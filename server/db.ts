@@ -813,7 +813,18 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
         });
       }
 
-      // NO creamos transacción financiera aún — se crea al aprobar el cierre de caja
+      // Registrar transacción financiera inmediata
+      MOCK_FINANCIAL_TRANSACTIONS.push({
+        id: MOCK_FINANCIAL_TRANSACTIONS.length + 1,
+        type: "income",
+        category: "order_delivery",
+        amount: order.totalPrice,
+        referenceId: orderId,
+        userId: order.deliveryPersonId,
+        notes: `Entrega Pedido ${order.orderNumber}`,
+        paymentMethod: method,
+        createdAt: new Date()
+      });
       syncMocksToDisk();
       return { success: true };
     }
@@ -848,7 +859,17 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
       });
     }
 
-    // NO creamos transacción financiera — se crea al aprobar el cierre de caja
+    // Registrar transacción financiera inmediata para visibilidad en tiempo real
+    await tx.insert(financialTransactions).values({
+      type: "income",
+      category: "order_delivery",
+      amount: order.totalPrice,
+      referenceId: orderId,
+      userId: order.deliveryPersonId,
+      notes: `Entrega Pedido ${order.orderNumber}`,
+      paymentMethod: method,
+      createdAt: new Date()
+    });
     return { success: true };
   });
 }

@@ -1,5 +1,5 @@
 import { protectedProcedure, router } from "../_core/trpc";
-import { getAllOrders, getAllInventory, getAllProducts } from "../db";
+import { getAllOrders, getAllInventory, getAllProducts, getFinancialTransactions } from "../db";
 import { TRPCError } from "@trpc/server";
 
 export const statsRouter = router({
@@ -12,6 +12,20 @@ export const statsRouter = router({
     const orders = await getAllOrders();
     const inventory = await getAllInventory();
     const products = await getAllProducts();
+    const transactions = await getFinancialTransactions();
+
+    // Calcular ingresos por método desde las transacciones financieras
+    const revenueByMethod = {
+      cash: transactions
+        .filter((t: any) => t.type === "income" && (t.paymentMethod === "cash" || !t.paymentMethod))
+        .reduce((sum: number, t: any) => sum + t.amount, 0),
+      qr: transactions
+        .filter((t: any) => t.type === "income" && t.paymentMethod === "qr")
+        .reduce((sum: number, t: any) => sum + t.amount, 0),
+      transfer: transactions
+        .filter((t: any) => t.type === "income" && t.paymentMethod === "transfer")
+        .reduce((sum: number, t: any) => sum + t.amount, 0),
+    };
 
     const stats = {
       totalOrders: orders.length,
@@ -20,11 +34,9 @@ export const statsRouter = router({
       inTransitOrders: orders.filter((o) => o.status === "in_transit").length,
       deliveredOrders: orders.filter((o) => o.status === "delivered").length,
       cancelledOrders: orders.filter((o) => o.status === "cancelled").length,
-      totalRevenue: orders
-        .filter((o) => o.paymentStatus === "completed")
-        .reduce((sum, o) => sum + o.totalPrice, 0),
-      lowStockProducts: inventory.filter((inv) => inv.quantity <= inv.minStock)
-        .length,
+      totalRevenue: revenueByMethod.cash + revenueByMethod.qr + revenueByMethod.transfer,
+      revenueByMethod,
+      lowStockProducts: inventory.filter((inv) => inv.quantity <= inv.minStock).length,
       totalProducts: products.length,
       totalInventoryValue: inventory.reduce((sum, inv) => {
         const product = products.find((p) => p.id === inv.productId);

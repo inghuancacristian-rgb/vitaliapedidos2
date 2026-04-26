@@ -87,7 +87,7 @@ export default function Dashboard() {
 
         {/* Estadísticas principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
+          <Card className="border-t-4 border-t-slate-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
@@ -97,7 +97,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-t-4 border-t-yellow-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
               <AlertCircle className="h-4 w-4 text-yellow-500" />
@@ -107,7 +107,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-t-4 border-t-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">En Tránsito</CardTitle>
               <Truck className="h-4 w-4 text-blue-500" />
@@ -117,7 +117,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-t-4 border-t-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Entregados</CardTitle>
               <TrendingUp className="h-4 w-4 text-green-500" />
@@ -128,17 +128,56 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Resumen Financiero Solicitado */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="bg-emerald-50/50 border-emerald-200 border-t-4 border-t-emerald-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Caja Efectivo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-black text-emerald-700">
+                {formatCurrency((stats as any)?.revenueByMethod?.cash || 0)}
+              </div>
+              <p className="text-[10px] text-emerald-600 mt-1 italic">Ingresos recaudados en efectivo</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-blue-50/50 border-blue-200 border-t-4 border-t-blue-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold text-blue-800 uppercase tracking-wider">Caja QR / Digital</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-black text-blue-700">
+                {formatCurrency((stats as any)?.revenueByMethod?.qr || 0)}
+              </div>
+              <p className="text-[10px] text-blue-600 mt-1 italic">Cobros por códigos QR</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-purple-50/50 border-purple-200 border-t-4 border-t-purple-600">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold text-purple-800 uppercase tracking-wider">Cuenta Bancaria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-black text-purple-700">
+                {formatCurrency((stats as any)?.revenueByMethod?.transfer || 0)}
+              </div>
+              <p className="text-[10px] text-purple-600 mt-1 italic">Transferencias bancarias directas</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Ingresos y inventario */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle>Ingresos Totales</CardTitle>
+              <CardTitle>Ingresos Totales (Global)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
                 {formatCurrency(stats?.totalRevenue || 0)}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">De pedidos completados</p>
+              <p className="text-sm text-muted-foreground mt-2">Suma de todos los métodos de pago</p>
             </CardContent>
           </Card>
 
