@@ -522,12 +522,7 @@ export async function createProduct(data: InsertProduct) {
     const result = await db.insert(products).values(data);
 
     // Obtener el ID del producto creado
-    let productId: number | null = null;
-    if (Array.isArray(result) && result.length > 0) {
-      productId = result[0].insertId;
-    } else if (result && typeof result === 'object') {
-      productId = (result as any).insertId || null;
-    }
+    const productId = getInsertId(result);
 
     if (!productId && data.id) {
        productId = data.id;
@@ -1188,7 +1183,7 @@ export async function getPurchasesByProductId(productId: number) {
     .where(eq(purchaseItems.productId, productId));
 }
 
-export async function createPurchase(purchaseData: any, items: any[]) {
+export async function createPurchase(purchaseData: any, items: any[], userId?: number) {
   const db = await getDb();
   if (!db) {
     const purchaseId = MOCK_PURCHASES.length + 1;
@@ -1221,13 +1216,41 @@ export async function createPurchase(purchaseData: any, items: any[]) {
 
   // Real DB logic
   return await db.transaction(async (tx: any) => {
-    const result = await tx.insert(purchases).values(purchaseData);
+    // 1. Asegurar que haya un supplierId (campo obligatorio)
+    let finalSupplierId = purchaseData.supplierId;
+    if (!finalSupplierId) {
+      const supplierName = "Compra rÃ¡pida (sistema)";
+      const supplierRows = await tx
+        .select({ id: suppliers.id })
+        .from(suppliers)
+        .where(eq(suppliers.name, supplierName))
+        .limit(1);
+      
+      finalSupplierId = supplierRows[0]?.id;
+      
+      if (!finalSupplierId) {
+        const created = await tx.insert(suppliers).values({ name: supplierName });
+        finalSupplierId = getInsertId(created);
+      }
+    }
+
+    // 2. Insertar la compra
+    const purchaseToInsert = {
+      ...purchaseData,
+      supplierId: finalSupplierId,
+      orderDate: purchaseData.orderDate ? new Date(purchaseData.orderDate) : new Date(),
+    };
+
+    const result = await tx.insert(purchases).values(purchaseToInsert);
     const id = getInsertId(result);
 
+    // 3. Insertar items y actualizar stock
     for (const item of items) {
-      await tx.insert(purchaseItems).values({ ...item, purchaseId: id });
+      // Limpiar item para que solo contenga campos de la tabla
+      const { productName, ...cleanItem } = item;
+      
+      await tx.insert(purchaseItems).values({ ...cleanItem, purchaseId: id });
 
-      // Actualizar stock en DB real si es 'received'
       if (purchaseData.status === "received") {
         const existing = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
         if (existing.length > 0) {
@@ -1247,6 +1270,20 @@ export async function createPurchase(purchaseData: any, items: any[]) {
         }
       }
     }
+
+    // 4. Registrar transacciÃ³n financiera en Caja (Gasto)
+    if (purchaseData.paymentStatus === "paid" || (purchaseData.status === "received" && purchaseData.isCredit === 0)) {
+      await tx.insert(financialTransactions).values({
+        type: "expense",
+        category: "purchase",
+        amount: purchaseData.totalAmount,
+        paymentMethod: purchaseData.paymentMethod || "cash",
+        referenceId: id,
+        userId: userId,
+        notes: `Compra ${purchaseData.purchaseNumber}`,
+      });
+    }
+
     return result;
   });
 }
@@ -2176,7 +2213,7 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
       notes: payload.notes,
     });
 
-    const saleId = saleResult.insertId;
+    const saleId = getInsertId(saleResult);
 
     for (const item of payload.items) {
       const productRows = await tx.select().from(products).where(eq(products.id, item.productId)).limit(1);
@@ -2554,7 +2591,7 @@ export async function createQuotationWithItems(data: InsertQuotation & { items: 
   await db.transaction(async (tx: any) => {
     const { items, ...quotationData } = data;
     const result = await tx.insert(quotations).values(quotationData);
-    quotationId = (result as any).insertId;
+    quotationId = getInsertId(result);
 
     if (items && items.length > 0) {
       const itemsToInsert = items.map((item) => ({

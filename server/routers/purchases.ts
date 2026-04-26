@@ -45,6 +45,6 @@ export const purchasesRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
       const { items, ...purchaseData } = input;
-      return await createPurchase(purchaseData, items);
+      return await createPurchase(purchaseData, items, ctx.user!.id);
     }),
 });
