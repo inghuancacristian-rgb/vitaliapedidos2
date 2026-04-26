@@ -1,0 +1,286 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --primary: oklch(0.34 0.05 257);
+  --primary-foreground: oklch(0.985 0.003 255);
+  --sidebar-primary: oklch(0.38 0.05 255);
+  --sidebar-primary-foreground: oklch(0.985 0.003 255);
+  --chart-1: oklch(0.68 0.05 247);
+  --chart-2: oklch(0.58 0.05 235);
+  --chart-3: oklch(0.48 0.04 220);
+  --chart-4: oklch(0.55 0.03 198);
+  --chart-5: oklch(0.73 0.02 255);
+  --radius: 1rem;
+  --background: oklch(0.978 0.003 255);
+  --foreground: oklch(0.23 0.018 255);
+  --card: oklch(0.995 0.002 255 / 90%);
+  --card-foreground: oklch(0.23 0.018 255);
+  --popover: oklch(0.995 0.002 255 / 96%);
+  --popover-foreground: oklch(0.23 0.018 255);
+  --secondary: oklch(0.95 0.006 252);
+  --secondary-foreground: oklch(0.31 0.02 248);
+  --muted: oklch(0.958 0.003 252);
+  --muted-foreground: oklch(0.5 0.013 252);
+  --accent: oklch(0.936 0.01 248);
+  --accent-foreground: oklch(0.28 0.02 248);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.89 0.006 248 / 72%);
+  --input: oklch(0.89 0.006 248 / 92%);
+  --ring: oklch(0.43 0.05 255);
+  --sidebar: oklch(0.985 0.002 255 / 95%);
+  --sidebar-foreground: oklch(0.23 0.018 255);
+  --sidebar-accent: oklch(0.94 0.009 248);
+  --sidebar-accent-foreground: oklch(0.28 0.02 248);
+  --sidebar-border: oklch(0.89 0.006 248 / 68%);
+  --sidebar-ring: oklch(0.43 0.05 255);
+}
+
+.dark {
+  --primary: oklch(0.68 0.05 248);
+  --primary-foreground: oklch(0.2 0.02 250);
+  --sidebar-primary: oklch(0.63 0.05 246);
+  --sidebar-primary-foreground: oklch(0.2 0.02 250);
+  --background: oklch(0.2 0.015 255);
+  --foreground: oklch(0.95 0.004 255);
+  --card: oklch(0.24 0.014 255 / 86%);
+  --card-foreground: oklch(0.95 0.004 255);
+  --popover: oklch(0.24 0.014 255 / 96%);
+  --popover-foreground: oklch(0.95 0.004 255);
+  --secondary: oklch(0.29 0.012 248);
+  --secondary-foreground: oklch(0.91 0.004 255);
+  --muted: oklch(0.29 0.012 252);
+  --muted-foreground: oklch(0.77 0.015 248);
+  --accent: oklch(0.32 0.018 244);
+  --accent-foreground:  oklch(0.97 0.004 255);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.62 0.05 246);
+  --chart-1: oklch(0.7 0.05 247);
+  --chart-2: oklch(0.62 0.05 235);
+  --chart-3: oklch(0.54 0.04 220);
+  --chart-4: oklch(0.58 0.03 198);
+  --chart-5: oklch(0.75 0.02 255);
+  --sidebar: oklch(0.24 0.014 255 / 94%);
+  --sidebar-foreground: oklch(0.95 0.004 255);
+  --sidebar-accent: oklch(0.32 0.018 244);
+  --sidebar-accent-foreground:  oklch(0.98 0.004 255);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.62 0.05 246);
+}
+
+@layer base {
+  html {
+    font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    color-scheme: light;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at top left, rgba(51, 65, 85, 0.14), transparent 28%),
+      radial-gradient(circle at top right, rgba(71, 85, 105, 0.12), transparent 24%),
+      linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(242,246,251,0.98) 55%, rgba(237,242,248,1) 100%);
+    background-attachment: fixed;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 26%, white);
+    color: var(--foreground);
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+@layer components {
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   *
+   * This overrides Tailwind's default container behavior to:
+   * - Auto-center content (mx-auto)
+   * - Add responsive horizontal padding
+   * - Set max-width for large screens
+   *
+   * Usage: <div className="container">...</div>
+   *
+   * For custom widths, use max-w-* utilities directly:
+   * <div className="max-w-6xl mx-auto px-4">...</div>
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem; /* 16px - mobile padding */
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .page-shell {
+    @apply relative min-h-screen overflow-x-hidden px-4 py-4 md:px-6 md:py-6;
+  }
+
+  .page-shell::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(71, 85, 105, 0.08), transparent 22%),
+      radial-gradient(circle at 85% 8%, rgba(30, 41, 59, 0.08), transparent 20%),
+      radial-gradient(circle at 50% 100%, rgba(148, 163, 184, 0.1), transparent 28%);
+    z-index: -1;
+  }
+
+  .page-container {
+    @apply relative mx-auto w-full max-w-7xl;
+  }
+
+  .glass-panel {
+    @apply rounded-[1.5rem] border border-white/70 bg-white/80 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl;
+  }
+
+  .hero-panel {
+    @apply overflow-hidden rounded-[1.5rem] border border-white/70 bg-white/80 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl;
+    background-image:
+      linear-gradient(135deg, rgba(30, 41, 59, 0.07), transparent 42%),
+      linear-gradient(160deg, rgba(71, 85, 105, 0.08), rgba(255,255,255,0.86) 58%);
+  }
+
+  .section-card {
+    @apply rounded-[1.5rem] border border-white/70 bg-white/80 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl;
+  }
+
+  .metric-card {
+    @apply rounded-[1.5rem] border border-white/70 bg-white/80 p-5 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl;
+  }
+
+  .kpi-value {
+    @apply text-3xl font-extrabold tracking-tight text-foreground sm:text-[2rem];
+  }
+
+  .soft-grid {
+    @apply grid gap-4 md:gap-5;
+  }
+
+  .touch-card {
+    @apply transition duration-200 ease-out hover:-translate-y-1 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.4)];
+  }
+
+  .pill-nav {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/85 p-1 shadow-[0_14px_30px_-18px_rgba(15,23,42,0.3)] backdrop-blur-xl;
+  }
+
+  .status-chip {
+    @apply inline-flex items-center rounded-full border border-white/70 bg-white/75 px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-[1.4rem] border border-white/60 bg-white/75 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.38)] backdrop-blur-xl;
+  }
+
+  .table-scroll {
+    @apply overflow-x-auto;
+  }
+
+  .table-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.45);
+    border-radius: 999px;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem; /* 32px - desktop padding */
+      padding-right: 2rem;
+      max-width: 1280px; /* Standard content width */
+    }
+  }
+}
