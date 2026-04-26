@@ -163,6 +163,7 @@ export async function getDb() {
         _pool = mysql.createPool(process.env.DATABASE_URL);
       }
       _db = drizzle(_pool);
+      console.log("[Database] [v1.1.0] Connected to MySQL via TSX");
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
