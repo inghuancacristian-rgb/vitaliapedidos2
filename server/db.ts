@@ -1219,7 +1219,8 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
     // 1. Asegurar que haya un supplierId (campo obligatorio)
     let finalSupplierId = purchaseData.supplierId;
     if (!finalSupplierId) {
-      const supplierName = "Compra rÃ¡pida (sistema)";
+      const supplierName = "Compra Rapida (Sistema)";
+      console.log(`[DB] No supplierId provided, looking for/creating: ${supplierName}`);
       const supplierRows = await tx
         .select({ id: suppliers.id })
         .from(suppliers)
@@ -1229,10 +1230,12 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
       finalSupplierId = supplierRows[0]?.id;
       
       if (!finalSupplierId) {
+        console.log(`[DB] Creating default supplier: ${supplierName}`);
         const created = await tx.insert(suppliers).values({ name: supplierName });
         finalSupplierId = getInsertId(created);
       }
     }
+    console.log(`[DB] Using supplierId: ${finalSupplierId}`);
 
     // 2. Insertar la compra
     const purchaseToInsert = {
@@ -1241,8 +1244,10 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
       orderDate: purchaseData.orderDate ? new Date(purchaseData.orderDate) : new Date(),
     };
 
+    console.log(`[DB] Inserting purchase ${purchaseToInsert.purchaseNumber}...`);
     const result = await tx.insert(purchases).values(purchaseToInsert);
     const id = getInsertId(result);
+    console.log(`[DB] Purchase inserted with ID: ${id}`);
 
     // 3. Insertar items y actualizar stock
     for (const item of items) {
