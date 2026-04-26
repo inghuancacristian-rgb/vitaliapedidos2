@@ -4,9 +4,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 
-// Detectar si estamos en entorno Manus
-const IS_MANUS = process.env.MANUS_ENV === "true" || process.env.BUILT_IN_FORGE_API_URL !== undefined;
-
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
 // Writes browser logs directly to files, trimmed when exceeding size limit
@@ -151,19 +148,7 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-// Solo activar plugins de Manus si estamos en ese entorno
-const manusPlugins: Plugin[] = [];
-if (IS_MANUS) {
-  try {
-    const { vitePluginManusRuntime } = await import("vite-plugin-manus-runtime");
-    manusPlugins.push(vitePluginManusRuntime() as Plugin);
-    manusPlugins.push(vitePluginManusDebugCollector());
-  } catch {
-    // no-op: no estamos en Manus
-  }
-}
-
-const plugins: Plugin[] = [react(), tailwindcss(), ...manusPlugins];
+const plugins: Plugin[] = [react(), tailwindcss()];
 
 export default defineConfig({
   plugins,
