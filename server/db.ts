@@ -522,7 +522,7 @@ export async function createProduct(data: InsertProduct) {
     const result = await db.insert(products).values(data);
 
     // Obtener el ID del producto creado
-    const productId = getInsertId(result);
+    let productId = getInsertId(result);
 
     if (!productId && data.id) {
        productId = data.id;
