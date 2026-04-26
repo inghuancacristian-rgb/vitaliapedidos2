@@ -100,14 +100,20 @@ export async function deleteSession(sessionId: string) {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
 }
 
-/**
- * Autentica un usuario con username y contraseña
- */
 export async function authenticateUser(username: string, password: string) {
   const user = await getUserByUsername(username);
 
-  // Fallback para Modo Demo (siempre permitir admin con su contraseña fija)
-  if (username === "admin" && password === "admin123") {
+  // Si el usuario existe en la base de datos y tiene contraseña, usarlo a él
+  if (user && user.passwordHash) {
+    const isValid = await verifyPassword(password, user.passwordHash);
+    if (isValid) {
+      return user;
+    }
+  }
+
+  const db = await getDb();
+  // Fallback para Modo Demo (solo si no hay base de datos o si falla lo anterior)
+  if (!db && username === "admin" && password === "admin123") {
     console.log("[Auth] Demo Mode: Hardcoded admin authenticated");
     return {
       id: 999,
@@ -124,15 +130,5 @@ export async function authenticateUser(username: string, password: string) {
     };
   }
 
-  if (!user || !user.passwordHash) {
-    return null;
-  }
-
-  const isValid = await verifyPassword(password, user.passwordHash);
-
-  if (!isValid) {
-    return null;
-  }
-
-  return user;
+  return null;
 }
