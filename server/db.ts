@@ -280,6 +280,11 @@ export async function createUser(data: any) {
     console.log("[DB] Demo Mode: User registered in memory", data.username);
     return { insertId: newId };
   }
+  
+  if (!data.openId) {
+    data.openId = `local_${crypto.randomUUID()}`;
+  }
+
   return await db.insert(users).values(data);
 }
 
