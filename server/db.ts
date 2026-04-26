@@ -515,8 +515,14 @@ export async function createProduct(data: InsertProduct) {
 
     // Obtener el ID del producto creado
     let productId: number | null = null;
-    if (result && typeof result === 'object') {
+    if (Array.isArray(result) && result.length > 0) {
+      productId = result[0].insertId;
+    } else if (result && typeof result === 'object') {
       productId = (result as any).insertId || null;
+    }
+
+    if (!productId && data.id) {
+       productId = data.id;
     }
 
     // Crear automáticamente un registro de inventario con stock inicial de 0

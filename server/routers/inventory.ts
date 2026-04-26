@@ -164,7 +164,13 @@ export const inventoryRouter = router({
         status: (input.status || "active") as "active" | "inactive",
       });
 
-      const productId = Number((result as any)?.insertId);
+      let productId = 0;
+      if (Array.isArray(result) && result.length > 0) {
+        productId = Number(result[0].insertId);
+      } else {
+        productId = Number((result as any)?.insertId);
+      }
+      
       if (Number.isFinite(productId) && productId > 0) {
         await createInventoryMovement({
           productId,
