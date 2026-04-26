@@ -143,7 +143,9 @@ export default function RepartidorFinance() {
   }
 
   // Totales en Bs. para comparativa visual
-  const totalReported = formData.reportedCash + formData.reportedQr + formData.reportedTransfer;
+  const totalReported = (parseFloat(formData.reportedCash) || 0) + 
+                       (parseFloat(formData.reportedQr) || 0) + 
+                       (parseFloat(formData.reportedTransfer) || 0);
   const expectedCashBs = (expected?.cash || 0) / 100;
   const expectedQrBs = (expected?.qr || 0) / 100;
   const expectedTransferBs = (expected?.transfer || 0) / 100;
@@ -314,11 +316,11 @@ export default function RepartidorFinance() {
                 size="sm"
                 disabled={!expected}
                 onClick={() =>
-                  setFormData((prev) => ({
+                  setFormData((prev: any) => ({
                     ...prev,
-                    reportedCash: Number(expectedCashBs.toFixed(2)),
-                    reportedQr: Number(expectedQrBs.toFixed(2)),
-                    reportedTransfer: Number(expectedTransferBs.toFixed(2)),
+                    reportedCash: expectedCashBs.toFixed(2),
+                    reportedQr: expectedQrBs.toFixed(2),
+                    reportedTransfer: expectedTransferBs.toFixed(2),
                   }))
                 }
               >
@@ -342,12 +344,12 @@ export default function RepartidorFinance() {
                 <tr>
                   <td className="px-4 py-2">Efectivo</td>
                   <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedCashBs.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-green-700">Bs. {formData.reportedCash.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right font-bold text-green-700">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2">QR / Transferencia</td>
                   <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {(expectedQrBs + expectedTransferBs).toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-blue-700">Bs. {(formData.reportedQr + formData.reportedTransfer).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right font-bold text-blue-700">Bs. {(parseFloat(formData.reportedQr) + parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
                 </tr>
                 <tr className="bg-slate-50/30">
                   <td className="px-4 py-2 font-bold">TOTAL RECAUDADO</td>
