@@ -3,6 +3,14 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
+
+function getInsertId(result: any): number {
+  if (Array.isArray(result) && result.length > 0) {
+    return result[0].insertId;
+  }
+  return result?.insertId || 0;
+}
+
 import {
   InsertUser,
   users,
@@ -1213,8 +1221,8 @@ export async function createPurchase(purchaseData: any, items: any[]) {
 
   // Real DB logic
   return await db.transaction(async (tx: any) => {
-    const [result] = await tx.insert(purchases).values(purchaseData);
-    const id = (result as any).insertId;
+    const result = await tx.insert(purchases).values(purchaseData);
+    const id = getInsertId(result);
 
     for (const item of items) {
       await tx.insert(purchaseItems).values({ ...item, purchaseId: id });
@@ -1373,7 +1381,7 @@ export async function recordInventoryEntryAsPurchase(
 
     if (!supplierId) {
       const created = await tx.insert(suppliers).values({ name: supplierName });
-      supplierId = (created as any).insertId as number;
+      supplierId = getInsertId(created);
     }
 
     const purchaseNumber = `COMPRA-INV-${Date.now()}`;
@@ -1390,7 +1398,7 @@ export async function recordInventoryEntryAsPurchase(
       isCredit: 0,
     });
 
-    const purchaseId = (purchaseInsert as any).insertId as number;
+    const purchaseId = getInsertId(purchaseInsert);
 
     await tx.insert(purchaseItems).values({
       purchaseId,

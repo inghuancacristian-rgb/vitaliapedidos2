@@ -169,7 +169,7 @@ export const usersRouter = router({
 
       return {
         success: true,
-        userId: (result as any).insertId,
+        userId: Array.isArray(result) && result.length > 0 ? result[0].insertId : (result as any).insertId,
       };
     }),
 });
