@@ -300,6 +300,8 @@ export default function Purchases() {
                     <Label className="text-xs">Cant.</Label>
                     <Input 
                       type="number" 
+                      step="any"
+                      onFocus={(e) => e.target.select()}
                       value={currentItem.quantity} 
                       onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value)})}
                     />
@@ -308,6 +310,8 @@ export default function Purchases() {
                     <Label className="text-[10px] font-bold text-green-700 uppercase">P. Unitario Compra</Label>
                     <Input 
                       type="number" 
+                      step="any"
+                      onFocus={(e) => e.target.select()}
                       value={currentItem.price} 
                       onChange={(e) => setCurrentItem({...currentItem, price: parseFloat(e.target.value) || 0})}
                       placeholder="0"

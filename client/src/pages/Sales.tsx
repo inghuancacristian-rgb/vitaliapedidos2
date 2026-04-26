@@ -914,13 +914,15 @@ export default function Sales() {
                               <Minus className="h-3 w-3" />
                             </Button>
                             <Input
-                              type="number"
-                              min="1"
-                              max={item.stock}
-                              value={item.quantity}
-                              onChange={(event) => updateCartItem(item.productId, { quantity: Math.max(1, parseInt(event.target.value || "1", 10)) })}
-                              className="h-8 w-14 text-center text-sm"
-                            />
+                               type="number"
+                               min="1"
+                               step="any"
+                               onFocus={(e) => e.target.select()}
+                               max={item.stock}
+                               value={item.quantity}
+                               onChange={(event) => updateCartItem(item.productId, { quantity: Math.max(1, parseInt(event.target.value || "1", 10)) })}
+                               className="h-8 w-14 text-center text-sm"
+                             />
                             <Button
                               variant="outline"
                               size="icon"
@@ -1013,21 +1015,22 @@ export default function Sales() {
                     </Select>
                     <div className="relative">
                       <Input
-                        type="number"
-                        min="0"
-                        step={globalDiscountType === "percentage" ? "1" : "0.01"}
-                        disabled={globalDiscountType === "none"}
-                        value={globalDiscountType === "fixed" ? globalDiscountValue / 100 : globalDiscountValue}
-                        onChange={(event) => {
-                          if (globalDiscountType === "fixed") {
-                            setGlobalDiscountValue(parsePrice(event.target.value || "0"));
-                            return;
-                          }
-                          setGlobalDiscountValue(Math.max(0, Math.round(parseFloat(event.target.value || "0"))));
-                        }}
-                        className="pr-12"
-                        placeholder={globalDiscountType === "percentage" ? "Ej: 10" : "Ej: 5.00"}
-                      />
+                         type="number"
+                         min="0"
+                         step="any"
+                         onFocus={(e) => e.target.select()}
+                         disabled={globalDiscountType === "none"}
+                         value={globalDiscountType === "fixed" ? globalDiscountValue / 100 : globalDiscountValue}
+                         onChange={(event) => {
+                           if (globalDiscountType === "fixed") {
+                             setGlobalDiscountValue(parsePrice(event.target.value || "0"));
+                             return;
+                           }
+                           setGlobalDiscountValue(Math.max(0, Math.round(parseFloat(event.target.value || "0"))));
+                         }}
+                         className="pr-12"
+                         placeholder={globalDiscountType === "percentage" ? "Ej: 10" : "Ej: 5.00"}
+                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                         {globalDiscountType === "percentage" ? "%" : "Bs"}
                       </span>

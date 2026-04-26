@@ -671,6 +671,7 @@ export default function Customers() {
                     type="number"
                     min="0"
                     max="120"
+                    onFocus={(e) => e.target.select()}
                     value={newCustomer.age}
                     onChange={(e) =>
                       setNewCustomer((prev) => ({ ...prev, age: e.target.value }))

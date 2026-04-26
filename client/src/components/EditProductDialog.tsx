@@ -239,6 +239,8 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
               <Input
                 id={`price-${product.id}`}
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.price}
                 onChange={(e) =>
@@ -251,6 +253,8 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
               <Input
                 id={`salePrice-${product.id}`}
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.salePrice}
                 onChange={(e) =>

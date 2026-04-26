@@ -229,6 +229,8 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
               <Input
                 id="price"
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.price}
                 onChange={(e) =>
@@ -241,6 +243,8 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
               <Input
                 id="salePrice"
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.salePrice}
                 onChange={(e) =>

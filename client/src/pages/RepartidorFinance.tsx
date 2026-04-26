@@ -27,12 +27,12 @@ export default function RepartidorFinance() {
   const today = getLocalDateInputValue();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    initialCash: 0,
-    reportedCash: 0,
-    reportedQr: 0,
-    reportedTransfer: 0,
-    expenses: 0,
+  const [formData, setFormData] = useState<any>({
+    initialCash: "",
+    reportedCash: "",
+    reportedQr: "",
+    reportedTransfer: "",
+    expenses: "",
   });
 
   const { data: status, refetch: refetchStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
@@ -55,15 +55,19 @@ export default function RepartidorFinance() {
     e.preventDefault();
     if (status?.status === "pending") return;
 
+    if (totalReported === 0 && !confirm("¿Seguro que deseas enviar el cierre con Bs. 0.00 recaudados?")) {
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await submitMutation.mutateAsync({
         date: today,
-        initialCash: formData.initialCash,
-        reportedCash: formData.reportedCash,
-        reportedQr: formData.reportedQr,
-        reportedTransfer: formData.reportedTransfer,
-        expenses: formData.expenses,
+        initialCash: parseFloat(formData.initialCash) || 0,
+        reportedCash: parseFloat(formData.reportedCash) || 0,
+        reportedQr: parseFloat(formData.reportedQr) || 0,
+        reportedTransfer: parseFloat(formData.reportedTransfer) || 0,
+        expenses: parseFloat(formData.expenses) || 0,
         expectedCash: expected?.cash || 0,
         expectedQr: expected?.qr || 0,
         expectedTransfer: expected?.transfer || 0,
@@ -217,9 +221,11 @@ export default function RepartidorFinance() {
                   <span className="text-2xl font-black">Bs.</span>
                   <Input
                     type="number"
+                    step="any"
+                    onFocus={(e) => e.target.select()}
                     className="bg-transparent border-none text-2xl font-black p-0 h-auto focus-visible:ring-0 w-32"
                     value={formData.initialCash}
-                    onChange={(e) => setFormData({...formData, initialCash: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setFormData({...formData, initialCash: e.target.value})}
                   />
                   <p className="text-[10px] text-slate-400 italic">(Dinero recibido para cambio)</p>
                 </div>
@@ -236,10 +242,12 @@ export default function RepartidorFinance() {
             </Label>
             <Input
               type="number"
+              step="any"
+              onFocus={(e) => e.target.select()}
               placeholder="0.00"
               className="font-bold text-lg"
               value={formData.reportedCash}
-              onChange={(e) => setFormData({...formData, reportedCash: parseFloat(e.target.value) || 0})}
+              onChange={(e) => setFormData({...formData, reportedCash: e.target.value})}
             />
           </div>
           <div className="space-y-2">
@@ -248,10 +256,12 @@ export default function RepartidorFinance() {
             </Label>
             <Input
               type="number"
+              step="any"
+              onFocus={(e) => e.target.select()}
               placeholder="0.00"
               className="font-bold text-lg"
               value={formData.reportedQr}
-              onChange={(e) => setFormData({...formData, reportedQr: parseFloat(e.target.value) || 0})}
+              onChange={(e) => setFormData({...formData, reportedQr: e.target.value})}
             />
           </div>
           <div className="space-y-2">
@@ -260,10 +270,12 @@ export default function RepartidorFinance() {
             </Label>
             <Input
               type="number"
+              step="any"
+              onFocus={(e) => e.target.select()}
               placeholder="0.00"
               className="font-bold text-lg"
               value={formData.reportedTransfer}
-              onChange={(e) => setFormData({...formData, reportedTransfer: parseFloat(e.target.value) || 0})}
+              onChange={(e) => setFormData({...formData, reportedTransfer: e.target.value})}
             />
           </div>
         </div>
@@ -278,10 +290,12 @@ export default function RepartidorFinance() {
               <Label className="text-[10px] font-bold text-orange-600 uppercase">Gastos del día (Gasolina, etc.)</Label>
               <Input
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="0.00"
                 className="mt-1 h-8 text-sm"
                 value={formData.expenses}
-                onChange={(e) => setFormData({...formData, expenses: parseFloat(e.target.value) || 0})}
+                onChange={(e) => setFormData({...formData, expenses: e.target.value})}
               />
             </div>
           </CardContent>

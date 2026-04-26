@@ -707,7 +707,7 @@ function OpenCashDialog() {
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2"><Label htmlFor="openingAmount">Fondo inicial</Label>
-            <Input id="openingAmount" type="number" step="0.01" min="0" placeholder="0.00" value={form.openingAmount} onChange={(e) => setForm({ ...form, openingAmount: e.target.value })} /></div>
+            <Input id="openingAmount" type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.openingAmount} onChange={(e) => setForm({ ...form, openingAmount: e.target.value })} /></div>
           <div className="space-y-2"><Label htmlFor="paymentMethod">Caja a Aperturar</Label>
             <Select value={form.paymentMethod} onValueChange={(val: any) => setForm({ ...form, paymentMethod: val })}>
               <SelectTrigger id="paymentMethod"><SelectValue placeholder="Seleccione Caja" /></SelectTrigger>
@@ -890,7 +890,7 @@ function AddExpenseDialog() {
                 <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
               ))}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Monto</Label><Input type="number" placeholder="0.00" onChange={(e) => setExpense({ ...expense, amount: parseFloat(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Monto</Label><Input type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" onChange={(e) => setExpense({ ...expense, amount: parseFloat(e.target.value) })} /></div>
             <div className="space-y-2"><Label>Categoria</Label>
               <Select onValueChange={(v: any) => setExpense({ ...expense, type: v })}>
                 <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -935,7 +935,7 @@ function TransferDialog() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="cash">Caja Efectivo</SelectItem><SelectItem value="qr">Caja QR</SelectItem><SelectItem value="transfer">Cuenta Bancaria</SelectItem></SelectContent>
             </Select></div>
-          <div className="space-y-2"><Label>Monto a transferir</Label><Input type="number" min="0.01" step="0.01" placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Monto a transferir</Label><Input type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
           <div className="space-y-2"><Label>Concepto (Opcional)</Label><Input placeholder="Ej. Deposito al banco" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           <Button className="w-full" onClick={handleSubmit} disabled={mutation.isPending}>{mutation.isPending ? "Procesando..." : "Confirmar Traspaso"}</Button>
         </div>

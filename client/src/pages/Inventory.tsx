@@ -131,6 +131,8 @@ function AdjustInventoryDialog({
               <Input
                 id="quantity"
                 type="number"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder="Ej: 10 o -5"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
@@ -145,7 +147,8 @@ function AdjustInventoryDialog({
               <Input
                 id="price"
                 type="number"
-                step="0.01"
+                step="any"
+                onFocus={(e) => e.target.select()}
                 placeholder={item.product?.price != null ? `Actual: ${(item.product.price / 100).toFixed(2)}` : "Mantener actual"}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
