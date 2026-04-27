@@ -231,13 +231,8 @@ export const financeRouter = router({
       });
 
       if (isAdmin) {
-        const methods = ["cash", "qr", "transfer"] as const;
-        for (const method of methods) {
-          const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, input.date, method);
-          if (activeOpening) {
-            await updateCashOpeningStatus(activeOpening.id, "closed");
-          }
-        }
+        const { closeAllActiveOpeningsForUser } = await import("../db");
+        await closeAllActiveOpeningsForUser(userId, input.date);
       }
 
       return result;

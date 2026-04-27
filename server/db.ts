@@ -1664,7 +1664,7 @@ export async function getCashOpeningByUserIdAndDateMethod(userId: number, openin
     // Buscar si existe alguna apertura 'open' para este usuario y método
     return MOCK_CASH_OPENINGS.find((opening) => 
       opening.responsibleUserId === userId && 
-      opening.paymentMethod === paymentMethod &&
+      (opening.paymentMethod === paymentMethod || (!opening.paymentMethod && paymentMethod === "cash")) &&
       opening.status === "open"
     );
   }
@@ -1672,7 +1672,7 @@ export async function getCashOpeningByUserIdAndDateMethod(userId: number, openin
   const result = await db
     .select()
     .from(cashOpenings)
-    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND ${cashOpenings.paymentMethod} = ${paymentMethod} AND ${cashOpenings.status} = 'open'`)
+    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND (${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash')) AND ${cashOpenings.status} = 'open'`)
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
@@ -1702,6 +1702,25 @@ export async function updateCashOpeningStatus(id: number, status: string) {
     return;
   }
   return await db.update(cashOpenings).set({ status }).where(eq(cashOpenings.id, id));
+}
+
+export async function closeAllActiveOpeningsForUser(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) {
+    let changed = false;
+    MOCK_CASH_OPENINGS.forEach(o => {
+      if (o.status === "open") {
+        o.status = "closed";
+        changed = true;
+      }
+    });
+    if (changed) syncMocksToDisk();
+    return;
+  }
+  
+  await db.update(cashOpenings)
+    .set({ status: 'closed' })
+    .where(sql`${cashOpenings.status} = 'open'`);
 }
 
 export async function getAllCashOpenings() {
