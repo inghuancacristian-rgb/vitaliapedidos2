@@ -235,8 +235,8 @@ export default function DeliveryLoad() {
     w.document.close();
   };
 
-  const { data: closureStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
-  const isLocked = closureStatus?.status === "pending";
+  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+  const isLocked = user?.role === "user" && closureStatus?.hasPending;
 
   if (isLocked) {
     return (
@@ -246,9 +246,9 @@ export default function DeliveryLoad() {
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="w-8 h-8 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl font-black">Carga Bloqueada</CardTitle>
-            <CardDescription>
-              No puedes gestionar tu carga mientras tengas un cierre de caja pendiente de aprobación.
+            <CardTitle className="text-2xl font-black text-slate-800">Aplicación Inhabilitada</CardTitle>
+            <CardDescription className="text-slate-500 font-medium text-base">
+              Para poder utilizar la aplicación, solicite la habilitación en administración.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center pb-6">

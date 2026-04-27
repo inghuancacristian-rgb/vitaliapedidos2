@@ -218,8 +218,8 @@ export default function Home() {
     );
   }
 
-    const { data: status } = trpc.finance.getMyStatus.useQuery({ date: today });
-    const isLocked = status?.status === "pending";
+    const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+    const isLocked = user?.role === "user" && closureStatus?.hasPending;
 
     if (isLocked) {
       return (
@@ -229,9 +229,9 @@ export default function Home() {
               <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Receipt className="w-8 h-8 text-blue-600" />
               </div>
-              <CardTitle className="text-2xl font-black">Cierre en Revisión</CardTitle>
-              <CardDescription>
-                Has enviado tu cierre de caja. No puedes realizar nuevas operaciones hasta que el administrador lo apruebe.
+              <CardTitle className="text-2xl font-black text-slate-800">Aplicación Inhabilitada</CardTitle>
+              <CardDescription className="text-slate-500 font-medium text-base">
+                Para poder utilizar la aplicación, solicite la habilitación en administración.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

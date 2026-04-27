@@ -114,7 +114,7 @@ export default function RepartidorFinance() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-slate-50/50 border-none shadow-none">
                 <CardContent className="p-4 text-center">
                   <p className="text-[10px] text-slate-400 font-black uppercase mb-1">Efectivo Enviado</p>
@@ -125,6 +125,12 @@ export default function RepartidorFinance() {
                 <CardContent className="p-4 text-center">
                   <p className="text-[10px] text-slate-400 font-black uppercase mb-1">QR Enviado</p>
                   <p className="text-2xl font-black text-slate-700">{formatCurrency(status.reportedQr)}</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-slate-50/50 border-none shadow-none">
+                <CardContent className="p-4 text-center">
+                  <p className="text-[10px] text-slate-400 font-black uppercase mb-1">Transf. Enviada</p>
+                  <p className="text-2xl font-black text-slate-700">{formatCurrency(status.reportedTransfer)}</p>
                 </CardContent>
               </Card>
             </div>
@@ -340,28 +346,28 @@ export default function RepartidorFinance() {
                   <th className="text-right px-4 py-2 font-medium text-slate-500 uppercase text-[9px]">Reportado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                <tr>
-                  <td className="px-4 py-2">Efectivo</td>
-                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedCashBs.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-green-700">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-blue-700 font-medium">Cobros QR</td>
-                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedQrBs.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-blue-700">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-purple-700 font-medium">Transferencias</td>
-                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedTransferBs.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-purple-700">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
-                </tr>
-                <tr className="bg-slate-50/30">
-                  <td className="px-4 py-2 font-bold">TOTAL RECAUDADO</td>
-                  <td className="px-4 py-2 text-right font-bold text-slate-600">Bs. {totalExpectedBs.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-black text-blue-800">Bs. {totalReported.toFixed(2)}</td>
-                </tr>
-              </tbody>
+               <tbody className="divide-y">
+                 <tr>
+                   <td className="px-4 py-2 font-medium">Efectivo</td>
+                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedCashBs.toFixed(2)}</td>
+                   <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
+                 </tr>
+                 <tr>
+                   <td className="px-4 py-2 font-medium text-blue-700">Cobros por QR</td>
+                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedQrBs.toFixed(2)}</td>
+                   <td className="px-4 py-2 text-right font-bold text-blue-700 font-mono">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
+                 </tr>
+                 <tr>
+                   <td className="px-4 py-2 font-medium text-purple-700">Transferencias Directas</td>
+                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedTransferBs.toFixed(2)}</td>
+                   <td className="px-4 py-2 text-right font-bold text-purple-700 font-mono">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
+                 </tr>
+                 <tr className="bg-slate-100/50">
+                   <td className="px-4 py-2 font-black">TOTAL RECAUDADO</td>
+                   <td className="px-4 py-2 text-right font-black text-slate-900 font-mono underline decoration-double">Bs. {totalExpectedBs.toFixed(2)}</td>
+                   <td className="px-4 py-2 text-right font-black text-blue-900 font-mono underline decoration-double">Bs. {totalReported.toFixed(2)}</td>
+                 </tr>
+               </tbody>
             </table>
           </CardContent>
           <div className={`p-3 text-center text-xs font-bold ${diffCents >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>

@@ -239,6 +239,9 @@ export const financeRouter = router({
     }),
 
   // Obtener mi estado de cierre para hoy
+    }),
+  
+  // Obtener mi estado de cierre para hoy
   getMyStatus: protectedProcedure
     .input(z.object({ date: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -246,6 +249,15 @@ export const financeRouter = router({
       if (!userId) return null;
       return await getCashClosureByUserIdAndDate(userId, input.date);
     }),
+  
+  // Verificar si tiene algún cierre pendiente (de cualquier fecha)
+  hasPendingClosure: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user?.id;
+    if (!userId) return { hasPending: false };
+    const closures = await getCashClosuresByUserId(userId);
+    const hasPending = closures.some((c: any) => c.status === "pending");
+    return { hasPending };
+  }),
 
   // Obtener monto pendiente de órdenes sin entregar del repartidor
   getPendingOrders: protectedProcedure

@@ -469,9 +469,8 @@ export default function Sales() {
     })));
   };
 
-  const today = new Date().toISOString().split("T")[0];
-  const { data: closureStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
-  const isLocked = user?.role === "user" && closureStatus?.status === "pending";
+  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+  const isLocked = user?.role === "user" && closureStatus?.hasPending;
 
   if (isLocked) {
     return (
@@ -481,14 +480,14 @@ export default function Sales() {
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <ShoppingBag className="w-8 h-8 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl font-black text-slate-800">Ventas Bloqueadas</CardTitle>
-            <CardDescription className="text-slate-500">
-              No puedes registrar nuevas ventas mientras tengas un cierre de caja pendiente de aprobación.
+            <CardTitle className="text-2xl font-black text-slate-800">Aplicación Inhabilitada</CardTitle>
+            <CardDescription className="text-slate-500 font-medium text-base">
+              Para poder utilizar la aplicación, solicite la habilitación en administración.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center pb-6">
-            <p className="text-sm text-slate-500 mb-6 font-medium">
-              Espera a que el administrador valide tu arqueo para reanudar operaciones.
+            <p className="text-sm text-slate-400 mb-6 italic">
+              Tu cierre de caja está siendo revisado por el administrador.
             </p>
             <Link href="/repartidor/finance">
               <Button className="w-full font-bold">Ver Estado de mi Caja</Button>
