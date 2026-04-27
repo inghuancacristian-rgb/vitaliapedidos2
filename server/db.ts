@@ -610,7 +610,7 @@ export async function getAllOrders() {
       };
     });
   }
-  const result = await db.select({
+  return await db.select({
     ...orders,
     deliveryPersonName: users.name,
     customerPhone: customers.phone,
@@ -618,7 +618,31 @@ export async function getAllOrders() {
   }).from(orders)
     .leftJoin(users, eq(orders.deliveryPersonId, users.id))
     .leftJoin(customers, eq(orders.customerId, customers.id));
-  return result;
+}
+
+export async function getOrdersByDeliveryPerson(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    return MOCK_ORDERS.filter(o => o.deliveryPersonId === userId).map(order => {
+      const deliveryPerson = MOCK_USERS.find(u => u.id === order.deliveryPersonId);
+      const customer = MOCK_CUSTOMERS.find(c => c.id === order.customerId);
+      return {
+        ...order,
+        deliveryPersonName: deliveryPerson?.name || null,
+        customerPhone: customer?.phone || null,
+        customerWhatsapp: customer?.whatsapp || null,
+      };
+    });
+  }
+  return await db.select({
+    ...orders,
+    deliveryPersonName: users.name,
+    customerPhone: customers.phone,
+    customerWhatsapp: customers.whatsapp,
+  }).from(orders)
+    .leftJoin(users, eq(orders.deliveryPersonId, users.id))
+    .leftJoin(customers, eq(orders.customerId, customers.id))
+    .where(eq(orders.deliveryPersonId, userId));
 }
 
 // Deduce inventory when an order is created

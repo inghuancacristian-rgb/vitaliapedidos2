@@ -215,8 +215,10 @@ export const ordersRouter = router({
     if (ctx.user?.role !== "user") {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
-    const allOrders = await getAllOrders();
-    return allOrders.filter((o: any) => o.deliveryPersonId === ctx.user?.id);
+    const allOrders = await getOrdersByDeliveryPerson(ctx.user.id);
+    return (allOrders as any[]).filter((o: any) => 
+      ["assigned", "in_transit", "rescheduled", "delivered"].includes(o.status)
+    );
   }),
 
   // Carga del repartidor: productos agregados por pedidos activos
@@ -230,12 +232,11 @@ export const ordersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      const allOrders = await getAllOrders();
       const statusFilter = input?.status && input.status !== "all" ? input.status : null;
       const dateFilter = input?.date || null;
+      const allOrders = await getOrdersByDeliveryPerson(ctx.user.id);
 
       const activeOrders = (allOrders as any[]).filter((o: any) => {
-        if (o.deliveryPersonId !== ctx.user?.id) return false;
         if (!["assigned", "in_transit", "rescheduled"].includes(o.status)) return false;
         if (statusFilter && o.status !== statusFilter) return false;
 
