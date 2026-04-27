@@ -374,6 +374,36 @@ export default function Inventory() {
     });
   };
 
+  const today = new Date().toISOString().split("T")[0];
+  const { data: closureStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
+  const isLocked = user?.role === "user" && closureStatus?.status === "pending";
+
+  if (isLocked) {
+    return (
+      <div className="page-shell flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Box className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black">Inventario Bloqueado</CardTitle>
+            <CardDescription>
+              No puedes consultar el inventario mientras tengas un cierre de caja pendiente de aprobación.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-6">
+            <p className="text-sm text-slate-500 mb-6">
+              Una vez el administrador apruebe tu cierre, podrás volver a acceder a esta sección.
+            </p>
+            <Button className="w-full" onClick={() => window.location.href = "/repartidor/finance"}>
+              Ir a Cierre de Caja
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="page-shell flex items-center justify-center">
