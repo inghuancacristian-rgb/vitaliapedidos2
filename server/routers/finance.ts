@@ -74,7 +74,7 @@ export const financeRouter = router({
       if (existing) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Ya existe una apertura de caja (${input.paymentMethod.toUpperCase()}) para este usuario en esa fecha.`,
+          message: `Este usuario ya tiene una caja abierta (${input.paymentMethod.toUpperCase()}). Debe cerrarla antes de abrir una nueva.`,
         });
       }
 
@@ -202,11 +202,11 @@ export const financeRouter = router({
       if (!userId) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       // Verificar si ya existe un cierre para esta fecha
-      const existing = await getCashClosureByUserIdAndDate(userId, input.date);
-      if (existing?.status === "pending") {
+      const lastClosure = await getCashClosureByUserIdAndDate(userId, input.date);
+      if (lastClosure?.status === "pending") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Ya existe un cierre de caja pendiente para esta fecha."
+          message: "Ya tienes un cierre de caja pendiente de aprobación. Espera a que el administrador lo valide."
         });
       }
 
@@ -282,23 +282,15 @@ export const financeRouter = router({
       });
 
       // Si se aprueba, creamos las transacciones financieras y la próxima apertura
+      // Si se aprueba, creamos las transacciones financieras
       if (input.status === "approved") {
         const closure = await getCashClosureById(input.id);
         if (closure) {
           // Registrar las transacciones de las entregas pendientes de registrar
           await createFinancialTransactionsForDeliveries(input.id, closure.userId, closure.date);
-
-          const dateStr = getLocalDateKey(new Date()) || closure.date;
-
-          await createCashOpening({
-            responsibleUserId: closure.userId,
-            openedByUserId: ctx.user!.id,
-            openingAmount: 0,
-            paymentMethod: "cash",
-            openingDate: dateStr,
-            status: "open",
-            notes: `Apertura automática tras cierre #${input.id}`
-          });
+          
+          // NOTA: Se eliminó la apertura automática aquí para permitir que el admin
+          // abra la siguiente caja manualmente con el fondo inicial que desee.
         }
       }
 

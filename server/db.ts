@@ -1661,13 +1661,18 @@ export async function deleteOperationalExpense(id: number) {
 export async function getCashOpeningByUserIdAndDateMethod(userId: number, openingDate: string, paymentMethod: string) {
   const db = await getDb();
   if (!db) {
-    return MOCK_CASH_OPENINGS.find((opening) => opening.responsibleUserId === userId && opening.openingDate === openingDate && opening.paymentMethod === paymentMethod);
+    // Buscar si existe alguna apertura 'open' para este usuario y método
+    return MOCK_CASH_OPENINGS.find((opening) => 
+      opening.responsibleUserId === userId && 
+      opening.paymentMethod === paymentMethod &&
+      opening.status === "open"
+    );
   }
 
   const result = await db
     .select()
     .from(cashOpenings)
-    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND ${cashOpenings.openingDate} = ${openingDate} AND ${cashOpenings.paymentMethod} = ${paymentMethod}`)
+    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND ${cashOpenings.paymentMethod} = ${paymentMethod} AND ${cashOpenings.status} = 'open'`)
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;
@@ -1725,6 +1730,8 @@ export async function getAllCashOpenings() {
 export async function getCashClosureByUserIdAndDate(userId: number, date: string) {
   const db = await getDb();
   if (!db) {
+    // Para validación de "ya existe un cierre", buscamos el que esté 'pending'
+    // Para visualización de "mi estado hoy", buscamos el último creado hoy
     const matches = MOCK_CASH_CLOSURES.filter((c: any) => c.userId === userId && c.date === date);
     if (matches.length === 0) return undefined;
     return matches
@@ -1735,6 +1742,8 @@ export async function getCashClosureByUserIdAndDate(userId: number, date: string
         return bMs - aMs;
       })[0];
   }
+  
+  // Buscar cierres del usuario para hoy, ordenados por el más reciente
   const result = await db.select().from(cashClosures).where(
     sql`${cashClosures.userId} = ${userId} AND (${cashClosures.date} = ${date} OR DATE(${cashClosures.createdAt}) = ${date})`
   ).orderBy(desc(cashClosures.createdAt)).limit(1);
