@@ -426,85 +426,123 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
-        <div className={`${colors.light} p-4 border-b ${colors.border}`}>
+        <div className={`${colors.light} p-6 border-b ${colors.border}`}>
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className={`text-lg font-bold ${colors.text}`}>Historial - {title}</h3>
-              <p className="text-sm text-muted-foreground">Transacciones del período seleccionado</p>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${colors.bg} text-white shadow-lg shadow-${colorClass}-200/50`}>
+                <History className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className={`text-xl font-black tracking-tight ${colors.text}`}>Historial - {title}</h3>
+                <p className="text-sm font-medium text-muted-foreground/80 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  Registro detallado de flujo de caja
+                </p>
+              </div>
             </div>
             <Button
               variant="ghost"
-              size="sm"
-              className="p-0 h-8 w-8"
+              size="icon"
+              className="rounded-full hover:bg-slate-200/50 transition-colors"
               onClick={() => onOpenChange(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5 text-slate-500" />
             </Button>
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="p-4 border-b space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <Select value={dateRange} onValueChange={(v: any) => setDateRange(v)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hoy</SelectItem>
-                <SelectItem value="week">Última semana</SelectItem>
-                <SelectItem value="month">Último mes</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Filtros y Resumen */}
+        <div className="p-6 border-b bg-slate-50/30 space-y-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-white p-1 rounded-lg border shadow-sm items-center">
+              <Select value={dateRange} onValueChange={(v: any) => setDateRange(v)}>
+                <SelectTrigger className="w-40 border-none shadow-none focus:ring-0 font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hoy</SelectItem>
+                  <SelectItem value="week">Última semana</SelectItem>
+                  <SelectItem value="month">Último mes</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {dateRange === "custom" && (
-              <>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-36"
-                />
-                <span className="text-muted-foreground self-center">-</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-36"
-                />
-              </>
-            )}
+              {dateRange === "custom" && (
+                <div className="flex items-center gap-2 px-2 border-l ml-1">
+                  <Input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-36 border-none h-8 shadow-none focus-visible:ring-0 px-1"
+                  />
+                  <span className="text-slate-300">—</span>
+                  <Input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-36 border-none h-8 shadow-none focus-visible:ring-0 px-1"
+                  />
+                </div>
+              )}
+            </div>
 
-            <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="income">Ingresos</SelectItem>
-                <SelectItem value="expense">Egresos</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex bg-white p-1 rounded-lg border shadow-sm">
+              <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+                <SelectTrigger className="w-36 border-none shadow-none focus:ring-0 font-medium">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Ops</SelectItem>
+                  <SelectItem value="income">Solo Ingresos</SelectItem>
+                  <SelectItem value="expense">Solo Egresos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Panel de Control
+            </div>
           </div>
 
-          {/* Totales */}
+          {/* Totales Cards */}
           {data && (
-            <div className="flex gap-4 text-sm">
-              <div className="flex-1 grid grid-cols-3 gap-2">
-                <div className={`p-2 rounded border ${colors.border} ${colors.light}`}>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Ingresos</p>
-                  <p className="font-bold text-green-600">{formatCurrency(data.summary.totalIncome)}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                <div className="flex justify-between items-start mb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-black text-emerald-600 tracking-wider">Total Ingresos</p>
+                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </div>
                 </div>
-                <div className={`p-2 rounded border ${colors.border} ${colors.light}`}>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Egresos</p>
-                  <p className="font-bold text-red-600">{formatCurrency(data.summary.totalExpense)}</p>
+                <p className="text-2xl font-black text-slate-900 relative z-10">{formatCurrency(data.summary.totalIncome)}</p>
+                <div className="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <ArrowUpRight className="h-16 w-16 text-emerald-600" />
                 </div>
-                <div className={`p-2 rounded border ${colors.border} ${colors.light}`}>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Final</p>
-                  <p className={`font-bold ${data.summary.finalBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    {formatCurrency(data.summary.finalBalance)}
-                  </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-red-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+                <div className="flex justify-between items-start mb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-black text-red-600 tracking-wider">Total Egresos</p>
+                  <div className="p-1.5 rounded-lg bg-red-50 text-red-600">
+                    <ArrowDownRight className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-2xl font-black text-slate-900 relative z-10">{formatCurrency(data.summary.totalExpense)}</p>
+                <div className="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <ArrowDownRight className="h-16 w-16 text-red-600" />
+                </div>
+              </div>
+
+              <div className={`p-4 rounded-xl border shadow-sm relative overflow-hidden group transition-all hover:shadow-md ${data.summary.finalBalance >= 0 ? "border-slate-200 bg-slate-900" : "border-red-200 bg-red-900"}`}>
+                <div className="flex justify-between items-start mb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Saldo en Caja</p>
+                  <div className="p-1.5 rounded-lg bg-white/10 text-white">
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-2xl font-black text-white relative z-10">{formatCurrency(data.summary.finalBalance)}</p>
+                <div className="absolute -right-2 -bottom-2 opacity-10">
+                  <TrendingUp className="h-16 w-16 text-white" />
                 </div>
               </div>
             </div>
@@ -512,60 +550,64 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
         </div>
 
         {/* Tabla de Transacciones */}
-        <div className="overflow-auto max-h-[50vh]">
+        <div className="overflow-auto max-h-[50vh] scrollbar-thin scrollbar-thumb-slate-200">
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Cargando transacciones...</div>
+            <div className="p-12 text-center flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
+              <p className="text-sm font-medium text-slate-500">Recuperando registros...</p>
+            </div>
           ) : data?.transactions.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No hay transacciones en este período</div>
+            <div className="p-12 text-center flex flex-col items-center gap-4">
+              <div className="p-4 rounded-full bg-slate-50 text-slate-300">
+                <History className="h-10 w-10" />
+              </div>
+              <p className="text-sm font-medium text-slate-500 max-w-[200px]">No se encontraron transacciones en este período.</p>
+            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className={`${colors.light} sticky top-0`}>
+            <table className="w-full text-sm border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20">
                 <tr>
-                  <th className="text-left p-3 font-bold">Fecha / Hora</th>
-                  <th className="text-left p-3 font-bold">Tipo</th>
-                  <th className="text-left p-3 font-bold">Categoría</th>
-                  <th className="text-left p-3 font-bold">Referencia</th>
-                  <th className="text-right p-3 font-bold">Monto</th>
-                  <th className="text-right p-3 font-bold">Ingreso</th>
-                  <th className="text-right p-3 font-bold">Egreso</th>
-                  <th className="text-right p-3 font-bold">Saldo</th>
+                  <th className="text-left px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Fecha / Hora</th>
+                  <th className="text-left px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Operación</th>
+                  <th className="text-left px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Detalle</th>
+                  <th className="text-right px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Ingreso</th>
+                  <th className="text-right px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Egreso</th>
+                  <th className="text-right px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b pr-8">Saldo Correlativo</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {data?.transactions.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-muted/50">
-                    <td className="p-3">
-                      <div className="font-medium">{new Date(t.createdAt).toLocaleDateString("es-BO")}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(t.createdAt).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}</div>
+                  <tr key={t.id} className="group hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-bold text-slate-900">{new Date(t.createdAt).toLocaleDateString("es-BO")}</div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase">{new Date(t.createdAt).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}</div>
                     </td>
-                    <td className="p-3">
-                      <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}>
-                        {t.type === "income" ? "INGRESO" : "EGRESO"}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-1">
-                        {t.type === "income" ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-600" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-600" />
-                        )}
-                        {categoryLabel(t.category)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-tight ${
+                        t.type === "income" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                      }`}>
+                        {t.type === "income" ? "ENTRADA" : "SALIDA"}
                       </div>
-                      {t.notes && <p className="text-xs text-muted-foreground truncate max-w-48">{t.notes}</p>}
                     </td>
-                    <td className="p-3 font-mono text-xs">{t.referenceId ? `#${t.referenceId}` : "—"}</td>
-                    <td className={`p-3 text-right font-mono font-bold ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                      {t.type === "income" ? "+" : "-"} {formatCurrency(t.amount)}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${t.type === "income" ? "bg-emerald-500" : "bg-red-500"}`} />
+                        <span className="font-bold text-slate-700 truncate max-w-[180px]">{categoryLabel(t.category)}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">
+                        {t.referenceId ? `REF: #${t.referenceId}` : ""} {t.notes ? `· ${t.notes}` : ""}
+                      </div>
                     </td>
-                    <td className="p-3 text-right font-mono text-green-600">
-                      {t.type === "income" ? formatCurrency(t.amount) : ""}
+                    <td className="px-6 py-4 text-right font-mono text-emerald-600 font-bold whitespace-nowrap">
+                      {t.type === "income" ? `+ ${formatCurrency(t.amount)}` : "—"}
                     </td>
-                    <td className="p-3 text-right font-mono text-red-600">
-                      {t.type === "expense" ? formatCurrency(t.amount) : ""}
+                    <td className="px-6 py-4 text-right font-mono text-red-600 font-bold whitespace-nowrap">
+                      {t.type === "expense" ? `- ${formatCurrency(t.amount)}` : "—"}
                     </td>
-                    <td className={`p-3 text-right font-mono font-bold ${t.runningBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
-                      {formatCurrency(t.runningBalance)}
+                    <td className="px-6 py-4 text-right pr-8 whitespace-nowrap">
+                       <span className={`inline-block font-black font-mono text-base ${t.runningBalance >= 0 ? "text-slate-900" : "text-red-700"}`}>
+                        {formatCurrency(t.runningBalance)}
+                       </span>
                     </td>
                   </tr>
                 ))}
@@ -575,20 +617,34 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
         </div>
 
         {/* Acciones */}
-        <div className="p-4 border-t flex justify-between">
-          <div className="text-sm text-muted-foreground">
-            {data?.summary.count || 0} transacciones
+        <div className="p-6 border-t bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2 w-2 rounded-full bg-slate-300"></span>
+            <span className="text-xs font-black text-slate-500 uppercase tracking-tighter">
+              Mostrando {data?.transactions.length || 0} registros
+            </span>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCsv} className="gap-2">
-              <Download className="h-4 w-4" /> Exportar CSV
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportCsv} 
+              className="flex-1 sm:flex-initial gap-2 bg-white font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <Download className="h-4 w-4" /> CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" /> Imprimir
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handlePrint} 
+              className="flex-1 sm:flex-initial gap-2 bg-white font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <Printer className="h-4 w-4" /> PDF
             </Button>
             <Button
-              variant="ghost"
+              variant="default"
               size="sm"
+              className="flex-1 sm:flex-initial font-black uppercase tracking-widest text-[10px] px-6"
               onClick={() => onOpenChange(false)}
             >
               Cerrar

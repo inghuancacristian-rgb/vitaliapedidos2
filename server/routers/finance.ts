@@ -357,20 +357,15 @@ export const financeRouter = router({
         isOpening: false,
       }));
 
-      // Combinar y ordenar por fecha descendente
-      const allRows = [...openingRows, ...txRows].sort((a: any, b: any) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      // Combinar y ordenar por fecha ASCENDENTE para el cálculo correcto del saldo correlativo
+      const sortedAsc = [...openingRows, ...txRows].sort((a: any, b: any) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
 
-      // Calcular saldo acumulado partiendo de cero (sin base inicial)
+      // Calcular saldo acumulado correlativo
       let runningBalance = 0;
-      // Para un saldo correcto, necesitamos empezar desde la apertura más antigua
-      // que esté dentro o antes del rango, y aplicar el balance de todas las filas
-      // que vienen antes cronológicamente
-      const transactionsWithBalance = allRows.map((t: any) => {
-        if (t.isOpening) {
-          runningBalance += t.amount;
-        } else if (t.type === "income") {
+      const calculatedRows = sortedAsc.map((t: any) => {
+        if (t.isOpening || t.type === "income") {
           runningBalance += t.amount;
         } else {
           runningBalance -= t.amount;
@@ -381,13 +376,41 @@ export const financeRouter = router({
         };
       });
 
+      // Filtrar por rango de fechas (después de calcular el saldo para mantener la correlación histórica si es posible, 
+      // aunque aquí el saldo inicial siempre parte de 0 en el set completo por ahora)
+      let finalRows = calculatedRows;
+      if (input.startDate) {
+        finalRows = finalRows.filter((t: any) => {
+          const txDate = getLocalDateKey(t.createdAt);
+          return txDate && txDate >= input.startDate!;
+        });
+      }
+      if (input.endDate) {
+        finalRows = finalRows.filter((t: any) => {
+          const txDate = getLocalDateKey(t.createdAt);
+          return txDate && txDate <= input.endDate!;
+        });
+      }
+
+      // Ordenar por fecha DESCENDENTE para mostrar lo más reciente arriba (Historial)
+      const transactionsWithBalance = [...finalRows].sort((a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      const totalIncome = finalRows
+        .filter((t: any) => t.type === "income")
+        .reduce((sum: number, t: any) => sum + t.amount, 0);
+      
+      const totalExpense = finalRows
+        .filter((t: any) => t.type === "expense")
+        .reduce((sum: number, t: any) => sum + t.amount, 0);
+
       return {
         transactions: transactionsWithBalance,
         summary: {
-          totalIncome: filtered.filter((t: any) => t.type === "income").reduce((sum: number, t: any) => sum + t.amount, 0)
-            + visibleOpenings.reduce((sum: number, o: any) => sum + o.openingAmount, 0),
-          totalExpense: filtered.filter((t: any) => t.type === "expense").reduce((sum: number, t: any) => sum + t.amount, 0),
-          finalBalance: runningBalance,
+          totalIncome,
+          totalExpense,
+          finalBalance: runningBalance, // Este es el saldo final absoluto del set completo
           count: transactionsWithBalance.length,
         },
       };
