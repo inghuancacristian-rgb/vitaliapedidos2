@@ -1073,7 +1073,7 @@ function AddExpenseDialog() {
               </Select></div>
           </div>
           <div className="space-y-2"><Label>Descripcion</Label><Input placeholder="Ej: Carga de Nafta" onChange={(e) => setExpense({ ...expense, notes: e.target.value })} /></div>
-          <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => mutation.mutate({ ...expense, amount: Math.round(expense.amount * 100) })} disabled={mutation.isPending}>{mutation.isPending ? \"Registrando...\" : \"Registrar Gasto\"}</Button>
+          <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => mutation.mutate({ ...expense, amount: Math.round(expense.amount * 100) })} disabled={mutation.isPending}>{mutation.isPending ? "Registrando..." : "Registrar Gasto"}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1092,7 +1092,7 @@ function TransferDialog() {
     const amount = parseFloat(form.amount);
     if (isNaN(amount) || amount <= 0) { toast.error("Ingresa un monto valido"); return; }
     if (form.fromMethod === form.toMethod) { toast.error("Las cajas deben ser distintas"); return; }
-    mutation.mutate({ fromMethod: form.fromMethod as \"cash\" | \"qr\" | \"transfer\", toMethod: form.toMethod as \"cash\" | \"qr\" | \"transfer\", amount: Math.round(amount * 100), notes: form.notes });
+    mutation.mutate({ fromMethod: form.fromMethod as "cash" | "qr" | "transfer", toMethod: form.toMethod as "cash" | "qr" | "transfer", amount: Math.round(amount * 100), notes: form.notes });
   };
 
   return (
