@@ -738,7 +738,7 @@ export async function updateOrder(orderId: number, data: Partial<InsertOrder>) {
         MOCK_FINANCIAL_TRANSACTIONS.push({
           id: MOCK_FINANCIAL_TRANSACTIONS.length + 1,
           type: "income",
-          category: "sale",
+          category: "order_delivery",
           amount: MOCK_ORDERS[index].totalPrice,
           referenceId: orderId,
           notes: "Venta Pedido " + MOCK_ORDERS[index].orderNumber,
@@ -2209,7 +2209,7 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
     if (payload.paymentStatus === "completed") {
       await createFinancialTransaction({
         type: "income",
-        category: "sale",
+        category: payload.saleChannel === "delivery" ? "sale_delivery" : "sale_local",
         amount: payload.total,
         referenceId: newSaleId,
         notes: getSaleFinanceNote(payload.saleNumber),
@@ -2289,7 +2289,7 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
     if (payload.paymentStatus === "completed") {
       await tx.insert(financialTransactions).values({
         type: "income",
-        category: "sale",
+        category: payload.saleChannel === "delivery" ? "sale_delivery" : "sale_local",
         amount: payload.total,
         referenceId: saleId,
         notes: getSaleFinanceNote(payload.saleNumber),
@@ -2328,7 +2328,7 @@ export async function markSalePaymentCompleted(saleId: number) {
   await updateSale(saleId, { paymentStatus: "completed" });
   await createFinancialTransaction({
     type: "income",
-    category: "sale",
+    category: sale.saleChannel === "delivery" ? "sale_delivery" : "sale_local",
     amount: sale.total,
     referenceId: saleId,
     notes: getSaleFinanceNote(sale.saleNumber),

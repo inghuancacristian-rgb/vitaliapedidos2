@@ -46,8 +46,10 @@ function paymentMethodLabel(method: string) {
 function categoryLabel(cat: string) {
   const labels: Record<string, string> = {
     sale: "Venta",
+    sale_local: "Venta Local",
+    sale_delivery: "Venta Delivery",
     purchase: "Compra",
-    order_delivery: "Entrega Pedido",
+    order_delivery: "Pedido",
     sale_cancellation: "Anulación Venta",
     fuel: "Combustible",
     subsistence: "Viáticos",
@@ -951,9 +953,15 @@ function TransferDialog() {
 function TransactionRow({ transaction }: { transaction: any }) {
   const [showDetail, setShowDetail] = useState(false);
   const categoryLabels: Record<string, string> = {
-    sale: "Venta", purchase: "Compra", order_delivery: "Entrega de Pedido",
-    sale_cancellation: "Anulacion de Venta", fuel: "Combustible",
-    subsistence: "Viaticos / Comida", transfer: "Traspaso",
+    sale: "Venta",
+    sale_local: "Venta Local",
+    sale_delivery: "Venta Delivery",
+    purchase: "Compra",
+    order_delivery: "Pedido",
+    sale_cancellation: "Anulacion de Venta",
+    fuel: "Combustible",
+    subsistence: "Viaticos / Comida",
+    transfer: "Traspaso",
     transfer_between_registers: "Traspaso Cajas",
   };
 
@@ -1227,9 +1235,15 @@ function PrintSaleContent({ detail }: { detail: any }) {
 function BasicTransactionDialog({ transaction, onClose, onPrint }: { transaction: any; onClose: () => void; onPrint: () => void }) {
   const typeLabel = transaction.type === "income" ? "INGRESO" : "EGRESO";
   const categoryLabels: Record<string, string> = {
-    sale: "Venta", purchase: "Compra", order_delivery: "Entrega de Pedido",
-    sale_cancellation: "Anulacion de Venta", fuel: "Combustible",
-    subsistence: "Viaticos / Comida", transfer: "Traspaso",
+    sale: "Venta",
+    sale_local: "Venta Local",
+    sale_delivery: "Venta Delivery",
+    purchase: "Compra",
+    order_delivery: "Pedido",
+    sale_cancellation: "Anulacion de Venta",
+    fuel: "Combustible",
+    subsistence: "Viaticos / Comida",
+    transfer: "Traspaso",
     transfer_between_registers: "Traspaso Cajas",
   };
   const methodLabels: Record<string, string> = { cash: "Caja Efectivo", qr: "Caja QR", transfer: "Cuenta Bancaria" };
