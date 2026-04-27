@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { MapPin, Phone, MessageCircle, Navigation } from "lucide-react";
 import { useRoute } from "wouter";
+import { formatCurrency } from "@/lib/currency";
 
 export default function Tracking() {
   const { user } = useAuth();
@@ -77,8 +78,8 @@ export default function Tracking() {
     );
   }
 
-  const { order } = orderDetails;
-  const whatsappNumber = orderDetails.order.customerId; // Esto debería venir del cliente
+  const { order, customer } = orderDetails;
+  const whatsappNumber = customer?.whatsapp || customer?.phone || "";
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
@@ -104,7 +105,7 @@ export default function Tracking() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="font-semibold mt-1">${(order.totalPrice / 100).toFixed(2)}</p>
+                <p className="font-semibold mt-1">{formatCurrency(order.totalPrice)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Método de pago</p>
@@ -165,7 +166,7 @@ export default function Tracking() {
             <div className="flex flex-col md:flex-row gap-4">
               {/* Botón de WhatsApp */}
               <a
-                href={`https://wa.me/+5491234567890?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}%20en%20la%20zona%20de%20${order.zone}`}
+                href={`https://wa.me/${whatsappNumber}?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}%20en%20la%20zona%20de%20${order.zone}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1"
@@ -177,7 +178,7 @@ export default function Tracking() {
               </a>
 
               {/* Botón de llamada */}
-              <a href="tel:+5491234567890" className="flex-1">
+              <a href={`tel:${customer?.phone || ""}`} className="flex-1">
                 <Button variant="outline" className="w-full gap-2">
                   <Phone className="h-4 w-4" />
                   Llamar

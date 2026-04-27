@@ -13,6 +13,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 export default function OrderDetail() {
   const { user } = useAuth();
   const [, params] = useRoute("/order/:orderId");
+  const [, setLocation] = useLocation();
   const orderId = params?.orderId ? parseInt(params.orderId) : null;
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
@@ -42,7 +43,7 @@ export default function OrderDetail() {
     );
   }
 
-  const { order, items } = orderDetails;
+  const { order, items, customer } = orderDetails;
 
   const handleMarkAsDelivered = () => {
     if (user?.role === "user") {
@@ -124,7 +125,7 @@ export default function OrderDetail() {
           <div className="grid grid-cols-2 gap-8 mb-8 bg-gray-50 p-4 rounded-lg">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cliente</p>
-              <p className="font-bold text-lg">{(order as any).customerName || "Consumidor Final"}</p>
+              <p className="font-bold text-lg">{customer?.name || "Consumidor Final"}</p>
               <p className="text-sm text-gray-600">Zona: {order.zone}</p>
             </div>
             <div className="text-right">
@@ -314,7 +315,7 @@ export default function OrderDetail() {
               </Button>
 
               <a
-                href={`https://wa.me/+5491234567890?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}`}
+                href={`https://wa.me/${customer?.whatsapp || customer?.phone || ''}?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
