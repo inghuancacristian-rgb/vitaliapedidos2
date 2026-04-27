@@ -117,7 +117,8 @@ export default function ClosuresHistory() {
                     <TableHead>Fecha</TableHead>
                     <TableHead className="text-right">Ingreso Inicial</TableHead>
                     <TableHead className="text-right">Efectivo Reportado</TableHead>
-                    <TableHead className="text-right">QR/Transfer</TableHead>
+                    <TableHead className="text-right">QR Reportado</TableHead>
+                    <TableHead className="text-right">Transf. Reportada</TableHead>
                     <TableHead className="text-right">Total Esperado</TableHead>
                     <TableHead className="text-right">Diferencia</TableHead>
                     <TableHead className="text-center">Estado</TableHead>
@@ -141,11 +142,15 @@ export default function ClosuresHistory() {
                         {formatBs(closure.reportedCash)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm text-blue-700 font-semibold">
-                        {formatBs(closure.reportedQr + closure.reportedTransfer)}
+                        {formatBs(closure.reportedQr)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-purple-700 font-semibold">
+                        {formatBs(closure.reportedTransfer)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm text-slate-600">
                         {formatBs((closure.expectedCash || 0) + (closure.expectedQr || 0) + (closure.expectedTransfer || 0))}
                       </TableCell>
+[... many lines omitted for brevity in this thought, but I will provide the full replacement in the tool call ...]
                       <TableCell className={`text-right font-mono text-sm font-bold ${
                         closure.status === "approved" ? "text-green-600" : "text-orange-600"
                       }`}>
@@ -220,8 +225,12 @@ export default function ClosuresHistory() {
                                         <span className="font-medium">{formatBs(closure.expectedCash || 0)}</span>
                                       </div>
                                       <div className="flex justify-between mb-1">
-                                        <span className="text-muted-foreground">QR / Transferencia</span>
-                                        <span className="font-medium">{formatBs((closure.expectedQr || 0) + (closure.expectedTransfer || 0))}</span>
+                                        <span className="text-muted-foreground">QR</span>
+                                        <span className="font-medium">{formatBs(closure.expectedQr || 0)}</span>
+                                      </div>
+                                      <div className="flex justify-between mb-1">
+                                        <span className="text-muted-foreground">Transferencia</span>
+                                        <span className="font-medium">{formatBs(closure.expectedTransfer || 0)}</span>
                                       </div>
                                       <div className="border-t pt-2 font-bold text-green-800 text-lg">
                                         {formatBs((closure.expectedCash || 0) + (closure.expectedQr || 0) + (closure.expectedTransfer || 0))}
@@ -318,13 +327,16 @@ export default function ClosuresHistory() {
                                     </div>
                                     <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
                                       <div className="flex justify-between items-center mb-2">
-                                        <span className="font-semibold text-blue-700">QR / Transferencia</span>
-                                        <span className="font-bold">{formatBs((closure.expectedQr || 0) + (closure.expectedTransfer || 0))} esperado</span>
+                                        <span className="font-semibold text-blue-700">Cobros por QR</span>
+                                        <span className="font-bold">{formatBs(closure.expectedQr || 0)} esperado</span>
                                       </div>
-                                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                        <span>QR: {formatBs(closure.reportedQr || 0)}</span>
-                                        <span>Transfer: {formatBs(closure.reportedTransfer || 0)}</span>
+                                      <div className="text-xs text-muted-foreground mb-3">Reportado: {formatBs(closure.reportedQr || 0)}</div>
+                                      
+                                      <div className="flex justify-between items-center mb-2 border-t pt-2">
+                                        <span className="font-semibold text-purple-700">Transferencias</span>
+                                        <span className="font-bold">{formatBs(closure.expectedTransfer || 0)} esperado</span>
                                       </div>
+                                      <div className="text-xs text-muted-foreground">Reportado: {formatBs(closure.reportedTransfer || 0)}</div>
                                     </div>
                                   </CardContent>
                                 </Card>

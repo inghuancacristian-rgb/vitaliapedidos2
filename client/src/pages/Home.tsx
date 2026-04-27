@@ -218,44 +218,55 @@ export default function Home() {
     );
   }
 
-  if (user?.role !== "admin") {
-    const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-    const isLocked = closureStatus?.hasPending;
+  // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
+  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
+  const isLockedByPending = closureStatus?.hasPending;
+  const isLockedByNoOpening = !openingStatus?.hasActive;
 
-    if (isLocked) {
-      return (
-        <div className="page-shell flex items-center justify-center">
-          <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
-            <CardHeader className="text-center">
-              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Receipt className="w-8 h-8 text-blue-600" />
-              </div>
-              <CardTitle className="text-2xl font-black text-slate-800">Aplicación Inhabilitada</CardTitle>
-              <CardDescription className="text-slate-500 font-medium text-base">
-                Para poder utilizar la aplicación, solicite la habilitación en administración.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-slate-400 text-center italic">
-                Cierre de caja ({closureStatus?.pendingClosure?.date}) en revisión.
-              </p>
-              <div className="p-4 bg-blue-50 rounded-xl text-center">
-                <Badge className="bg-blue-600 font-bold px-3 py-1">
-                  PENDIENTE DE APROBACIÓN
-                </Badge>
-              </div>
-              <Link href="/repartidor/finance">
-                <Button className="w-full">Ver estado de mi caja</Button>
-              </Link>
-              <Button variant="ghost" className="w-full" onClick={logout}>
-                Cerrar sesión
+  // Si el usuario no es admin o si el admin quiere ver el bloqueo
+  if (isLockedByPending || isLockedByNoOpening) {
+    return (
+      <div className="page-shell flex items-center justify-center">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Receipt className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black text-slate-800">
+              {isLockedByPending ? "Aplicación Inhabilitada" : "Caja Cerrada"}
+            </CardTitle>
+            <CardDescription className="text-slate-500 font-medium text-base">
+              {isLockedByPending 
+                ? "Para poder utilizar la aplicación, solicite la habilitación en administración."
+                : "Debes abrir tu caja diaria para poder realizar ventas y entregas."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`p-4 rounded-xl text-center ${isLockedByPending ? "bg-blue-50" : "bg-amber-50"}`}>
+              <Badge className={`${isLockedByPending ? "bg-blue-600" : "bg-amber-600"} font-bold px-3 py-1 uppercase`}>
+                {isLockedByPending ? "PENDIENTE DE APROBACIÓN" : "APERTURA REQUERIDA"}
+              </Badge>
+              {isLockedByPending && (
+                <p className="text-[10px] text-slate-400 mt-2 italic">
+                  Cierre de caja ({closureStatus?.pendingClosure?.date}) en revisión.
+                </p>
+              )}
+            </div>
+            <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
+              <Button className="w-full h-11 font-bold">
+                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
               </Button>
-            </CardContent>
-          </Card>
-          <div className="fixed bottom-2 right-2 text-[8px] text-slate-300">v1.0.4-locked</div>
-        </div>
-      );
-    }
+            </Link>
+            <Button variant="ghost" className="w-full" onClick={logout}>
+              Cerrar sesión
+            </Button>
+          </CardContent>
+        </Card>
+        <div className="fixed bottom-2 right-2 text-[8px] text-slate-300 font-mono">v1.1.5-sync-locked</div>
+      </div>
+    );
+  }
 
     return (
       <div className="page-shell">

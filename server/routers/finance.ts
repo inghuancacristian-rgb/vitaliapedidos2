@@ -254,16 +254,28 @@ export const financeRouter = router({
   hasPendingClosure: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) return { hasPending: false };
-    console.log(`[Finance] Checking pending closure for user ${userId}`);
     const closures = await getCashClosuresByUserId(userId);
     const pendingClosure = closures.find((c: any) => c.status === "pending");
-    console.log(`[Finance] User ${userId} has pending: ${!!pendingClosure}`);
-    if (pendingClosure) {
-      console.log(`[Finance] Found pending closure: ID ${pendingClosure.id} for date ${pendingClosure.date}`);
-    }
     return { 
       hasPending: !!pendingClosure,
       pendingClosure 
+    };
+  }),
+
+  // Verificar si tiene una apertura de caja ACTIVA para hoy (para bloquear ventas)
+  hasActiveOpening: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user?.id;
+    if (!userId) return { hasActive: false };
+    
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+    const today = new Date(now.getTime() - offsetMs).toISOString().split("T")[0];
+    
+    // Verificamos si tiene apertura de efectivo abierta hoy
+    const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, "cash");
+    return { 
+      hasActive: !!activeOpening && activeOpening.status === "open",
+      activeOpening 
     };
   }),
 
@@ -319,11 +331,13 @@ export const financeRouter = router({
           // Registrar las transacciones de las entregas pendientes de registrar
           await createFinancialTransactionsForDeliveries(input.id, closure.userId, closure.date);
           
-          // Cerrar la apertura de caja activa de este usuario para que no siga sumando
-          // Asumimos efectivo por defecto para los repartidores en este flujo
-          const activeOpening = await getCashOpeningByUserIdAndDateMethod(closure.userId, closure.date, "cash");
-          if (activeOpening) {
-            await updateCashOpeningStatus(activeOpening.id, "closed");
+          // Cerrar TODAS las aperturas de caja activas de este usuario (Efectivo, QR, Transferencia)
+          const methods = ["cash", "qr", "transfer"];
+          for (const method of methods) {
+            const activeOpening = await getCashOpeningByUserIdAndDateMethod(closure.userId, closure.date, method);
+            if (activeOpening) {
+              await updateCashOpeningStatus(activeOpening.id, "closed");
+            }
           }
         }
       }
