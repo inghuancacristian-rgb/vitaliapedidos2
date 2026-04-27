@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -394,9 +395,11 @@ export default function Inventory() {
             <p className="text-sm text-slate-500 mb-6">
               Una vez el administrador apruebe tu cierre, podrás volver a acceder a esta sección.
             </p>
-            <Button className="w-full" onClick={() => window.location.href = "/repartidor/finance"}>
-              Ir a Cierre de Caja
-            </Button>
+            <Link href="/repartidor/finance">
+              <Button className="w-full">
+                Ir a Cierre de Caja
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

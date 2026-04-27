@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
@@ -202,9 +203,11 @@ export default function Customers() {
             <p className="text-sm text-slate-500 mb-6">
               Una vez el administrador apruebe tu cierre, podrás volver a acceder a la base de clientes.
             </p>
-            <Button className="w-full" onClick={() => window.location.href = "/repartidor/finance"}>
-              Ir a Cierre de Caja
-            </Button>
+            <Link href="/repartidor/finance">
+              <Button className="w-full">
+                Ir a Cierre de Caja
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

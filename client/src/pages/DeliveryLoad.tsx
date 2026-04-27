@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -255,9 +256,11 @@ export default function DeliveryLoad() {
             <p className="text-sm text-slate-500 mb-6">
               Una vez el administrador apruebe tu cierre, podrás volver a ver tus pedidos asignados.
             </p>
-            <Button variant="outline" className="w-full" onClick={() => window.location.href = "/repartidor/finance"}>
-              Ir a Cierre de Caja
-            </Button>
+            <Link href="/repartidor/finance">
+              <Button variant="outline" className="w-full">
+                Ir a Cierre de Caja
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
