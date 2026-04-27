@@ -35,6 +35,7 @@ export default function RepartidorFinance() {
     expenses: "",
   });
 
+  const { data: anyPending } = trpc.finance.hasPendingClosure.useQuery();
   const { data: status, refetch: refetchStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
   const { data: pendingOrders } = trpc.finance.getPendingOrders.useQuery({});
   const { data: expected, isLoading: isLoadingExpected } = trpc.finance.getExpectedDaily.useQuery({ date: today });
@@ -78,7 +79,12 @@ export default function RepartidorFinance() {
     }
   };
 
-  if (status && status.status === "pending") {
+  const isLockedByPending = anyPending?.hasPending;
+  const currentStatus = anyPending?.pendingClosure || status;
+
+  if (isLockedByPending) {
+    const displayStatus = currentStatus;
+    const displayDate = displayStatus?.date || today;
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
         <Card className="border-t-4 border-t-blue-500 shadow-xl overflow-hidden">
@@ -88,7 +94,7 @@ export default function RepartidorFinance() {
             </div>
             <CardTitle className="text-2xl font-black text-slate-800">Cierre en Revisión</CardTitle>
             <CardDescription className="text-slate-500 font-medium">
-              Tu reporte del día {today} ha sido enviado al administrador.
+              Tu reporte del día {displayDate} ha sido enviado al administrador.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
@@ -107,7 +113,7 @@ export default function RepartidorFinance() {
                   </div>
                   <div>
                     <p className="text-xs font-black text-orange-700 uppercase tracking-wider">Monto Pendiente de Entregas</p>
-                    <p className="text-2xl font-black text-orange-800">{formatCurrency(status.pendingOrders)}</p>
+                    <p className="text-2xl font-black text-orange-800">{formatCurrency(displayStatus?.pendingOrders || 0)}</p>
                     <p className="text-[10px] text-orange-500 italic">Pedidos asignados y sin entregar</p>
                   </div>
                 </div>
@@ -118,19 +124,19 @@ export default function RepartidorFinance() {
               <Card className="bg-slate-50/50 border-none shadow-none">
                 <CardContent className="p-4 text-center">
                   <p className="text-[10px] text-slate-400 font-black uppercase mb-1">Efectivo Enviado</p>
-                  <p className="text-2xl font-black text-slate-700">{formatCurrency(status.reportedCash)}</p>
+                  <p className="text-2xl font-black text-slate-700">{formatCurrency(displayStatus?.reportedCash || 0)}</p>
                 </CardContent>
               </Card>
               <Card className="bg-slate-50/50 border-none shadow-none">
                 <CardContent className="p-4 text-center">
                   <p className="text-[10px] text-slate-400 font-black uppercase mb-1">QR Enviado</p>
-                  <p className="text-2xl font-black text-slate-700">{formatCurrency(status.reportedQr)}</p>
+                  <p className="text-2xl font-black text-slate-700">{formatCurrency(displayStatus?.reportedQr || 0)}</p>
                 </CardContent>
               </Card>
               <Card className="bg-slate-50/50 border-none shadow-none">
                 <CardContent className="p-4 text-center">
                   <p className="text-[10px] text-slate-400 font-black uppercase mb-1">Transf. Enviada</p>
-                  <p className="text-2xl font-black text-slate-700">{formatCurrency(status.reportedTransfer)}</p>
+                  <p className="text-2xl font-black text-slate-700">{formatCurrency(displayStatus?.reportedTransfer || 0)}</p>
                 </CardContent>
               </Card>
             </div>

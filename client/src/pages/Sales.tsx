@@ -469,12 +469,12 @@ export default function Sales() {
     })));
   };
 
-  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-  const isLocked = user?.role === "user" && closureStatus?.hasPending;
+  const { data: closureStatus, isLoading: isClosureLoading } = trpc.finance.hasPendingClosure.useQuery();
+  const isLocked = user && user.role !== "admin" && closureStatus?.hasPending;
 
   if (isLocked) {
     return (
-      <div className="page-shell flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
           <CardHeader className="text-center">
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -487,13 +487,14 @@ export default function Sales() {
           </CardHeader>
           <CardContent className="text-center pb-6">
             <p className="text-sm text-slate-400 mb-6 italic">
-              Tu cierre de caja está siendo revisado por el administrador.
+              Tu cierre de caja ({closureStatus?.pendingClosure?.date}) está siendo revisado por el administrador.
             </p>
             <Link href="/repartidor/finance">
               <Button className="w-full font-bold">Ver Estado de mi Caja</Button>
             </Link>
           </CardContent>
         </Card>
+        <div className="fixed bottom-2 right-2 text-[8px] text-slate-300">v1.0.4-locked</div>
       </div>
     );
   }

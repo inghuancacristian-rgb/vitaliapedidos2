@@ -254,9 +254,17 @@ export const financeRouter = router({
   hasPendingClosure: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user?.id;
     if (!userId) return { hasPending: false };
+    console.log(`[Finance] Checking pending closure for user ${userId}`);
     const closures = await getCashClosuresByUserId(userId);
-    const hasPending = closures.some((c: any) => c.status === "pending");
-    return { hasPending };
+    const pendingClosure = closures.find((c: any) => c.status === "pending");
+    console.log(`[Finance] User ${userId} has pending: ${!!pendingClosure}`);
+    if (pendingClosure) {
+      console.log(`[Finance] Found pending closure: ID ${pendingClosure.id} for date ${pendingClosure.date}`);
+    }
+    return { 
+      hasPending: !!pendingClosure,
+      pendingClosure 
+    };
   }),
 
   // Obtener monto pendiente de órdenes sin entregar del repartidor

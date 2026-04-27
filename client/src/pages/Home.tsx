@@ -219,7 +219,7 @@ export default function Home() {
   }
 
     const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-    const isLocked = user?.role === "user" && closureStatus?.hasPending;
+    const isLocked = user && user.role !== "admin" && closureStatus?.hasPending;
 
     if (isLocked) {
       return (
@@ -235,6 +235,9 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <p className="text-sm text-slate-400 text-center italic">
+                Cierre de caja ({closureStatus?.pendingClosure?.date}) en revisión.
+              </p>
               <div className="p-4 bg-blue-50 rounded-xl text-center">
                 <Badge className="bg-blue-600 font-bold px-3 py-1">
                   PENDIENTE DE APROBACIÓN
@@ -248,6 +251,7 @@ export default function Home() {
               </Button>
             </CardContent>
           </Card>
+          <div className="fixed bottom-2 right-2 text-[8px] text-slate-300">v1.0.4-locked</div>
         </div>
       );
     }
