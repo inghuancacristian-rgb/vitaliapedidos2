@@ -18,6 +18,7 @@ import {
   createFinancialTransactionsForDeliveries,
   getAllOrders,
   getOrderItems,
+  updateCashOpeningStatus,
 } from "../db";
 import { TRPCError } from "@trpc/server";
 
@@ -289,8 +290,12 @@ export const financeRouter = router({
           // Registrar las transacciones de las entregas pendientes de registrar
           await createFinancialTransactionsForDeliveries(input.id, closure.userId, closure.date);
           
-          // NOTA: Se eliminó la apertura automática aquí para permitir que el admin
-          // abra la siguiente caja manualmente con el fondo inicial que desee.
+          // Cerrar la apertura de caja activa de este usuario para que no siga sumando
+          // Asumimos efectivo por defecto para los repartidores en este flujo
+          const activeOpening = await getCashOpeningByUserIdAndDateMethod(closure.userId, closure.date, "cash");
+          if (activeOpening) {
+            await updateCashOpeningStatus(activeOpening.id, "closed");
+          }
         }
       }
 

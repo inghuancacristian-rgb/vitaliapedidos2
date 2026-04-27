@@ -1691,6 +1691,19 @@ export async function createCashOpening(data: InsertCashOpening) {
   return await db.insert(cashOpenings).values(data);
 }
 
+export async function updateCashOpeningStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) {
+    const idx = MOCK_CASH_OPENINGS.findIndex(o => o.id === id);
+    if (idx !== -1) {
+      MOCK_CASH_OPENINGS[idx].status = status;
+      syncMocksToDisk();
+    }
+    return;
+  }
+  return await db.update(cashOpenings).set({ status }).where(eq(cashOpenings.id, id));
+}
+
 export async function getAllCashOpenings() {
   const db = await getDb();
   if (!db) {
