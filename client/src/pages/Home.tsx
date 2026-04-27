@@ -267,7 +267,7 @@ export default function Home() {
       </div>
     );
   }
-
+  if (isDelivery) {
     return (
       <div className="page-shell">
         <div className="page-container space-y-6">
