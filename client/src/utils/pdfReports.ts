@@ -470,6 +470,96 @@ export const generateAuditPDF = (logs: any[]) => {
   return doc;
 };
 
+// 8. REPORTE DE ARQUEO DE CAJA
+export const generateArqueoPDF = (data: any) => {
+  const doc = createPDF("Comprobante de Arqueo y Cierre");
+
+  let y = 45;
+
+  doc.setFontSize(12);
+  doc.setFont(undefined, "bold");
+  doc.text("DETALLES DEL CIERRE", 20, y);
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.text(`Fecha de Cierre: ${data.date}`, 20, y + 7);
+  doc.text(`Responsable: ${data.userName || "Administrador"}`, 20, y + 14);
+
+  y += 25;
+
+  autoTable(doc, {
+    ...getTableOptions(y),
+    head: [["Concepto", "Esperado (Sistema)", "Reportado (Físico)", "Diferencia"]],
+    body: [
+      [
+        "Efectivo", 
+        formatBs(data.expectedCash), 
+        formatBs(data.reportedCash), 
+        formatBs(data.reportedCash - data.expectedCash)
+      ],
+      [
+        "Caja QR", 
+        formatBs(data.expectedQr), 
+        formatBs(data.reportedQr), 
+        formatBs(data.reportedQr - data.expectedQr)
+      ],
+      [
+        "Transferencia", 
+        formatBs(data.expectedTransfer), 
+        formatBs(data.reportedTransfer), 
+        formatBs(data.reportedTransfer - data.expectedTransfer)
+      ]
+    ],
+    didParseCell: (data: any) => {
+      if (data.column.index === 3 && data.section === 'body') {
+        const value = data.cell.raw as string;
+        if (value.includes("-")) {
+          data.cell.styles.textColor = [220, 53, 69]; // Red for negative difference
+        } else if (value !== "Bs. 0.00") {
+          data.cell.styles.textColor = [76, 175, 80]; // Green for positive difference
+        }
+      }
+    }
+  });
+
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  
+  const totalExpected = data.expectedCash + data.expectedQr + data.expectedTransfer;
+  const totalReported = data.reportedCash + data.reportedQr + data.reportedTransfer;
+  const totalDiff = totalReported - totalExpected;
+
+  doc.setFontSize(12);
+  doc.setFont(undefined, "bold");
+  doc.text("TOTALES GLOBALES", 20, finalY);
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, "normal");
+  doc.text(`Total Esperado: ${formatBs(totalExpected)}`, 20, finalY + 7);
+  doc.text(`Total Reportado: ${formatBs(totalReported)}`, 20, finalY + 14);
+  
+  doc.setFont(undefined, "bold");
+  if (totalDiff < 0) {
+    doc.setTextColor(220, 53, 69);
+  } else if (totalDiff > 0) {
+    doc.setTextColor(76, 175, 80);
+  }
+  doc.text(`Diferencia Total: ${formatBs(totalDiff)}`, 20, finalY + 21);
+  doc.setTextColor(40, 40, 40);
+
+  // Firmas
+  y = finalY + 45;
+  doc.setLineWidth(0.5);
+  doc.line(30, y, 80, y);
+  doc.line(130, y, 180, y);
+  
+  doc.setFont(undefined, "normal");
+  doc.setFontSize(10);
+  doc.text("Firma Entregue", 55, y + 5, { align: "center" });
+  doc.text("Firma Recibí Conforme", 155, y + 5, { align: "center" });
+
+  return doc;
+};
+
 // Descargar PDF
 export const downloadPDF = (doc: jsPDF, filename: string) => {
   doc.save(filename);

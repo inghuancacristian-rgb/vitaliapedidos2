@@ -212,8 +212,10 @@ export const financeRouter = router({
       }
 
       const pending = input.pendingOrders ?? 0;
+      const isAdmin = ctx.user?.role === "admin";
+      const finalStatus = isAdmin ? "approved" : "pending";
 
-      return await createCashClosure({
+      const result = await createCashClosure({
         userId,
         date: input.date,
         initialCash: Math.round(input.initialCash),
@@ -225,8 +227,20 @@ export const financeRouter = router({
         expectedTransfer: Math.round(input.expectedTransfer),
         expenses: Math.round(input.expenses || 0),
         pendingOrders: Math.round(pending),
-        status: "pending"
+        status: finalStatus
       });
+
+      if (isAdmin) {
+        const methods = ["cash", "qr", "transfer"] as const;
+        for (const method of methods) {
+          const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, input.date, method);
+          if (activeOpening) {
+            await updateCashOpeningStatus(activeOpening.id, "closed");
+          }
+        }
+      }
+
+      return result;
     }),
 
   // Obtener mi estado de cierre para hoy

@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 import { Calculator } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { generateArqueoPDF, downloadPDF } from "@/utils/pdfReports";
 
 const BILLS = [200, 100, 50, 20, 10];
 const COINS = [5, 2, 1, 0.5, 0.2, 0.1];
@@ -27,6 +28,8 @@ export function ArqueoDialog({
   const [reportedTransfer, setReportedTransfer] = useState<number>(0);
 
   const utils = trpc.useContext();
+  const { data: user } = trpc.auth.getUser.useQuery();
+
   const getLocalDateInputValue = () => {
     const now = new Date();
     const offsetMs = now.getTimezoneOffset() * 60 * 1000;
@@ -48,13 +51,34 @@ export function ArqueoDialog({
 
   const mutation = trpc.finance.submitClosure.useMutation({
     onSuccess: () => {
-      toast.success("Cierre de caja registrado exitosamente. Esperando validación del administrador.");
+      toast.success("Cierre de caja procesado exitosamente.");
+      
+      const pdfData = {
+        date: getLocalDateInputValue(),
+        userName: user?.name || user?.username || "Usuario",
+        expectedCash,
+        reportedCash: totalReportedCash,
+        expectedQr,
+        reportedQr: Math.round(reportedQr * 100),
+        expectedTransfer,
+        reportedTransfer: Math.round(reportedTransfer * 100),
+      };
+      
+      try {
+        const doc = generateArqueoPDF(pdfData);
+        downloadPDF(doc, `Arqueo_Caja_${pdfData.date}.pdf`);
+      } catch (err) {
+        console.error("Error generando PDF", err);
+        toast.error("Cierre procesado, pero falló la generación del PDF.");
+      }
+
       setOpen(false);
       setCounts({});
       setReportedQr(0);
       setReportedTransfer(0);
       utils.finance.getTransactions.invalidate();
       utils.finance.listAllClosures.invalidate();
+      utils.finance.getCashOpenings.invalidate();
     },
     onError: (error) => {
       toast.error(error.message || "Error al procesar el cierre");
