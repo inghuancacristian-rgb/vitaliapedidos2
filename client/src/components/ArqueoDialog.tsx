@@ -65,12 +65,12 @@ export function ArqueoDialog({
     mutation.mutate({
       date: getLocalDateInputValue(),
       initialCash: 0,
-      reportedCash: totalReportedCash / 100,
-      reportedQr: reportedQr,
-      reportedTransfer: reportedTransfer,
-      expectedCash: expectedCash / 100,
-      expectedQr: expectedQr / 100,
-      expectedTransfer: expectedTransfer / 100,
+      reportedCash: totalReportedCash, // Ya estÃ¡ en centavos
+      reportedQr: Math.round(reportedQr * 100), // El input es float (Bs), pasamos a centavos
+      reportedTransfer: Math.round(reportedTransfer * 100), // El input es float (Bs), pasamos a centavos
+      expectedCash: expectedCash,
+      expectedQr: expectedQr,
+      expectedTransfer: expectedTransfer,
       expenses: 0,
     });
   };

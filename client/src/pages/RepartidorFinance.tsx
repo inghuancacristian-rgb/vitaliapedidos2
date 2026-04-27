@@ -63,11 +63,11 @@ export default function RepartidorFinance() {
     try {
       await submitMutation.mutateAsync({
         date: today,
-        initialCash: parseFloat(formData.initialCash) || 0,
-        reportedCash: parseFloat(formData.reportedCash) || 0,
-        reportedQr: parseFloat(formData.reportedQr) || 0,
-        reportedTransfer: parseFloat(formData.reportedTransfer) || 0,
-        expenses: parseFloat(formData.expenses) || 0,
+        initialCash: Math.round((parseFloat(formData.initialCash) || 0) * 100),
+        reportedCash: Math.round((parseFloat(formData.reportedCash) || 0) * 100),
+        reportedQr: Math.round((parseFloat(formData.reportedQr) || 0) * 100),
+        reportedTransfer: Math.round((parseFloat(formData.reportedTransfer) || 0) * 100),
+        expenses: Math.round((parseFloat(formData.expenses) || 0) * 100),
         expectedCash: expected?.cash || 0,
         expectedQr: expected?.qr || 0,
         expectedTransfer: expected?.transfer || 0,

@@ -890,28 +890,145 @@ function ClosureDetailDialog({ closure, onClose }: { closure: any, onClose: () =
             <Button onClick={handlePrint} className="gap-2 bg-slate-900 group"><Printer className="h-4 w-4" />Imprimir Recibo</Button>
           </DialogFooter>
         </div>
-        <div className="hidden print:block p-8 bg-white text-black w-full" id="print-area-closure">
-          <div className="text-center mb-6 border-b pb-4"><h1 className="text-2xl font-bold uppercase">Recibo de Liquidacion</h1><p className="text-sm">Control de Pedidos App</p></div>
-          <div className="grid grid-cols-2 gap-y-4 mb-8 text-sm">
-            <div><span className="font-bold">Nro. Arqueo:</span> #{`ARK-${String(closure.id).padStart(5, '0')}`}</div>
-            <div><span className="font-bold">Fecha:</span> {closure.date}</div>
-            <div><span className="font-bold">Repartidor:</span> {closure.userName}</div>
-            <div><span className="font-bold">Estado:</span> {closure.status === 'approved' ? 'APROBADO' : 'RECHAZADO'}</div>
+        <div className="hidden print:block p-8 bg-white text-slate-900 w-full font-sans" id="print-area-closure">
+          <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter uppercase text-slate-900">LiquidaciÃ³n de Caja</h1>
+              <p className="text-slate-500 font-bold tracking-widest text-xs uppercase">Control de Pedidos Â· Sistema de GestiÃ³n</p>
+            </div>
+            <div className="text-right">
+              <div className="bg-slate-900 text-white px-4 py-2 rounded-lg font-black text-xl mb-1">
+                #{String(closure.id).padStart(5, '0')}
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arqueo ID</p>
+            </div>
           </div>
-          <table className="w-full text-sm border-collapse mb-8"><thead><tr className="bg-gray-100 border border-gray-300">
-            <th className="p-2 text-left border-r border-gray-300">Concepto</th><th className="p-2 text-right border-r border-gray-300">Esperado</th><th className="p-2 text-right">Reportado</th>
-          </tr></thead>
-            <tbody>
-            <tr className="border-b"><td className="p-2 border-r">Efectivo</td><td className="p-2 text-right border-r">{formatCurrency(closure.expectedCash)}</td><td className="p-2 text-right">{formatCurrency(closure.reportedCash)}</td></tr>
-            <tr className="border-b"><td className="p-2 border-r">QR / Digital</td><td className="p-2 text-right border-r">{formatCurrency(closure.expectedQr)}</td><td className="p-2 text-right">{formatCurrency(closure.reportedQr)}</td></tr>
-            <tr className="border-b"><td className="p-2 border-r">Transferencia</td><td className="p-2 text-right border-r">{formatCurrency(closure.expectedTransfer)}</td><td className="p-2 text-right">{formatCurrency(closure.reportedTransfer)}</td></tr>
-            <tr className="bg-gray-100 font-bold"><td className="p-2 border-r">TOTAL</td><td className="p-2 text-right border-r">{formatCurrency(totalExp)}</td><td className="p-2 text-right">{formatCurrency(totalRep)}</td></tr>
-          </tbody></table>
-          <div className="mb-12"><p className="font-bold text-sm mb-1 uppercase">Diferencia: {diff === 0 ? 'OK' : formatCurrency(diff)}</p>
-            {closure.adminNotes && <p className="text-xs italic mt-2">{closure.adminNotes}</p>}</div>
-          <div className="mt-16 grid grid-cols-2 gap-12"><div className="text-center pt-8 border-t border-black"><p className="text-sm font-bold uppercase">Firma Administrador</p></div>
-            <div className="text-center pt-8 border-t border-black"><p className="text-sm font-bold uppercase">Firma Repartidor</p><p className="text-xs">{closure.userName}</p></div></div>
-          <div className="mt-8 text-[10px] text-center text-gray-400">Generado por Sistema de Control de Pedidos - {new Date().toLocaleString()}</div>
+
+          <div className="grid grid-cols-3 gap-8 mb-10">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Responsable</p>
+              <p className="text-lg font-bold text-slate-900">{closure.userName}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha de OperaciÃ³n</p>
+              <p className="text-lg font-bold text-slate-900">{closure.date}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado Final</p>
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${closure.status === 'approved' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <p className="text-lg font-black text-slate-900 uppercase">{closure.status === 'approved' ? 'Aprobado' : 'Rechazado'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-10">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-4 border-b pb-2">Desglose Detallado</h2>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 border-y border-slate-200">
+                  <th className="text-left px-4 py-3 font-black text-slate-600 uppercase text-[10px]">Concepto</th>
+                  <th className="text-right px-4 py-3 font-black text-slate-600 uppercase text-[10px]">Sugerido Sistema</th>
+                  <th className="text-right px-4 py-3 font-black text-slate-600 uppercase text-[10px]">Declarado Repartidor</th>
+                  <th className="text-right px-4 py-3 font-black text-slate-600 uppercase text-[10px]">Diferencia</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <tr>
+                  <td className="px-4 py-4 font-bold text-slate-700">Efectivo en Caja</td>
+                  <td className="px-4 py-4 text-right font-mono text-slate-500">{formatCurrency(closure.expectedCash)}</td>
+                  <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(closure.reportedCash)}</td>
+                  <td className={`px-4 py-4 text-right font-black ${closure.reportedCash - closure.expectedCash === 0 ? 'text-slate-400' : closure.reportedCash - closure.expectedCash > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatCurrency(closure.reportedCash - closure.expectedCash)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-4 font-bold text-slate-700">Pagos Digitales (QR)</td>
+                  <td className="px-4 py-4 text-right font-mono text-slate-500">{formatCurrency(closure.expectedQr)}</td>
+                  <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(closure.reportedQr)}</td>
+                  <td className={`px-4 py-4 text-right font-black ${closure.reportedQr - closure.expectedQr === 0 ? 'text-slate-400' : closure.reportedQr - closure.expectedQr > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatCurrency(closure.reportedQr - closure.expectedQr)}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-4 font-bold text-slate-700">Transferencias Bancarias</td>
+                  <td className="px-4 py-4 text-right font-mono text-slate-500">{formatCurrency(closure.expectedTransfer)}</td>
+                  <td className="px-4 py-4 text-right font-bold text-slate-900">{formatCurrency(closure.reportedTransfer)}</td>
+                  <td className={`px-4 py-4 text-right font-black ${closure.reportedTransfer - closure.expectedTransfer === 0 ? 'text-slate-400' : closure.reportedTransfer - closure.expectedTransfer > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatCurrency(closure.reportedTransfer - closure.expectedTransfer)}
+                  </td>
+                </tr>
+                <tr className="bg-slate-900 text-white">
+                  <td className="px-4 py-4 font-black uppercase text-[10px] tracking-widest">Totales Consolidados</td>
+                  <td className="px-4 py-4 text-right font-mono text-slate-300">{formatCurrency(totalExp)}</td>
+                  <td className="px-4 py-4 text-right font-black">{formatCurrency(totalRep)}</td>
+                  <td className={`px-4 py-4 text-right font-black ${diff === 0 ? 'text-white/50' : diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatCurrency(diff)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid grid-cols-2 gap-10 mb-12">
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Observaciones del Administrador</p>
+                <p className="text-sm italic text-slate-600">
+                  {closure.adminNotes || "No se registraron observaciones adicionales durante la liquidaciÃ³n."}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-slate-900">
+                <div className={`p-2 rounded-lg ${diff === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                  {diff === 0 ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider">{diff === 0 ? 'LiquidaciÃ³n Exitosa' : 'Diferencia en Caja'}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">{diff === 0 ? 'Los montos coinciden perfectamente' : `Se detectÃ³ un desfase de ${formatCurrency(diff)}`}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">Fondo Inicial</span>
+                <span className="font-bold text-slate-900">{formatCurrency(closure.initialCash)}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">Gastos Declarados</span>
+                <span className="font-bold text-red-600">-{formatCurrency(closure.expenses || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase">Pedidos Pendientes</span>
+                <span className="font-bold text-slate-900">{formatCurrency(closure.pendingOrders || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-sm font-black uppercase text-slate-900">Saldo Final Real</span>
+                <span className="text-xl font-black text-slate-900">{formatCurrency(totalRep - (closure.expenses || 0))}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-20 flex justify-between gap-20">
+            <div className="flex-1 text-center">
+              <div className="border-t-2 border-slate-900 pt-3">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-900">Firma Administrador</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Sello y Firma de AutorizaciÃ³n</p>
+              </div>
+            </div>
+            <div className="flex-1 text-center">
+              <div className="border-t-2 border-slate-900 pt-3">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-900">Firma {closure.userName}</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">DeclaraciÃ³n de Conformidad</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <p className="text-[8px] font-bold text-slate-300 uppercase tracking-[0.3em]">
+              Documento generado digitalmente por Control de Pedidos App Â· {new Date().toLocaleString('es-BO')}
+            </p>
+          </div>
         </div>
       </DialogContent>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -956,7 +1073,7 @@ function AddExpenseDialog() {
               </Select></div>
           </div>
           <div className="space-y-2"><Label>Descripcion</Label><Input placeholder="Ej: Carga de Nafta" onChange={(e) => setExpense({ ...expense, notes: e.target.value })} /></div>
-          <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => mutation.mutate(expense)} disabled={mutation.isPending}>{mutation.isPending ? "Registrando..." : "Registrar Gasto"}</Button>
+          <Button className="w-full bg-red-600 hover:bg-red-700" onClick={() => mutation.mutate({ ...expense, amount: Math.round(expense.amount * 100) })} disabled={mutation.isPending}>{mutation.isPending ? \"Registrando...\" : \"Registrar Gasto\"}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -975,7 +1092,7 @@ function TransferDialog() {
     const amount = parseFloat(form.amount);
     if (isNaN(amount) || amount <= 0) { toast.error("Ingresa un monto valido"); return; }
     if (form.fromMethod === form.toMethod) { toast.error("Las cajas deben ser distintas"); return; }
-    mutation.mutate({ fromMethod: form.fromMethod as "cash" | "qr" | "transfer", toMethod: form.toMethod as "cash" | "qr" | "transfer", amount, notes: form.notes });
+    mutation.mutate({ fromMethod: form.fromMethod as \"cash\" | \"qr\" | \"transfer\", toMethod: form.toMethod as \"cash\" | \"qr\" | \"transfer\", amount: Math.round(amount * 100), notes: form.notes });
   };
 
   return (

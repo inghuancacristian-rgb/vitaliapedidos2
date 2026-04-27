@@ -215,15 +215,15 @@ export const financeRouter = router({
       return await createCashClosure({
         userId,
         date: input.date,
-        initialCash: Math.round(input.initialCash * 100),
-        reportedCash: Math.round(input.reportedCash * 100),
-        reportedQr: Math.round(input.reportedQr * 100),
-        reportedTransfer: Math.round(input.reportedTransfer * 100),
-        expectedCash: input.expectedCash, // Ya vienen en centavos del query anterior
-        expectedQr: input.expectedQr,
-        expectedTransfer: input.expectedTransfer,
-        expenses: Math.round((input.expenses || 0) * 100),
-        pendingOrders: Math.round(pending * 100),
+        initialCash: Math.round(input.initialCash),
+        reportedCash: Math.round(input.reportedCash),
+        reportedQr: Math.round(input.reportedQr),
+        reportedTransfer: Math.round(input.reportedTransfer),
+        expectedCash: Math.round(input.expectedCash),
+        expectedQr: Math.round(input.expectedQr),
+        expectedTransfer: Math.round(input.expectedTransfer),
+        expenses: Math.round(input.expenses || 0),
+        pendingOrders: Math.round(pending),
         status: "pending"
       });
     }),

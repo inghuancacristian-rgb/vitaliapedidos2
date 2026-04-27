@@ -30,7 +30,8 @@ export function parsePrice(input: string): number {
   } else {
     // Si hay punto, la parte después es centavos
     const bolivianos = parseInt(parts[0] || "0");
-    const centavos = parseInt(parts[1]?.substring(0, 2) || "0");
+    const centavosStr = (parts[1] || "").padEnd(2, "0").substring(0, 2);
+    const centavos = parseInt(centavosStr || "0");
     return bolivianos * 100 + centavos;
   }
 }
