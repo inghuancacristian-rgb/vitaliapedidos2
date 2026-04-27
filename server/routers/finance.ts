@@ -239,9 +239,6 @@ export const financeRouter = router({
     }),
 
   // Obtener mi estado de cierre para hoy
-    }),
-  
-  // Obtener mi estado de cierre para hoy
   getMyStatus: protectedProcedure
     .input(z.object({ date: z.string() }))
     .query(async ({ ctx, input }) => {
