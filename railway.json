@@ -5,7 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "npx tsx server/_core/index.ts",
+    "startCommand": "npx tsx server/scripts/fix-database.ts && npx tsx server/_core/index.ts",
     "healthcheckPath": "/",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
