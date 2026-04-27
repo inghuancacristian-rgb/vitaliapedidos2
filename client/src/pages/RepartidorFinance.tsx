@@ -347,9 +347,14 @@ export default function RepartidorFinance() {
                   <td className="px-4 py-2 text-right font-bold text-green-700">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2">QR / Transferencia</td>
-                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {(expectedQrBs + expectedTransferBs).toFixed(2)}</td>
-                  <td className="px-4 py-2 text-right font-bold text-blue-700">Bs. {(parseFloat(formData.reportedQr) + parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
+                  <td className="px-4 py-2 text-blue-700 font-medium">Cobros QR</td>
+                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedQrBs.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right font-bold text-blue-700">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 text-purple-700 font-medium">Transferencias</td>
+                  <td className="px-4 py-2 text-right font-mono text-slate-400">Bs. {expectedTransferBs.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right font-bold text-purple-700">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
                 </tr>
                 <tr className="bg-slate-50/30">
                   <td className="px-4 py-2 font-bold">TOTAL RECAUDADO</td>

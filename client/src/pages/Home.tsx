@@ -20,6 +20,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Receipt,
 } from "lucide-react";
 
 const adminModules = [
@@ -217,7 +218,40 @@ export default function Home() {
     );
   }
 
-  if (isDelivery) {
+    const { data: status } = trpc.finance.getMyStatus.useQuery({ date: today });
+    const isLocked = status?.status === "pending";
+
+    if (isLocked) {
+      return (
+        <div className="page-shell flex items-center justify-center">
+          <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Receipt className="w-8 h-8 text-blue-600" />
+              </div>
+              <CardTitle className="text-2xl font-black">Cierre en Revisión</CardTitle>
+              <CardDescription>
+                Has enviado tu cierre de caja. No puedes realizar nuevas operaciones hasta que el administrador lo apruebe.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-blue-50 rounded-xl text-center">
+                <Badge className="bg-blue-600 font-bold px-3 py-1">
+                  PENDIENTE DE APROBACIÓN
+                </Badge>
+              </div>
+              <Link href="/repartidor/finance">
+                <Button className="w-full">Ver estado de mi caja</Button>
+              </Link>
+              <Button variant="ghost" className="w-full" onClick={logout}>
+                Cerrar sesión
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     return (
       <div className="page-shell">
         <div className="page-container space-y-6">

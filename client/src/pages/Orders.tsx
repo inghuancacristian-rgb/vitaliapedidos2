@@ -362,6 +362,35 @@ export default function Orders() {
     w.document.close();
   };
 
+  const { data: closureStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
+  const isLocked = user?.role === "user" && closureStatus?.status === "pending";
+
+  if (isLocked) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black">Pedidos Bloqueados</CardTitle>
+            <CardDescription>
+              No puedes gestionar pedidos mientras tengas un cierre de caja pendiente de aprobación.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-6">
+            <p className="text-sm text-slate-500 mb-6">
+              Una vez el administrador apruebe tu cierre, podrás volver a gestionar tus entregas.
+            </p>
+            <Link href="/repartidor/finance">
+              <Button className="w-full">Ir a Cierre de Caja</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading || isLoadingDelivery) {
     return <div className="p-8 text-center">Cargando pedidos...</div>;
   }
