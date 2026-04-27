@@ -218,8 +218,9 @@ export default function Home() {
     );
   }
 
+  if (user?.role !== "admin") {
     const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-    const isLocked = user && user.role !== "admin" && closureStatus?.hasPending;
+    const isLocked = closureStatus?.hasPending;
 
     if (isLocked) {
       return (

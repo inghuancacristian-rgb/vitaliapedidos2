@@ -91,6 +91,13 @@ async function startServer() {
     }
   });
   
+  // Version endpoint for deployment verification
+  const APP_VERSION = "1.0.5";
+  app.get("/api/version", (_req, res) => {
+    res.json({ version: APP_VERSION, buildTime: new Date().toISOString(), nodeEnv: process.env.NODE_ENV });
+  });
+  console.log(`[App] Version ${APP_VERSION} starting...`);
+
   // tRPC API
   app.use(
     "/api/trpc",
