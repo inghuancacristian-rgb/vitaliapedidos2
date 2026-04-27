@@ -73,6 +73,42 @@ function categoryLabel(cat: string) {
   return labels[cat] || cat;
 }
 
+function BoxStatusIndicator({ method, openings }: { method: string, openings: any[] }) {
+  const methodOpenings = openings.filter(o => o.paymentMethod === method || (!o.paymentMethod && method === "cash"));
+  const activeOpening = methodOpenings.find(o => o.status === "open");
+  const closedOpenings = methodOpenings.filter(o => o.status === "closed");
+
+  if (activeOpening) {
+    return (
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">ABIERTA · {activeOpening.responsibleUserName?.split(' ')[0]}</span>
+      </div>
+    );
+  } else if (closedOpenings.length > 0) {
+    return (
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">CORTADA · {closedOpenings[closedOpenings.length - 1].responsibleUserName?.split(' ')[0]}</span>
+      </div>
+    );
+  } else {
+    return (
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">CERRADA</span>
+      </div>
+    );
+  }
+}
+
 export default function Finance() {
   const { data: transactions, isLoading } = trpc.finance.getTransactions.useQuery();
   const { data: cashOpenings, isLoading: isLoadingOpenings } = trpc.finance.getCashOpenings.useQuery();
@@ -127,20 +163,23 @@ export default function Finance() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Caja Efectivo */}
         <Card className="bg-emerald-50/60 border-emerald-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-emerald-800">Caja Efectivo</CardTitle>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-600" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100"
-                title="Ver Historial"
-                onClick={() => setCashHistoryOpen(true)}
-              >
-                <History className="h-4 w-4" />
-              </Button>
+          <CardHeader className="flex flex-col pb-2">
+            <div className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold text-emerald-800">Caja Efectivo</CardTitle>
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100"
+                  title="Ver Historial"
+                  onClick={() => setCashHistoryOpen(true)}
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            <BoxStatusIndicator method="cash" openings={todaysOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-emerald-700">{formatCurrency(cashBalance)}</div>
@@ -153,20 +192,23 @@ export default function Finance() {
 
         {/* Caja QR */}
         <Card className="bg-blue-50/60 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-blue-800">Caja QR</CardTitle>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-blue-600" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                title="Ver Historial"
-                onClick={() => setQrHistoryOpen(true)}
-              >
-                <History className="h-4 w-4" />
-              </Button>
+          <CardHeader className="flex flex-col pb-2">
+            <div className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold text-blue-800">Caja QR</CardTitle>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  title="Ver Historial"
+                  onClick={() => setQrHistoryOpen(true)}
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            <BoxStatusIndicator method="qr" openings={todaysOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-blue-700">{formatCurrency(qrBalance)}</div>
@@ -179,20 +221,23 @@ export default function Finance() {
 
         {/* Cuenta Bancaria */}
         <Card className="bg-purple-50/60 border-purple-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-purple-800">Cuenta Bancaria</CardTitle>
-            <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-purple-600" />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                title="Ver Historial"
-                onClick={() => setTransferHistoryOpen(true)}
-              >
-                <History className="h-4 w-4" />
-              </Button>
+          <CardHeader className="flex flex-col pb-2">
+            <div className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold text-purple-800">Cuenta Bancaria</CardTitle>
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-purple-600" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
+                  title="Ver Historial"
+                  onClick={() => setTransferHistoryOpen(true)}
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            <BoxStatusIndicator method="transfer" openings={todaysOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-purple-700">{formatCurrency(transferBalance)}</div>
@@ -818,7 +863,10 @@ function CashClosuresAdmin() {
             const pending = c.pendingOrders || 0;
             return (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.date}</TableCell>
+                <TableCell>
+                  <div className="font-medium text-slate-900">{new Date(c.createdAt).toLocaleDateString("es-BO")}</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(c.createdAt).toLocaleTimeString("es-BO", { hour: '2-digit', minute: '2-digit' })}</div>
+                </TableCell>
                 <TableCell>{c.userName}</TableCell>
                 <TableCell className="text-right">{formatCurrency(totalExp)}</TableCell>
                 <TableCell className="text-right font-bold">{formatCurrency(totalRep)}
