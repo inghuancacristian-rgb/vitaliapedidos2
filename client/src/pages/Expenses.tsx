@@ -1,4 +1,6 @@
 import { trpc } from "@/lib/trpc";
+import { Link } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,7 @@ function getCategoryColor(category: string) {
 }
 
 export default function Expenses() {
+  const { user } = useAuth();
   const { data: expenses, isLoading, refetch } = trpc.expenses.list.useQuery();
   const { data: totals } = trpc.expenses.totals.useQuery();
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -56,6 +59,46 @@ export default function Expenses() {
     if (filterCategory !== "all" && e.category !== filterCategory) return false;
     return true;
   });
+
+  // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
+  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
+  const isLockedByPending = closureStatus?.hasPending;
+  const isLockedByNoOpening = !openingStatus?.hasActive;
+
+  if (isLockedByPending || isLockedByNoOpening) {
+    return (
+      <div className="page-shell flex items-center justify-center pt-20">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Receipt className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black text-slate-800">
+              {isLockedByPending ? "Gastos Inhabilitados" : "Caja Cerrada"}
+            </CardTitle>
+            <CardDescription className="text-slate-500 font-medium text-base">
+              {isLockedByPending 
+                ? "Para poder registrar gastos, primero debes solicitar la habilitación de tu caja en administración."
+                : "Para poder registrar gastos, primero debes realizar la apertura de caja del día."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-6">
+            <p className="text-sm text-slate-500 mb-6">
+              {isLockedByPending
+                ? "Una vez el administrador apruebe tu cierre anterior, podrás volver a registrar gastos."
+                : "La apertura de caja registra tu saldo inicial para el control de efectivo."}
+            </p>
+            <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
+              <Button className="w-full h-11 font-bold">
+                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-6 max-w-6xl mx-auto mb-20 md:mb-0">
