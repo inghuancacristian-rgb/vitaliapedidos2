@@ -484,7 +484,8 @@ export async function getProductById(productId: number) {
 
 // Almacenamiento en memoria para modo demo (persistente mientras el servidor corra)
 const MOCK_USERS: any[] = [
-  { id: 999, username: "admin", passwordHash: "", name: "Administrador (Modo Demo)", role: "admin", openId: "demo_admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "admin@demo.com", loginMethod: "traditional" }
+  { id: 999, username: "admin", passwordHash: "", name: "Administrador (Modo Demo)", role: "admin", openId: "demo_admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "admin@demo.com", loginMethod: "traditional" },
+  { id: 1000, username: "admin_root", passwordHash: "$2b$10$9Sg2Com1gCSFtFhWjxkBbuLzPA9ar0ucdiPLycgbOogdudS60Uwlu", name: "Administrador Principal", role: "admin", openId: "admin_root", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "root@vitaliapro.com", loginMethod: "traditional" }
 ];
 const MOCK_PRODUCTS: any[] = [];
 const MOCK_INVENTORY: any[] = [];
