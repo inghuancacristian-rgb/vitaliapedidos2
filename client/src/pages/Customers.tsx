@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -178,6 +179,38 @@ export default function Customers() {
       getCustomerTags(customer).some((tag) => tag.toLowerCase().includes(normalized))
     );
   }, [data?.customers, search, channelFilter, cohortFilter, rangeStart, rangeEnd]);
+
+  const today = new Date().toISOString().split("T")[0];
+  const { data: closureStatus } = trpc.finance.getMyStatus.useQuery({ date: today });
+  const { user } = useAuth();
+
+  const isLocked = user?.role === "user" && closureStatus?.status === "pending";
+
+  if (isLocked) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black">Clientes Bloqueados</CardTitle>
+            <CardDescription>
+              No puedes gestionar clientes mientras tengas un cierre de caja pendiente de aprobación.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-6">
+            <p className="text-sm text-slate-500 mb-6">
+              Una vez el administrador apruebe tu cierre, podrás volver a acceder a la base de clientes.
+            </p>
+            <Button className="w-full" onClick={() => window.location.href = "/repartidor/finance"}>
+              Ir a Cierre de Caja
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
