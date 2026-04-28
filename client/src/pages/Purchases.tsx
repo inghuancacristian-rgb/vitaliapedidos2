@@ -75,6 +75,10 @@ export default function Purchases() {
       utils.purchases.list.invalidate();
       (utils as any).inventory.listInventory.invalidate(); // Invalida el inventario completo para ver las nuevas cantidades
     },
+    onError: (error: any) => {
+      console.error("Error creating purchase:", error);
+      toast.error(error.message || "Error al registrar la compra");
+    }
   });
 
   const addItem = () => {
@@ -149,7 +153,10 @@ export default function Purchases() {
     const purchasePayload = {
       ...purchaseData,
       supplierId: supplierId === 0 ? undefined : supplierId,
-      items
+      items: items.map(item => ({
+        ...item,
+        expiryDate: item.expiryDate || undefined
+      }))
     };
     createMutation.mutate(purchasePayload);
   };
@@ -240,14 +247,14 @@ export default function Purchases() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Proveedor</Label>
+                <div className="space-y-2 min-w-0">
+                  <Label className="text-sm font-bold text-slate-700">Proveedor</Label>
                   <Select
                     value={supplierId === 0 ? "" : supplierId.toString()}
                     onValueChange={(val) => setSupplierId(parseInt(val))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin proveedor (Compra Directa)" />
+                    <SelectTrigger className="truncate">
+                      <SelectValue placeholder="Sin proveedor (Directo)" />
                     </SelectTrigger>
                     <SelectContent>
                       {(suppliers as any[])?.map((s: any) => (
@@ -256,17 +263,19 @@ export default function Purchases() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Nro de Factura/Nota</Label>
+                <div className="space-y-2 min-w-0">
+                  <Label className="text-sm font-bold text-slate-700">Nro de Factura/Nota</Label>
                   <Input 
                     value={purchaseData.purchaseNumber} 
                     onChange={(e) => setPurchaseData({...purchaseData, purchaseNumber: e.target.value})}
+                    className="font-mono bg-white"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Método de Pago</Label>
+                <div className="space-y-2 min-w-0">
+                  <Label className="text-sm font-bold text-slate-700">Método de Pago</Label>
                   <Select value={purchaseData.paymentMethod} onValueChange={(val: any) => setPurchaseData({...purchaseData, paymentMethod: val})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white">
+
                       <SelectValue placeholder="Seleccionar..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -292,22 +301,23 @@ export default function Purchases() {
                   <Package className="h-4 w-4" /> Detalle de Productos
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
-                  <div className="md:col-span-2 space-y-1">
+                  <div className="md:col-span-2 space-y-1 min-w-0">
                     <Label className="text-xs font-bold text-blue-800">Producto / Insumo</Label>
-                    <div className="flex gap-2">
-                      {currentItem.productId !== 0 && (
-                        selectedProduct?.imageUrl ? (
-                          <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="h-10 w-10 rounded-md object-cover border flex-shrink-0 bg-white" />
-                        ) : (
-                          <div className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center border flex-shrink-0">
-                            <Package className="h-5 w-5 text-slate-400" />
-                          </div>
-                        )
+                    <div className="flex gap-2 items-center">
+                      {currentItem.productId !== 0 && selectedProduct?.imageUrl ? (
+                        <img src={selectedProduct.imageUrl} alt={selectedProduct.name} className="h-10 w-10 rounded-md object-cover border flex-shrink-0 bg-white" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-md bg-blue-50 flex items-center justify-center border border-blue-100 flex-shrink-0 transition-colors">
+                          <Package className={`h-5 w-5 ${currentItem.productId === 0 ? 'text-blue-300' : 'text-blue-500'}`} />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <Select value={currentItem.productId.toString()} onValueChange={(val) => setCurrentItem({...currentItem, productId: parseInt(val), price: 0})}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar..." />
+                        <Select 
+                          value={currentItem.productId === 0 ? "" : currentItem.productId.toString()} 
+                          onValueChange={(val) => setCurrentItem({...currentItem, productId: parseInt(val), price: 0})}
+                        >
+                          <SelectTrigger className={`bg-white truncate ${currentItem.productId === 0 ? 'text-slate-500' : 'font-semibold'}`}>
+                            <SelectValue placeholder="Buscar o seleccionar..." />
                           </SelectTrigger>
                           <SelectContent>
                             {(products as any[])?.map((p: any) => (
