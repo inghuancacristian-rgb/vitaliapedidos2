@@ -145,6 +145,12 @@ export default function Finance() {
 
   const isAnyBoxOpen = activeOpenings.length > 0;
 
+  const todaysOpenings = useMemo(
+    () => ((cashOpenings as any[]) || []).filter((opening: any) => opening.openingDate === today),
+    [cashOpenings, today]
+  );
+  const todaysOpenedAmount = todaysOpenings.reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+
   return (
     <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-0">
       <div className="flex justify-between items-center no-print">
