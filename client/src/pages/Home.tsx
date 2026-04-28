@@ -105,6 +105,8 @@ export default function Home() {
   const { data: sales } = trpc.sales.list.useQuery(undefined, {
     enabled: isAdmin,
   });
+  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
 
   const actionableOrders = useMemo(() => {
     if (!orders) return [];
@@ -219,8 +221,7 @@ export default function Home() {
   }
 
   // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
-  const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
+  // Solo bloqueamos si las consultas ya cargaron para evitar flicker durante la carga
   const isLockedByPending = closureStatus && closureStatus.hasPending;
   const isLockedByNoOpening = openingStatus && !openingStatus.hasActive;
 

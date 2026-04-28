@@ -2,6 +2,7 @@ import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -21,6 +22,7 @@ export function useAuth(options?: UseAuthOptions) {
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
+      toast.success("La sesión se cerró correctamente.");
     },
   });
 
