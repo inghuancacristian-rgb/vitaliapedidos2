@@ -21,6 +21,7 @@ import {
   completeOrderDelivery,
   deductInventoryForOrder,
   restoreInventoryForOrder,
+  getOrdersByDeliveryPerson,
 } from "../db";
 import { TRPCError } from "@trpc/server";
 
