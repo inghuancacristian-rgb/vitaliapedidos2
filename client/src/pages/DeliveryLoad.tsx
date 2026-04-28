@@ -236,8 +236,9 @@ export default function DeliveryLoad() {
     w.document.close();
   };
 
+  const { data: user } = trpc.auth.getUser.useQuery();
   const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-  const isLocked = user?.role === "user" && closureStatus?.hasPending;
+  const isLocked = user?.role === "repartidor" && closureStatus?.hasPending;
 
   if (isLocked) {
     return (
