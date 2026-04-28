@@ -184,13 +184,12 @@ export default function Purchases() {
     win.print();
   };
 
-  // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
+  // Bloqueo de seguridad: Si tiene un cierre pendiente
   const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
   const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
   const isLockedByPending = closureStatus && closureStatus.hasPending;
-  const isLockedByNoOpening = openingStatus && !openingStatus.hasActive;
 
-  if (isLockedByPending || isLockedByNoOpening) {
+  if (isLockedByPending) {
     return (
       <div className="page-shell flex items-center justify-center pt-20">
         <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
@@ -199,23 +198,19 @@ export default function Purchases() {
               <ShoppingCart className="w-8 h-8 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-black text-slate-800">
-              {isLockedByPending ? "Compras Inhabilitadas" : "Caja Cerrada"}
+              Compras Inhabilitadas
             </CardTitle>
             <CardDescription className="text-slate-500 font-medium text-base">
-              {isLockedByPending 
-                ? "Para poder registrar compras, primero debes solicitar la habilitación de tu caja en administración."
-                : "Para poder registrar compras, primero debes realizar la apertura de caja del día."}
+              Para poder registrar compras, primero debes solicitar la habilitación de tu caja en administración.
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center pb-6">
             <p className="text-sm text-slate-500 mb-6">
-              {isLockedByPending
-                ? "Una vez el administrador apruebe tu cierre anterior, podrás volver a registrar compras."
-                : "La apertura de caja registra tu saldo inicial para el control de efectivo."}
+              Una vez el administrador apruebe tu cierre anterior, podrás volver a registrar compras.
             </p>
             <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
               <Button className="w-full h-11 font-bold">
-                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
+                Ver estado de mi caja
               </Button>
             </Link>
           </CardContent>
