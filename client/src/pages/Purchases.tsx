@@ -191,7 +191,6 @@ export default function Purchases() {
 
   // Bloqueo de seguridad: Si tiene un cierre pendiente
   const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
-  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
   const isLockedByPending = closureStatus && closureStatus.hasPending;
 
   if (isLockedByPending) {
