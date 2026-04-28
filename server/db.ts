@@ -884,12 +884,10 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
       });
     }
 
-    // Registrar transacción financiera inmediata para visibilidad en tiempo real
-    if (method === "qr" || method === "transfer") {
-      const today = getLocalDateKey(new Date());
-      if (today && order.deliveryPersonId) {
-        await autoOpenCashRegisterIfNeeded(tx, order.deliveryPersonId, method, today);
-      }
+    // Validar que la caja esté abierta para el método de pago seleccionado
+    const today = getLocalDateKey(new Date());
+    if (today && order.deliveryPersonId) {
+      await checkCashRegisterOpening(tx, order.deliveryPersonId, method, today);
     }
 
     await tx.insert(financialTransactions).values({
@@ -1334,12 +1332,10 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
     // Se registra siempre que NO sea a crédito (isCredit=0) y haya un método de pago
     const shouldRegisterTransaction = purchaseData.isCredit === 0 && purchaseData.paymentMethod;
     if (shouldRegisterTransaction) {
-      // Auto-abrir caja si es QR o Transferencia
-      if (purchaseData.paymentMethod === "qr" || purchaseData.paymentMethod === "transfer") {
-        const today = getLocalDateKey(new Date());
-        if (today && userId) {
-          await autoOpenCashRegisterIfNeeded(tx, userId, purchaseData.paymentMethod, today);
-        }
+      // Validar que la caja esté abierta para el método de pago seleccionado
+      const today = getLocalDateKey(new Date());
+      if (today && userId) {
+        await checkCashRegisterOpening(tx, userId, purchaseData.paymentMethod, today);
       }
 
       await tx.insert(financialTransactions).values({
@@ -1540,11 +1536,11 @@ export async function createFinancialTransaction(data: any) {
   }
 
   return await db.transaction(async (tx: any) => {
-    // Si hay un userId y es QR o Transferencia, asegurar que la caja esté abierta
-    if (data.userId && data.paymentMethod && (data.paymentMethod === "qr" || data.paymentMethod === "transfer")) {
+    // Validar que la caja esté abierta para el método de pago seleccionado
+    if (data.userId && data.paymentMethod) {
       const today = getLocalDateKey(new Date());
       if (today) {
-        await autoOpenCashRegisterIfNeeded(tx, data.userId, data.paymentMethod, today);
+        await checkCashRegisterOpening(tx, data.userId, data.paymentMethod, today);
       }
     }
 
@@ -1666,12 +1662,10 @@ export async function createOperationalExpense(data: any) {
     const insertId = getInsertId(result);
 
     if (data.status === "paid") {
-      // Auto-abrir caja si es QR o Transferencia
-      if (data.paymentMethod === "qr" || data.paymentMethod === "transfer") {
-        const today = getLocalDateKey(new Date());
-        if (today && data.userId) {
-          await autoOpenCashRegisterIfNeeded(tx, data.userId, data.paymentMethod, today);
-        }
+      // Validar que la caja esté abierta para el método de pago seleccionado
+      const today = getLocalDateKey(new Date());
+      if (today && data.userId && data.paymentMethod) {
+        await checkCashRegisterOpening(tx, data.userId, data.paymentMethod, today);
       }
 
       await tx.insert(financialTransactions).values({
@@ -1757,10 +1751,7 @@ export async function deleteOperationalExpense(id: number) {
  * Asegura que una caja esté "abierta" para un método de pago y usuario específico en la fecha actual.
  * Si es QR o Transferencia y no está abierta, la abre automáticamente con fondo 0.
  */
-export async function autoOpenCashRegisterIfNeeded(dbOrTx: any, userId: number, paymentMethod: string, dateKey: string) {
-  // Solo auto-abrimos para QR y Transferencia (según solicitud del usuario)
-  if (paymentMethod !== "qr" && paymentMethod !== "transfer") return;
-
+export async function checkCashRegisterOpening(dbOrTx: any, userId: number, paymentMethod: string, dateKey: string) {
   const existing = await dbOrTx
     .select()
     .from(cashOpenings)
@@ -1768,25 +1759,20 @@ export async function autoOpenCashRegisterIfNeeded(dbOrTx: any, userId: number, 
       and(
         eq(cashOpenings.responsibleUserId, userId),
         eq(cashOpenings.openingDate, dateKey),
-        eq(cashOpenings.paymentMethod, paymentMethod),
+        sql`(${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash'))`,
         eq(cashOpenings.status, "open")
       )
     )
     .limit(1);
 
   if (existing.length === 0) {
-    console.log(`[FINANCE] Auto-abriendo caja ${paymentMethod} para usuario ${userId} en fecha ${dateKey}`);
-    await dbOrTx.insert(cashOpenings).values({
-      openingAmount: 0,
-      paymentMethod,
-      openingDate: dateKey,
-      responsibleUserId: userId,
-      openedByUserId: userId,
-      status: "open",
-      notes: "Apertura automática por transacción entrante",
-      createdAt: new Date()
-    });
+    throw new Error(`No existe una apertura de caja activa para ${paymentMethod === 'cash' ? 'Efectivo' : paymentMethod.toUpperCase()} en la fecha ${dateKey}. Por favor, realice la apertura de caja primero.`);
   }
+}
+
+export async function autoOpenCashRegisterIfNeeded(dbOrTx: any, userId: number, paymentMethod: string, dateKey: string) {
+  // Función mantenida por compatibilidad pero ahora requiere apertura manual
+  return checkCashRegisterOpening(dbOrTx, userId, paymentMethod, dateKey);
 }
 
 export async function getCashOpeningByUserIdAndDateMethod(userId: number, openingDate: string, paymentMethod: string) {
@@ -2460,12 +2446,10 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
     }
 
     if (payload.paymentStatus === "completed") {
-      // Auto-abrir caja si es QR o Transferencia
-      if (payload.paymentMethod === "qr" || payload.paymentMethod === "transfer") {
-        const today = getLocalDateKey(new Date());
-        if (today && payload.soldBy) {
-          await autoOpenCashRegisterIfNeeded(tx, payload.soldBy, payload.paymentMethod, today);
-        }
+      // Validar que la caja esté abierta para el método de pago seleccionado
+      const today = getLocalDateKey(new Date());
+      if (today && payload.soldBy) {
+        await checkCashRegisterOpening(tx, payload.soldBy, payload.paymentMethod, today);
       }
 
       await tx.insert(financialTransactions).values({

@@ -262,7 +262,9 @@ export const financeRouter = router({
   }),
 
   // Verificar si tiene una apertura de caja ACTIVA para hoy (para bloquear ventas)
-  hasActiveOpening: protectedProcedure.query(async ({ ctx }) => {
+  hasActiveOpening: protectedProcedure
+    .input(z.object({ paymentMethod: z.enum(["cash", "qr", "transfer"]).optional() }).optional())
+    .query(async ({ ctx, input }) => {
     const userId = ctx.user?.id;
     if (!userId) return { hasActive: false };
     
@@ -270,8 +272,8 @@ export const financeRouter = router({
     const offsetMs = now.getTimezoneOffset() * 60 * 1000;
     const today = new Date(now.getTime() - offsetMs).toISOString().split("T")[0];
     
-    // Verificamos si tiene apertura de efectivo abierta hoy
-    const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, "cash");
+    const method = input?.paymentMethod || "cash";
+    const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, method);
     return { 
       hasActive: !!activeOpening && activeOpening.status === "open",
       activeOpening 

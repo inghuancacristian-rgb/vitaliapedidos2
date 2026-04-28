@@ -26,6 +26,7 @@ export default function OrderDetail() {
   const utils = trpc.useUtils();
   const recordPaymentMutation = trpc.orders.recordPayment.useMutation();
   const updateStatusMutation = trpc.orders.updateStatus.useMutation();
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod });
 
   if (!orderId || isLoading) {
     return (
@@ -55,6 +56,10 @@ export default function OrderDetail() {
   };
 
   const handleRecordPayment = () => {
+    if (!openingStatus?.hasActive) {
+      toast.error(`Caja cerrada: Para cobrar en ${paymentMethod === 'cash' ? 'Efectivo' : paymentMethod.toUpperCase()}, primero debes realizar la apertura de caja.`);
+      return;
+    }
     recordPaymentMutation.mutate({
       orderId: order.id,
       amount: order.totalPrice,
@@ -383,10 +388,17 @@ export default function OrderDetail() {
                 </button>
               </div>
 
+              {!openingStatus?.hasActive && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  TU CAJA DE {paymentMethod === 'cash' ? 'EFECTIVO' : paymentMethod.toUpperCase()} ESTÁ CERRADA. ABRE TU CAJA PARA PODER COBRAR.
+                </div>
+              )}
+
               <Button
                 className="w-full h-12 text-base font-bold bg-emerald-600 hover:bg-emerald-700 gap-2"
                 onClick={handleRecordPayment}
-                disabled={recordPaymentMutation.isPending}
+                disabled={recordPaymentMutation.isPending || !openingStatus?.hasActive}
               >
                 <DollarSign className="h-5 w-5" />
                 {recordPaymentMutation.isPending ? "Registrando..." : `Confirmar Pago con ${paymentMethod === "cash" ? "Efectivo" : paymentMethod === "qr" ? "QR" : "Transferencia"}`}

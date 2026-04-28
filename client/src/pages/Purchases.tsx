@@ -110,6 +110,7 @@ export default function Purchases() {
 
   const { data: transactions } = trpc.finance.getTransactions.useQuery();
   const { data: cashOpenings } = trpc.finance.getCashOpenings.useQuery();
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod: purchaseData.paymentMethod as any });
 
   const balances = useMemo(() => {
     if (!transactions) return { cash: 0, qr: 0, transfer: 0 };
@@ -146,6 +147,10 @@ export default function Purchases() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (purchaseData.isCredit === 0 && !openingStatus?.hasActive) {
+      toast.error(`Caja cerrada: Para registrar compras en ${purchaseData.paymentMethod.toUpperCase()}, primero debes realizar la apertura de caja.`);
+      return;
+    }
     if (items.length === 0) {
       toast.error("Añade al menos un producto a la compra");
       return;
@@ -449,9 +454,16 @@ export default function Purchases() {
                     Actualiza stock al finalizar
                   </div>
                 </div>
+
+                {purchaseData.isCredit === 0 && !openingStatus?.hasActive && (
+                  <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-2">
+                    <XCircle className="h-4 w-4 shrink-0" />
+                    LA CAJA DE {purchaseData.paymentMethod.toUpperCase()} ESTÁ CERRADA. ABRA LA CAJA EN FINANZAS PARA CONTINUAR.
+                  </div>
+                )}
               </div>
 
-              <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700" disabled={createMutation.isPending || items.length === 0}>
+              <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700" disabled={createMutation.isPending || items.length === 0 || (purchaseData.isCredit === 0 && !openingStatus?.hasActive)}>
                 {createMutation.isPending ? "Procesando..." : "Registrar y Finalizar Compra"}
               </Button>
             </form>
