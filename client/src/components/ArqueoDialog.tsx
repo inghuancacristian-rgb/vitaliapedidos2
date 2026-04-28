@@ -17,10 +17,12 @@ export function ArqueoDialog({
   expectedCash,
   expectedQr,
   expectedTransfer,
+  disabled,
 }: {
   expectedCash: number;
   expectedQr: number;
   expectedTransfer: number;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -110,7 +112,7 @@ export function ArqueoDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-orange-600 hover:bg-orange-700 h-10 px-4">
+        <Button className="gap-2 bg-orange-600 hover:bg-orange-700 h-10 px-4" disabled={disabled}>
           <Calculator className="h-4 w-4" /> Arqueo y Cierre
         </Button>
       </DialogTrigger>

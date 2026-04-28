@@ -130,20 +130,20 @@ export default function Finance() {
 
   const today = getLocalDateInputValue();
 
-  const todaysOpenings = useMemo(
-    () => ((cashOpenings as any[]) || []).filter((opening: any) => opening.openingDate === today),
-    [cashOpenings, today]
+  const activeOpenings = useMemo(
+    () => ((cashOpenings as any[]) || []).filter((opening: any) => opening.status === "open"),
+    [cashOpenings]
   );
 
-  const todaysCashOpenings = todaysOpenings.filter((o: any) => o.paymentMethod === "cash" || !o.paymentMethod).reduce((sum: number, o: any) => sum + o.openingAmount, 0);
-  const todaysQrOpenings = todaysOpenings.filter((o: any) => o.paymentMethod === "qr").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
-  const todaysTransferOpenings = todaysOpenings.filter((o: any) => o.paymentMethod === "transfer").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const activeCashOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "cash" || !o.paymentMethod).reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const activeQrOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "qr").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const activeTransferOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "transfer").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
 
-  const todaysOpenedAmount = todaysCashOpenings + todaysQrOpenings + todaysTransferOpenings;
+  const cashBalance = baseCashBalance + activeCashOpenings;
+  const qrBalance = baseQrBalance + activeQrOpenings;
+  const transferBalance = baseTransferBalance + activeTransferOpenings;
 
-  const cashBalance = baseCashBalance + todaysCashOpenings;
-  const qrBalance = baseQrBalance + todaysQrOpenings;
-  const transferBalance = baseTransferBalance + todaysTransferOpenings;
+  const isAnyBoxOpen = activeOpenings.length > 0;
 
   return (
     <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-0">
@@ -153,7 +153,12 @@ export default function Finance() {
           <p className="text-muted-foreground">Resumen de ingresos, egresos y rentabilidad.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <ArqueoDialog expectedCash={cashBalance} expectedQr={qrBalance} expectedTransfer={transferBalance} />
+          <ArqueoDialog 
+            expectedCash={cashBalance} 
+            expectedQr={qrBalance} 
+            expectedTransfer={transferBalance} 
+            disabled={!isAnyBoxOpen}
+          />
           <TransferDialog />
           <OpenCashDialog />
           <AddExpenseDialog />
@@ -179,7 +184,7 @@ export default function Finance() {
                 </Button>
               </div>
             </div>
-            <BoxStatusIndicator method="cash" openings={todaysOpenings} />
+            <BoxStatusIndicator method="cash" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-emerald-700">{formatCurrency(cashBalance)}</div>
@@ -208,7 +213,7 @@ export default function Finance() {
                 </Button>
               </div>
             </div>
-            <BoxStatusIndicator method="qr" openings={todaysOpenings} />
+            <BoxStatusIndicator method="qr" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-blue-700">{formatCurrency(qrBalance)}</div>
@@ -237,7 +242,7 @@ export default function Finance() {
                 </Button>
               </div>
             </div>
-            <BoxStatusIndicator method="transfer" openings={todaysOpenings} />
+            <BoxStatusIndicator method="transfer" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-black text-purple-700">{formatCurrency(transferBalance)}</div>
