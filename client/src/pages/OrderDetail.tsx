@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { MessageCircle, MapPin, DollarSign, Receipt, Banknote, QrCode, Building2, AlertCircle, Calendar } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
