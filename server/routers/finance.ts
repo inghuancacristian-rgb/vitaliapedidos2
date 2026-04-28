@@ -109,6 +109,7 @@ export const financeRouter = router({
         category: "transfer_between_registers",
         amount: amountInCents,
         paymentMethod: input.fromMethod,
+        userId: ctx.user.id,
         notes: `Traspaso hacia ${input.toMethod.toUpperCase()}` + (input.notes ? ` - ${input.notes}` : ""),
       });
 
@@ -117,6 +118,7 @@ export const financeRouter = router({
         category: "transfer_between_registers",
         amount: amountInCents,
         paymentMethod: input.toMethod,
+        userId: ctx.user.id,
         notes: `Traspaso desde ${input.fromMethod.toUpperCase()}` + (input.notes ? ` - ${input.notes}` : ""),
       });
 

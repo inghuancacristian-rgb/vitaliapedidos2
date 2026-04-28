@@ -885,6 +885,13 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
     }
 
     // Registrar transacción financiera inmediata para visibilidad en tiempo real
+    if (method === "qr" || method === "transfer") {
+      const today = getLocalDateKey(new Date());
+      if (today && order.deliveryPersonId) {
+        await autoOpenCashRegisterIfNeeded(tx, order.deliveryPersonId, method, today);
+      }
+    }
+
     await tx.insert(financialTransactions).values({
       type: "income",
       category: "order_delivery",
@@ -1327,6 +1334,14 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
     // Se registra siempre que NO sea a crédito (isCredit=0) y haya un método de pago
     const shouldRegisterTransaction = purchaseData.isCredit === 0 && purchaseData.paymentMethod;
     if (shouldRegisterTransaction) {
+      // Auto-abrir caja si es QR o Transferencia
+      if (purchaseData.paymentMethod === "qr" || purchaseData.paymentMethod === "transfer") {
+        const today = getLocalDateKey(new Date());
+        if (today && userId) {
+          await autoOpenCashRegisterIfNeeded(tx, userId, purchaseData.paymentMethod, today);
+        }
+      }
+
       await tx.insert(financialTransactions).values({
         type: "expense",
         category: "purchase",
@@ -1523,7 +1538,19 @@ export async function createFinancialTransaction(data: any) {
     syncMocksToDisk();
     return { insertId: newId };
   }
-  return await db.insert(financialTransactions).values(data);
+
+  return await db.transaction(async (tx: any) => {
+    // Si hay un userId y es QR o Transferencia, asegurar que la caja esté abierta
+    if (data.userId && data.paymentMethod && (data.paymentMethod === "qr" || data.paymentMethod === "transfer")) {
+      const today = getLocalDateKey(new Date());
+      if (today) {
+        await autoOpenCashRegisterIfNeeded(tx, data.userId, data.paymentMethod, today);
+      }
+    }
+
+    const result = await tx.insert(financialTransactions).values(data);
+    return result;
+  });
 }
 
 export async function getFinancialTransactions(userId?: number) {
@@ -1572,7 +1599,23 @@ export async function createDeliveryExpense(data: any) {
     syncMocksToDisk();
     return { insertId: newId };
   }
-  return await db.insert(deliveryExpenses).values(data);
+  // Real DB
+  return await db.transaction(async (tx: any) => {
+    const result = await tx.insert(deliveryExpenses).values(data);
+    const insertId = getInsertId(result);
+
+    await tx.insert(financialTransactions).values({
+      type: "expense",
+      category: data.type === "fuel" ? "fuel" : "subsistence",
+      amount: data.amount,
+      notes: data.notes || "Gasto de repartidor",
+      paymentMethod: "cash", // Los gastos de repartidor suelen ser en efectivo
+      userId: data.deliveryPersonId,
+      referenceId: data.orderId || null,
+      createdAt: new Date()
+    });
+    return { insertId };
+  });
 }
 
 // Gastos Operativos
@@ -1617,7 +1660,33 @@ export async function createOperationalExpense(data: any) {
     syncMocksToDisk();
     return { insertId: newId };
   }
-  return await db.insert(operationalExpenses).values(data);
+  // Real DB
+  return await db.transaction(async (tx: any) => {
+    const result = await tx.insert(operationalExpenses).values(data);
+    const insertId = getInsertId(result);
+
+    if (data.status === "paid") {
+      // Auto-abrir caja si es QR o Transferencia
+      if (data.paymentMethod === "qr" || data.paymentMethod === "transfer") {
+        const today = getLocalDateKey(new Date());
+        if (today && data.userId) {
+          await autoOpenCashRegisterIfNeeded(tx, data.userId, data.paymentMethod, today);
+        }
+      }
+
+      await tx.insert(financialTransactions).values({
+        type: "expense",
+        category: data.category,
+        amount: data.amount,
+        paymentMethod: data.paymentMethod || "cash",
+        notes: data.description || "Gasto Operativo",
+        userId: data.userId, // Asociar con el usuario que registra
+        referenceId: insertId,
+        createdAt: new Date()
+      });
+    }
+    return { insertId };
+  });
 }
 
 export async function updateOperationalExpense(id: number, data: any) {
@@ -1684,6 +1753,42 @@ export async function deleteOperationalExpense(id: number) {
 }
 
 // Aperturas de Caja
+/**
+ * Asegura que una caja esté "abierta" para un método de pago y usuario específico en la fecha actual.
+ * Si es QR o Transferencia y no está abierta, la abre automáticamente con fondo 0.
+ */
+export async function autoOpenCashRegisterIfNeeded(dbOrTx: any, userId: number, paymentMethod: string, dateKey: string) {
+  // Solo auto-abrimos para QR y Transferencia (según solicitud del usuario)
+  if (paymentMethod !== "qr" && paymentMethod !== "transfer") return;
+
+  const existing = await dbOrTx
+    .select()
+    .from(cashOpenings)
+    .where(
+      and(
+        eq(cashOpenings.responsibleUserId, userId),
+        eq(cashOpenings.openingDate, dateKey),
+        eq(cashOpenings.paymentMethod, paymentMethod),
+        eq(cashOpenings.status, "open")
+      )
+    )
+    .limit(1);
+
+  if (existing.length === 0) {
+    console.log(`[FINANCE] Auto-abriendo caja ${paymentMethod} para usuario ${userId} en fecha ${dateKey}`);
+    await dbOrTx.insert(cashOpenings).values({
+      openingAmount: 0,
+      paymentMethod,
+      openingDate: dateKey,
+      responsibleUserId: userId,
+      openedByUserId: userId,
+      status: "open",
+      notes: "Apertura automática por transacción entrante",
+      createdAt: new Date()
+    });
+  }
+}
+
 export async function getCashOpeningByUserIdAndDateMethod(userId: number, openingDate: string, paymentMethod: string) {
   const db = await getDb();
   if (!db) {
@@ -2355,6 +2460,14 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
     }
 
     if (payload.paymentStatus === "completed") {
+      // Auto-abrir caja si es QR o Transferencia
+      if (payload.paymentMethod === "qr" || payload.paymentMethod === "transfer") {
+        const today = getLocalDateKey(new Date());
+        if (today && payload.soldBy) {
+          await autoOpenCashRegisterIfNeeded(tx, payload.soldBy, payload.paymentMethod, today);
+        }
+      }
+
       await tx.insert(financialTransactions).values({
         type: "income",
         category: payload.saleChannel === "delivery" ? "sale_delivery" : "sale_local",
