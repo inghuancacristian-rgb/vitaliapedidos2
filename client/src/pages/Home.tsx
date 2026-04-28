@@ -221,8 +221,8 @@ export default function Home() {
   // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
   const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
   const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
-  const isLockedByPending = closureStatus?.hasPending;
-  const isLockedByNoOpening = !openingStatus?.hasActive;
+  const isLockedByPending = closureStatus && closureStatus.hasPending;
+  const isLockedByNoOpening = openingStatus && !openingStatus.hasActive;
 
   // Si el usuario no es admin o si el admin quiere ver el bloqueo
   if (isLockedByPending || isLockedByNoOpening) {

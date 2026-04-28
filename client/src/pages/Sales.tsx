@@ -280,8 +280,9 @@ export default function Sales() {
   });
 
   // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
-  const isLockedByPending = closureStatus?.hasPending;
-  const isLockedByNoOpening = !openingStatus?.hasActive;
+  // Solo bloqueamos si las consultas ya cargaron para evitar falsos positivos (flicker) durante la carga
+  const isLockedByPending = closureStatus && closureStatus.hasPending;
+  const isLockedByNoOpening = openingStatus && !openingStatus.hasActive;
 
   if (isLockedByPending || isLockedByNoOpening) {
     return (
