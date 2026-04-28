@@ -458,7 +458,8 @@ export default function Sales() {
     setIsDetailOpen(true);
   };
 
-    if (paymentStatus === "completed" && !openingStatus?.hasActive) {
+  const submitSale = () => {
+    if (!openingStatus?.hasActive) {
       toast.error(`Caja cerrada: Para registrar ventas en ${paymentMethodLabel(paymentMethod)}, primero debes realizar la apertura de caja.`);
       return;
     }

@@ -147,7 +147,7 @@ export default function Purchases() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (purchaseData.isCredit === 0 && !openingStatus?.hasActive) {
+    if (!openingStatus?.hasActive) {
       toast.error(`Caja cerrada: Para registrar compras en ${purchaseData.paymentMethod.toUpperCase()}, primero debes realizar la apertura de caja.`);
       return;
     }
@@ -454,7 +454,7 @@ export default function Purchases() {
                   </div>
                 </div>
 
-                {purchaseData.isCredit === 0 && !openingStatus?.hasActive && (
+                {!openingStatus?.hasActive && (
                   <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold flex items-center gap-2">
                     <XCircle className="h-4 w-4 shrink-0" />
                     LA CAJA DE {purchaseData.paymentMethod.toUpperCase()} ESTÁ CERRADA. ABRA LA CAJA EN FINANZAS PARA CONTINUAR.
@@ -462,7 +462,7 @@ export default function Purchases() {
                 )}
               </div>
 
-              <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700" disabled={createMutation.isPending || items.length === 0 || (purchaseData.isCredit === 0 && !openingStatus?.hasActive)}>
+              <Button type="submit" className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700" disabled={createMutation.isPending || items.length === 0 || !openingStatus?.hasActive}>
                 {createMutation.isPending ? "Procesando..." : "Registrar y Finalizar Compra"}
               </Button>
             </form>

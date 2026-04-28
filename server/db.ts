@@ -862,6 +862,12 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
     const order = orderRows[0];
     if (!order || order.status === "delivered") return { success: false };
 
+    // Validar que la caja esté abierta para el método de pago seleccionado ANTES de cualquier cambio
+    const today = getLocalDateKey(new Date());
+    if (today && order.deliveryPersonId) {
+      await checkCashRegisterOpening(tx, order.deliveryPersonId, method, today);
+    }
+
     await tx.update(orders).set({
       status: "delivered",
       paymentStatus: "completed",
@@ -882,12 +888,6 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
         userId: order.deliveryPersonId,
         createdAt: new Date()
       });
-    }
-
-    // Validar que la caja esté abierta para el método de pago seleccionado
-    const today = getLocalDateKey(new Date());
-    if (today && order.deliveryPersonId) {
-      await checkCashRegisterOpening(tx, order.deliveryPersonId, method, today);
     }
 
     await tx.insert(financialTransactions).values({
@@ -1268,6 +1268,14 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
 
   // Real DB logic
   return await db.transaction(async (tx: any) => {
+    // 0. Validar que la caja esté abierta para el método de pago seleccionado
+    if (purchaseData.paymentMethod) {
+      const today = getLocalDateKey(new Date());
+      if (today && userId) {
+        await checkCashRegisterOpening(tx, userId, purchaseData.paymentMethod, today);
+      }
+    }
+
     // 1. Asegurar que haya un supplierId (campo obligatorio)
     let finalSupplierId = purchaseData.supplierId;
     if (!finalSupplierId) {
@@ -1332,12 +1340,6 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
     // Se registra siempre que NO sea a crédito (isCredit=0) y haya un método de pago
     const shouldRegisterTransaction = purchaseData.isCredit === 0 && purchaseData.paymentMethod;
     if (shouldRegisterTransaction) {
-      // Validar que la caja esté abierta para el método de pago seleccionado
-      const today = getLocalDateKey(new Date());
-      if (today && userId) {
-        await checkCashRegisterOpening(tx, userId, purchaseData.paymentMethod, today);
-      }
-
       await tx.insert(financialTransactions).values({
         type: "expense",
         category: "purchase",
@@ -1661,13 +1663,15 @@ export async function createOperationalExpense(data: any) {
     const result = await tx.insert(operationalExpenses).values(data);
     const insertId = getInsertId(result);
 
-    if (data.status === "paid") {
-      // Validar que la caja esté abierta para el método de pago seleccionado
+    // Validar que la caja esté abierta para el método de pago seleccionado ANTES de registrar impacto
+    if (data.paymentMethod) {
       const today = getLocalDateKey(new Date());
-      if (today && data.userId && data.paymentMethod) {
+      if (today && data.userId) {
         await checkCashRegisterOpening(tx, data.userId, data.paymentMethod, today);
       }
+    }
 
+    if (data.status === "paid") {
       await tx.insert(financialTransactions).values({
         type: "expense",
         category: data.category,
@@ -2381,6 +2385,12 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
   }
 
   return await db.transaction(async (tx: any) => {
+    // 0. Validar que la caja esté abierta para el método de pago seleccionado
+    const today = getLocalDateKey(new Date());
+    if (today && payload.soldBy && payload.paymentMethod) {
+      await checkCashRegisterOpening(tx, payload.soldBy, payload.paymentMethod, today);
+    }
+
     const saleResult = await tx.insert(sales).values({
       saleNumber: payload.saleNumber,
       customerId: payload.customerId,
@@ -2446,12 +2456,6 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
     }
 
     if (payload.paymentStatus === "completed") {
-      // Validar que la caja esté abierta para el método de pago seleccionado
-      const today = getLocalDateKey(new Date());
-      if (today && payload.soldBy) {
-        await checkCashRegisterOpening(tx, payload.soldBy, payload.paymentMethod, today);
-      }
-
       await tx.insert(financialTransactions).values({
         type: "income",
         category: payload.saleChannel === "delivery" ? "sale_delivery" : "sale_local",
