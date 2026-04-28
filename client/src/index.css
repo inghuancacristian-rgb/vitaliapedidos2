@@ -136,6 +136,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     min-height: 100vh;
+    overflow-y: auto;
     background-image:
       radial-gradient(circle at top left, rgba(51, 65, 85, 0.14), transparent 28%),
       radial-gradient(circle at top right, rgba(71, 85, 105, 0.12), transparent 24%),

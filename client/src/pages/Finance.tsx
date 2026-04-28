@@ -152,7 +152,7 @@ export default function Finance() {
   const todaysOpenedAmount = todaysOpenings.reduce((sum: number, o: any) => sum + o.openingAmount, 0);
 
   return (
-    <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-0">
+    <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-10 min-h-screen">
       <div className="flex justify-between items-center no-print">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Finanzas</h1>
@@ -481,7 +481,7 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
         <div className={`${colors.light} p-6 border-b ${colors.border}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -606,7 +606,7 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
         </div>
 
         {/* Tabla de Transacciones */}
-        <div className="overflow-auto max-h-[50vh] scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="flex-1 overflow-y-auto min-h-[300px] scrollbar-thin scrollbar-thumb-slate-200">
           {isLoading ? (
             <div className="p-12 text-center flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />

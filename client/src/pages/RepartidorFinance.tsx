@@ -86,7 +86,7 @@ export default function RepartidorFinance() {
     const displayStatus = currentStatus;
     const displayDate = displayStatus?.date || today;
     return (
-      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
         <Card className="border-t-4 border-t-blue-500 shadow-xl overflow-hidden">
           <CardHeader className="text-center pb-2 bg-slate-50/50">
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
@@ -165,7 +165,7 @@ export default function RepartidorFinance() {
   const diffCents = (totalReported * 100) - ((expected?.cash || 0) + (expected?.qr || 0) + (expected?.transfer || 0));
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Cierre de Caja Diario</h1>
@@ -391,7 +391,7 @@ export default function RepartidorFinance() {
               <PackageCheck className="w-4 h-4 text-emerald-600" /> Entregas Realizadas Hoy
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0 max-h-48 overflow-y-auto">
+          <CardContent className="p-0 max-h-80 overflow-y-auto">
             {!deliveryHistory || deliveryHistory.length === 0 ? (
               <div className="p-6 text-center">
                 <Truck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
