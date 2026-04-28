@@ -189,47 +189,8 @@ export default function Sales() {
   const isMobile = useIsMobile();
   const utils = trpc.useUtils();
 
-  // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
   const { data: closureStatus } = trpc.finance.hasPendingClosure.useQuery();
   const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery();
-  const isLockedByPending = closureStatus?.hasPending;
-  const isLockedByNoOpening = !openingStatus?.hasActive;
-
-  if (isLockedByPending || isLockedByNoOpening) {
-    return (
-      <div className="page-shell flex items-center justify-center pt-20">
-        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
-          <CardHeader className="text-center">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Receipt className="w-8 h-8 text-blue-600" />
-            </div>
-            <CardTitle className="text-2xl font-black text-slate-800">
-              {isLockedByPending ? "Ventas Inhabilitadas" : "Caja Cerrada"}
-            </CardTitle>
-            <CardDescription className="text-slate-500 font-medium text-base">
-              {isLockedByPending 
-                ? "Para poder registrar ventas, solicita la habilitación de tu último cierre."
-                : "Debes abrir tu caja diaria antes de poder registrar nuevas ventas."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className={`p-4 rounded-xl text-center ${isLockedByPending ? "bg-blue-50" : "bg-amber-50"}`}>
-              <Badge className={`${isLockedByPending ? "bg-blue-600" : "bg-amber-600"} font-bold px-3 py-1 uppercase`}>
-                {isLockedByPending ? "BLOQUEO POR CIERRE PENDIENTE" : "APERTURA DE CAJA REQUERIDA"}
-              </Badge>
-            </div>
-            <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
-              <Button className="w-full h-11 font-bold">
-                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-        <div className="fixed bottom-2 right-2 text-[8px] text-slate-300 font-mono italic">v1.1.5-sales-locked</div>
-      </div>
-    );
-  }
-
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
   const { data: customers } = trpc.customers.list.useQuery();
   const { data: salesList, isLoading } = trpc.sales.list.useQuery();
@@ -317,6 +278,46 @@ export default function Sales() {
       toast.error(error.message || "No se pudo actualizar el pago");
     },
   });
+
+  // Bloqueo de seguridad: Si tiene un cierre pendiente O si no ha abierto caja hoy
+  const isLockedByPending = closureStatus?.hasPending;
+  const isLockedByNoOpening = !openingStatus?.hasActive;
+
+  if (isLockedByPending || isLockedByNoOpening) {
+    return (
+      <div className="page-shell flex items-center justify-center pt-20">
+        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Receipt className="w-8 h-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-black text-slate-800">
+              {isLockedByPending ? "Ventas Inhabilitadas" : "Caja Cerrada"}
+            </CardTitle>
+            <CardDescription className="text-slate-500 font-medium text-base">
+              {isLockedByPending 
+                ? "Para poder registrar ventas, solicita la habilitación de tu último cierre."
+                : "Debes abrir tu caja diaria antes de poder registrar nuevas ventas."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className={`p-4 rounded-xl text-center ${isLockedByPending ? "bg-blue-50" : "bg-amber-50"}`}>
+              <Badge className={`${isLockedByPending ? "bg-blue-600" : "bg-amber-600"} font-bold px-3 py-1 uppercase`}>
+                {isLockedByPending ? "BLOQUEO POR CIERRE PENDIENTE" : "APERTURA DE CAJA REQUERIDA"}
+              </Badge>
+            </div>
+            <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
+              <Button className="w-full h-11 font-bold">
+                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <div className="fixed bottom-2 right-2 text-[8px] text-slate-300 font-mono italic">v1.1.5-sales-locked</div>
+      </div>
+    );
+  }
+
 
   const resetForm = () => {
     setProductSearch("");
