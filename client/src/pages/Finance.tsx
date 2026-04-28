@@ -799,7 +799,7 @@ function OpenCashDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
+        <Button type="button" className="gap-2">
           <WalletCards className="h-4 w-4" /> Apertura de Caja
         </Button>
       </DialogTrigger>
@@ -1103,7 +1103,7 @@ function AddExpenseDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button className="gap-2 bg-red-600 hover:bg-red-700"><ArrowDownRight className="h-4 w-4" /> Registrar Gasto Logistico</Button></DialogTrigger>
+      <DialogTrigger asChild><Button type="button" className="gap-2 bg-red-600 hover:bg-red-700"><ArrowDownRight className="h-4 w-4" /> Registrar Gasto Logistico</Button></DialogTrigger>
       <DialogContent><DialogHeader><DialogTitle>Nuevo Gasto de Repartidor</DialogTitle><DialogDescription>Registra combustible, viaticos o reparaciones.</DialogDescription></DialogHeader>
         <div className="space-y-4 pt-4">
           <div className="space-y-2"><Label>Repartidor</Label>
@@ -1145,7 +1145,7 @@ function TransferDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="outline" className="gap-2"><ArrowRightLeft className="h-4 w-4" />Traspaso</Button></DialogTrigger>
+      <DialogTrigger asChild><Button type="button" variant="outline" className="gap-2"><ArrowRightLeft className="h-4 w-4" />Traspaso</Button></DialogTrigger>
       <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Traspaso de Fondos</DialogTitle><DialogDescription>Mueve dinero entre tus diferentes cajas.</DialogDescription></DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2"><Label>Dinero sale de:</Label>

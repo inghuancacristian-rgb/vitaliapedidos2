@@ -1323,8 +1323,10 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
       }
     }
 
-    // 4. Registrar transacciÃ³n financiera en Caja (Gasto)
-    if (purchaseData.paymentStatus === "paid" || (purchaseData.status === "received" && purchaseData.isCredit === 0)) {
+    // 4. Registrar transacción financiera en Caja (Gasto)
+    // Se registra siempre que NO sea a crédito (isCredit=0) y haya un método de pago
+    const shouldRegisterTransaction = purchaseData.isCredit === 0 && purchaseData.paymentMethod;
+    if (shouldRegisterTransaction) {
       await tx.insert(financialTransactions).values({
         type: "expense",
         category: "purchase",
