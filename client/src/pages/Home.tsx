@@ -225,53 +225,40 @@ export default function Home() {
   const isLockedByPending = closureStatus && closureStatus.hasPending;
   const isLockedByNoOpening = openingStatus && !openingStatus.hasActive;
 
-  // Si el usuario no es admin o si el admin quiere ver el bloqueo
-  if (isLockedByPending || isLockedByNoOpening) {
-    return (
-      <div className="page-shell flex items-center justify-center">
-        <Card className="max-w-md w-full border-t-4 border-t-blue-500 shadow-xl">
-          <CardHeader className="text-center">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Receipt className="w-8 h-8 text-blue-600" />
-            </div>
-            <CardTitle className="text-2xl font-black text-slate-800">
-              {isLockedByPending ? "Aplicación Inhabilitada" : "Caja Cerrada"}
-            </CardTitle>
-            <CardDescription className="text-slate-500 font-medium text-base">
-              {isLockedByPending 
-                ? "Para poder utilizar la aplicación, solicite la habilitación en administración."
-                : "Debes abrir tu caja diaria para poder realizar ventas y entregas."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className={`p-4 rounded-xl text-center ${isLockedByPending ? "bg-blue-50" : "bg-amber-50"}`}>
-              <Badge className={`${isLockedByPending ? "bg-blue-600" : "bg-amber-600"} font-bold px-3 py-1 uppercase`}>
-                {isLockedByPending ? "PENDIENTE DE APROBACIÓN" : "APERTURA REQUERIDA"}
-              </Badge>
-              {isLockedByPending && (
-                <p className="text-[10px] text-slate-400 mt-2 italic">
-                  Cierre de caja ({closureStatus?.pendingClosure?.date}) en revisión.
-                </p>
-              )}
-            </div>
-            <Link href={user?.role === "admin" ? "/finance" : "/repartidor/finance"}>
-              <Button className="w-full h-11 font-bold">
-                {isLockedByPending ? "Ver estado de mi caja" : "Ir a Finanzas / Abrir Caja"}
-              </Button>
-            </Link>
-            <Button variant="ghost" className="w-full" onClick={logout}>
-              Cerrar sesión
-            </Button>
-          </CardContent>
-        </Card>
-        <div className="fixed bottom-2 right-2 text-[8px] text-slate-300 font-mono">v1.1.5-sync-locked</div>
-      </div>
-    );
-  }
+
   if (isDelivery) {
     return (
       <div className="page-shell">
         <div className="page-container space-y-6">
+          {isLockedByNoOpening && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-800 p-4 rounded shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-amber-600" />
+                <div>
+                  <p className="font-bold text-amber-900">Caja Cerrada</p>
+                  <p className="text-sm">Debes abrir tu caja diaria para poder cobrar ventas y entregas.</p>
+                </div>
+              </div>
+              <Link href="/repartidor/finance">
+                <Button className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">Abrir Caja</Button>
+              </Link>
+            </div>
+          )}
+          {isLockedByPending && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Receipt className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="font-bold text-blue-900">Cierre en Revisión</p>
+                  <p className="text-sm">Tu cierre de caja está siendo revisado por el administrador.</p>
+                </div>
+              </div>
+              <Link href="/repartidor/finance">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">Ver Estado</Button>
+              </Link>
+            </div>
+          )}
+          
           <section className="section-card p-5 sm:p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -349,6 +336,35 @@ export default function Home() {
   return (
     <div className="page-shell">
       <div className="page-container space-y-6">
+        {isLockedByNoOpening && (
+          <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-800 p-4 rounded shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-amber-600" />
+              <div>
+                <p className="font-bold text-amber-900">Caja Cerrada</p>
+                <p className="text-sm">Debes abrir tu caja diaria para poder registrar ventas y compras.</p>
+              </div>
+            </div>
+            <Link href="/finance">
+              <Button className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">Abrir Caja</Button>
+            </Link>
+          </div>
+        )}
+        {isLockedByPending && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Receipt className="h-6 w-6 text-blue-600" />
+              <div>
+                <p className="font-bold text-blue-900">Cierres Pendientes</p>
+                <p className="text-sm">Hay cierres de caja esperando tu revisión y aprobación.</p>
+              </div>
+            </div>
+            <Link href="/finance">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white shrink-0">Ir a Finanzas</Button>
+            </Link>
+          </div>
+        )}
+
         <section className="section-card p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
