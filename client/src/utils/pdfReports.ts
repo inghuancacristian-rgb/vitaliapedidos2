@@ -16,17 +16,30 @@ export const createPDF = (title: string) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(40, 40, 40);
-  doc.text("KÉFIR DELICIOUS", pageWidth / 2, 20, { align: "center" });
+  // Logo (si existe)
+  try {
+    // Intentamos cargar el logo desde el path público
+    // Nota: Para producción, es mejor pasar el logo como base64
+    doc.addImage("/logo.png", "PNG", 10, 10, 30, 30);
+  } catch (e) {
+    console.log("Logo not found or could not be loaded");
+  }
 
-  doc.setFontSize(16);
+  // Header
+  doc.setFontSize(22);
+  doc.setTextColor(2, 62, 47); // Color verde oscuro de Vitalia
+  doc.setFont(undefined, "bold");
+  doc.text("VITALIA", pageWidth / 2, 20, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont(undefined, "normal");
   doc.text(title, pageWidth / 2, 30, { align: "center" });
 
   // Línea separadora
   doc.setLineWidth(0.5);
-  doc.line(20, 35, pageWidth - 20, 35);
+  doc.setDrawColor(2, 62, 47);
+  doc.line(20, 38, pageWidth - 20, 38);
 
   // Footer con fecha
   const now = new Date();
@@ -46,7 +59,7 @@ export const createPDF = (title: string) => {
 export const getTableOptions = (startY: number) => ({
   startY,
   headStyles: {
-    fillColor: [76, 175, 80], // Verde Kéfir
+    fillColor: [2, 62, 47], // Verde Vitalia
     textColor: 255,
     fontStyle: "bold",
   },

@@ -122,7 +122,7 @@ export default function OrderDetail() {
               <p className="text-sm text-gray-500 mt-1">Order # {order.orderNumber}</p>
             </div>
             <div className="text-right">
-              <p className="font-bold text-lg">EMPRESA DE DISTRIBUCIÓN</p>
+              <p className="font-bold text-lg">VITALIA</p>
               <p className="text-xs text-gray-400">Fecha: {new Date().toLocaleDateString()}</p>
             </div>
           </div>

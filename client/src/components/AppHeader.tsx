@@ -39,7 +39,7 @@ export default function AppHeader() {
                   Operacion diaria
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-semibold text-slate-900">Control de Pedidos</span>
+                  <span className="truncate font-semibold text-slate-900">Vitalia</span>
                   <span className="bg-slate-100 text-[10px] px-1.5 py-0.5 rounded text-slate-500 font-mono">v1.1.2</span>
                   <ChevronRight className="hidden h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" />
                 </div>

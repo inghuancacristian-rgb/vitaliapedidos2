@@ -149,7 +149,7 @@ function printSaleTicket(detail: any) {
       </head>
       <body>
         <div class="header">
-          <h1>Control de Pedidos</h1>
+          <h1>Vitalia</h1>
           <p>Ticket simple de venta</p>
         </div>
         <div class="meta">

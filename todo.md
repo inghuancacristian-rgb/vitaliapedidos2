@@ -1,4 +1,4 @@
-# Control de Pedidos - TODO
+# Vitalia - TODO
 
 ## Base de Datos
 - [x] Diseñar esquema de tablas (usuarios, pedidos, clientes, productos, inventario, pagos)

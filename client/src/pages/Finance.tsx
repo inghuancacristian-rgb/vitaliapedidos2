@@ -772,7 +772,7 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
               </tfoot>
             </table>
             <div className="text-center text-xs text-gray-400 mt-4">
-              Generado por Control de Pedidos App - {new Date().toLocaleString()}
+              Generado por Vitalia App - {new Date().toLocaleString()}
             </div>
           </div>
         )}

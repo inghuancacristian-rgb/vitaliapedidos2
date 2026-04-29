@@ -48,9 +48,9 @@ export default function Login() {
         <Card className="overflow-hidden border-white/70">
           <CardHeader className="space-y-3 border-b border-border/70 bg-white/65 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[1.35rem] bg-[linear-gradient(135deg,#1f3351,#36506f)] shadow-[0_20px_32px_-18px_rgba(31,51,81,0.72)]">
-                <span className="text-base font-extrabold tracking-[0.24em] text-white">CP</span>
+                <span className="text-base font-extrabold tracking-[0.24em] text-white">V</span>
               </div>
-              <CardTitle className="text-3xl font-extrabold text-slate-900">Control de Pedidos</CardTitle>
+              <CardTitle className="text-3xl font-extrabold text-slate-900">Vitalia</CardTitle>
               <p className="text-sm text-muted-foreground">Inicia sesion para continuar con tu jornada.</p>
             </CardHeader>
 
