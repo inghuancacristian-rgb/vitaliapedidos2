@@ -193,8 +193,11 @@ export default function Finance() {
             <BoxStatusIndicator method="cash" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-emerald-700">{formatCurrency(cashBalance)}</div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-emerald-600/70 mt-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600/70 mb-1">Saldo Disponible</span>
+              <div className="text-2xl font-black text-emerald-700">{formatCurrency(cashBalance)}</div>
+            </div>
+            <div className="flex justify-between text-[10px] uppercase font-bold text-emerald-600/70 mt-4 pt-2 border-t border-emerald-100">
               <span>Ingresos: {formatCurrency(cashIncome)}</span>
               <span>Egresos: {formatCurrency(cashExpense)}</span>
             </div>
@@ -222,10 +225,13 @@ export default function Finance() {
             <BoxStatusIndicator method="qr" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-blue-700">{formatCurrency(qrBalance)}</div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-blue-600/70 mt-2">
-              <span>Ing: {formatCurrency(qrIncome)}</span>
-              <span>Egr: {formatCurrency(qrExpense)}</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/70 mb-1">Saldo Disponible</span>
+              <div className="text-2xl font-black text-blue-700">{formatCurrency(qrBalance)}</div>
+            </div>
+            <div className="flex justify-between text-[10px] uppercase font-bold text-blue-600/70 mt-4 pt-2 border-t border-blue-100">
+              <span>Ingresos: {formatCurrency(qrIncome)}</span>
+              <span>Egresos: {formatCurrency(qrExpense)}</span>
             </div>
           </CardContent>
         </Card>
@@ -251,10 +257,13 @@ export default function Finance() {
             <BoxStatusIndicator method="transfer" openings={activeOpenings} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-black text-purple-700">{formatCurrency(transferBalance)}</div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-purple-600/70 mt-2">
-              <span>Ing: {formatCurrency(transferIncome)}</span>
-              <span>Egr: {formatCurrency(transferExpense)}</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-wider text-purple-600/70 mb-1">Saldo Disponible</span>
+              <div className="text-2xl font-black text-purple-700">{formatCurrency(transferBalance)}</div>
+            </div>
+            <div className="flex justify-between text-[10px] uppercase font-bold text-purple-600/70 mt-4 pt-2 border-t border-purple-100">
+              <span>Ingresos: {formatCurrency(transferIncome)}</span>
+              <span>Egresos: {formatCurrency(transferExpense)}</span>
             </div>
           </CardContent>
         </Card>
@@ -348,6 +357,22 @@ export default function Finance() {
                 <Button variant="outline" className="gap-2 no-print" onClick={() => window.print()}>
                   <Printer className="h-4 w-4" /> Imprimir Libro
                 </Button>
+              </div>
+
+              {/* Resumen Combinado */}
+              <div className="grid grid-cols-3 gap-4 mt-4 no-print">
+                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                  <p className="text-[9px] uppercase font-black text-emerald-600">Total Ingresos</p>
+                  <p className="text-lg font-black text-emerald-800">{formatCurrency(cashIncome + qrIncome + transferIncome)}</p>
+                </div>
+                <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                  <p className="text-[9px] uppercase font-black text-slate-400">Saldo Disponible Total</p>
+                  <p className="text-lg font-black text-white">{formatCurrency(cashBalance + qrBalance + transferBalance)}</p>
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+                  <p className="text-[9px] uppercase font-black text-red-600">Total Egresos</p>
+                  <p className="text-lg font-black text-red-800">{formatCurrency(cashExpense + qrExpense + transferExpense)}</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -564,14 +589,14 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
                 <p className="text-sm sm:text-2xl font-black text-slate-900">{formatCurrency(data.summary.totalIncome)}</p>
               </div>
 
-              <div className="bg-white p-2 sm:p-4 rounded-xl border border-red-100 shadow-sm relative overflow-hidden group transition-all">
-                <p className="text-[8px] sm:text-[10px] uppercase font-black text-red-600 tracking-wider">Egresos</p>
-                <p className="text-sm sm:text-2xl font-black text-slate-900">{formatCurrency(data.summary.totalExpense)}</p>
+              <div className={`p-2 sm:p-4 rounded-xl border shadow-sm relative overflow-hidden group transition-all ${data.summary.finalBalance >= 0 ? "border-slate-200 bg-slate-900" : "border-red-200 bg-red-900"}`}>
+                <p className="text-[8px] sm:text-[10px] uppercase font-black text-slate-400 tracking-wider">Saldo Disponible</p>
+                <p className="text-sm sm:text-2xl font-black text-white">{formatCurrency(data.summary.finalBalance)}</p>
               </div>
 
-              <div className={`col-span-2 sm:col-span-1 p-2 sm:p-4 rounded-xl border shadow-sm relative overflow-hidden group transition-all ${data.summary.finalBalance >= 0 ? "border-slate-200 bg-slate-900" : "border-red-200 bg-red-900"}`}>
-                <p className="text-[8px] sm:text-[10px] uppercase font-black text-slate-400 tracking-wider">Saldo Final</p>
-                <p className="text-sm sm:text-2xl font-black text-white">{formatCurrency(data.summary.finalBalance)}</p>
+              <div className="col-span-2 sm:col-span-1 bg-white p-2 sm:p-4 rounded-xl border border-red-100 shadow-sm relative overflow-hidden group transition-all">
+                <p className="text-[8px] sm:text-[10px] uppercase font-black text-red-600 tracking-wider">Egresos</p>
+                <p className="text-sm sm:text-2xl font-black text-slate-900">{formatCurrency(data.summary.totalExpense)}</p>
               </div>
             </div>
           )}
