@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, Plus, Package, Calendar, User, Trash2, Eye, Printer, FileText } from "lucide-react";
+import { ShoppingCart, Plus, Package, Calendar, User, Trash2, Eye, Printer, FileText, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
