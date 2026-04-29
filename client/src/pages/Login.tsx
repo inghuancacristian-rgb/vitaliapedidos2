@@ -46,12 +46,11 @@ export default function Login() {
     <div className="page-shell flex items-center justify-center p-4">
       <div className="page-container w-full max-w-md mx-auto">
         <Card className="overflow-hidden border-white/70">
-          <CardHeader className="space-y-3 border-b border-border/70 bg-white/65 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[1.35rem] bg-[linear-gradient(135deg,#1f3351,#36506f)] shadow-[0_20px_32px_-18px_rgba(31,51,81,0.72)]">
-                <span className="text-base font-extrabold tracking-[0.24em] text-white">V</span>
+          <CardHeader className="space-y-4 border-b border-border/70 bg-white/65 text-center">
+              <div className="mx-auto">
+                <img src="/logo.png" alt="Vitalia Logo" className="mx-auto h-24 w-auto object-contain" />
               </div>
-              <CardTitle className="text-3xl font-extrabold text-slate-900">Vitalia</CardTitle>
-              <p className="text-sm text-muted-foreground">Inicia sesion para continuar con tu jornada.</p>
+              <p className="text-sm text-muted-foreground font-medium">Inicia sesion para continuar con tu jornada.</p>
             </CardHeader>
 
             <CardContent className="space-y-6 p-6 sm:p-7">

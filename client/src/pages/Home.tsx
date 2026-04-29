@@ -174,10 +174,9 @@ export default function Home() {
         <div className="page-container max-w-5xl">
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="hero-panel p-7 sm:p-10">
-              <span className="status-chip mb-5">
-                <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                Plataforma operativa
-              </span>
+              <div className="mb-8">
+                <img src="/logo.png" alt="Vitalia Logo" className="h-20 w-auto object-contain" />
+              </div>
               <h1 className="max-w-2xl text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl">
                 Pedidos, inventario, clientes y ventas en un mismo sistema.
               </h1>
@@ -345,11 +344,8 @@ export default function Home() {
         <section className="section-card p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="status-chip">
-                  <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                  Centro operativo
-                </span>
+              <div className="flex flex-wrap items-center gap-4">
+                <img src="/logo.png" alt="Vitalia Logo" className="h-12 w-auto object-contain" />
                 <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs font-semibold">
                   {user?.name}
                 </Badge>

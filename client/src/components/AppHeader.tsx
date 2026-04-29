@@ -31,8 +31,8 @@ export default function AppHeader() {
         <div className="glass-panel flex min-h-[72px] items-center justify-between gap-3 px-4 py-3 md:px-5">
           <Link href="/">
             <div className="group flex cursor-pointer items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#1f3351,#36506f)] shadow-[0_16px_28px_-18px_rgba(31,51,81,0.72)]">
-                <span className="text-sm font-extrabold tracking-[0.18em] text-white">CP</span>
+              <div className="flex items-center justify-center">
+                <img src="/logo.png" alt="Vitalia" className="h-10 w-auto object-contain" />
               </div>
               <div className="min-w-0">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-primary/80">
