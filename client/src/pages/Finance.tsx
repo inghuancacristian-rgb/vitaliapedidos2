@@ -135,13 +135,13 @@ export default function Finance() {
     [cashOpenings]
   );
 
-  const activeCashOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "cash" || !o.paymentMethod).reduce((sum: number, o: any) => sum + o.openingAmount, 0);
-  const activeQrOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "qr").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
-  const activeTransferOpenings = activeOpenings.filter((o: any) => o.paymentMethod === "transfer").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const totalCashOpenings = ((cashOpenings as any[]) || []).filter((o: any) => o.paymentMethod === "cash" || !o.paymentMethod).reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const totalQrOpenings = ((cashOpenings as any[]) || []).filter((o: any) => o.paymentMethod === "qr").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
+  const totalTransferOpenings = ((cashOpenings as any[]) || []).filter((o: any) => o.paymentMethod === "transfer").reduce((sum: number, o: any) => sum + o.openingAmount, 0);
 
-  const cashBalance = baseCashBalance + activeCashOpenings;
-  const qrBalance = baseQrBalance + activeQrOpenings;
-  const transferBalance = baseTransferBalance + activeTransferOpenings;
+  const cashBalance = baseCashBalance + totalCashOpenings;
+  const qrBalance = baseQrBalance + totalQrOpenings;
+  const transferBalance = baseTransferBalance + totalTransferOpenings;
 
   const isAnyBoxOpen = activeOpenings.length > 0;
 
