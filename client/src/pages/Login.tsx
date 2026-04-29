@@ -43,84 +43,96 @@ export default function Login() {
   };
 
   return (
-    <div className="page-shell flex items-center justify-center p-4">
-      <div className="page-container w-full max-w-md mx-auto">
-        <Card className="overflow-hidden border-white/70">
-          <CardHeader className="space-y-4 border-b border-border/70 bg-white/65 text-center">
-              <div className="mx-auto">
-                <img src="/logo.png" alt="Vitalia Logo" className="mx-auto h-24 w-auto object-contain" />
+    <div className="page-shell flex items-center justify-center p-4 bg-[radial-gradient(circle_at_top_right,rgba(2,62,47,0.05),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(2,62,47,0.05),transparent_40%)]">
+      <div className="page-container w-full max-w-[440px] mx-auto animate-in fade-in zoom-in duration-500">
+        <Card className="overflow-hidden border-none shadow-[0_32px_64px_-16px_rgba(15,23,42,0.15)] bg-white/90 backdrop-blur-xl rounded-[2.5rem]">
+          <CardHeader className="space-y-6 border-b border-slate-100 bg-gradient-to-b from-slate-50/50 to-white p-8 sm:p-10 text-center">
+              <div className="mx-auto transform transition-transform hover:scale-105 duration-300">
+                <img src="/logo.png" alt="Vitalia Logo" className="mx-auto h-36 w-auto object-contain drop-shadow-sm" />
               </div>
-              <p className="text-sm text-muted-foreground font-medium">Inicia sesion para continuar con tu jornada.</p>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Bienvenido</h2>
+                <p className="text-sm text-slate-500 font-medium">Inicia sesion para continuar con tu jornada diaria.</p>
+              </div>
             </CardHeader>
-
-            <CardContent className="space-y-6 p-6 sm:p-7">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Usuario</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Ingresa tu usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={loginMutation.isPending}
-                    autoComplete="username"
-                    className="h-11 rounded-xl border-white/70 bg-white/85"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Contrasena</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Ingresa tu contrasena"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loginMutation.isPending}
-                      autoComplete="current-password"
-                      className="h-11 rounded-xl border-white/70 bg-white/85 pr-11"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                      disabled={loginMutation.isPending}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button type="submit" className="h-11 w-full" disabled={loginMutation.isPending} size="lg">
-                  {loginMutation.isPending ? "Ingresando..." : "Iniciar sesion"}
-                </Button>
-              </form>
-
-              <div className="rounded-[1.3rem] border border-slate-200/80 bg-slate-50/80 p-4">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <ShieldCheck className="h-4 w-4" />
-                  Credenciales de administracion
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <CredentialPill label="Usuario" value="admin" />
-                  <CredentialPill label="Contrasena" value="admin123" />
-                </div>
-              </div>
-            </CardContent>
-
-            <CardFooter className="justify-center border-t border-border/70 bg-slate-50/70 px-6 py-5 text-center">
-              <p className="text-sm text-muted-foreground">
-                No tienes cuenta?{" "}
-                <Link href="/register" className="font-semibold text-primary hover:underline">
-                  Registrate aqui
-                </Link>
-              </p>
-            </CardFooter>
-          </Card>
-      </div>
-    </div>
+ 
+             <CardContent className="space-y-8 p-8 sm:p-10">
+               <form onSubmit={handleSubmit} className="space-y-5">
+                 <div className="space-y-2">
+                   <Label htmlFor="username" className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Usuario</Label>
+                   <Input
+                     id="username"
+                     type="text"
+                     placeholder="nombre de usuario"
+                     value={username}
+                     onChange={(e) => setUsername(e.target.value)}
+                     disabled={loginMutation.isPending}
+                     autoComplete="username"
+                     className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all text-base px-4"
+                   />
+                 </div>
+ 
+                 <div className="space-y-2">
+                   <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Contraseña</Label>
+                   <div className="relative">
+                     <Input
+                       id="password"
+                       type={showPassword ? "text" : "password"}
+                       placeholder="••••••••"
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                       disabled={loginMutation.isPending}
+                       autoComplete="current-password"
+                       className="h-12 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white transition-all text-base px-4 pr-12"
+                     />
+                     <button
+                       type="button"
+                       onClick={() => setShowPassword(!showPassword)}
+                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-900"
+                       disabled={loginMutation.isPending}
+                     >
+                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                     </button>
+                   </div>
+                 </div>
+ 
+                 <Button 
+                   type="submit" 
+                   className="h-13 w-full rounded-2xl bg-slate-900 text-white font-bold text-base shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:-translate-y-0.5 transition-all active:scale-[0.98] mt-2" 
+                   disabled={loginMutation.isPending}
+                 >
+                   {loginMutation.isPending ? (
+                     <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Ingresando...
+                     </div>
+                   ) : "Iniciar sesión"}
+                 </Button>
+               </form>
+ 
+               <div className="rounded-[2rem] border border-slate-100 bg-slate-50/50 p-5">
+                 <div className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+                   <ShieldCheck className="h-3.5 w-3.5" />
+                   Acceso de administración
+                 </div>
+                 <div className="grid gap-3 sm:grid-cols-2">
+                   <CredentialPill label="Usuario" value="admin" />
+                   <CredentialPill label="Contraseña" value="admin123" />
+                 </div>
+               </div>
+             </CardContent>
+ 
+             <CardFooter className="justify-center border-t border-slate-100 bg-slate-50/30 px-8 py-6 text-center">
+               <p className="text-sm text-slate-500">
+                 ¿No tienes cuenta?{" "}
+                 <Link href="/register" className="font-bold text-slate-900 hover:underline">
+                   Regístrate aquí
+                 </Link>
+               </p>
+             </CardFooter>
+           </Card>
+       </div>
+     </div>
   );
 }
 

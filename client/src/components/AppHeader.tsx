@@ -32,7 +32,7 @@ export default function AppHeader() {
           <Link href="/">
             <div className="group flex cursor-pointer items-center gap-3">
               <div className="flex items-center justify-center">
-                <img src="/logo.png" alt="Vitalia" className="h-10 w-auto object-contain" />
+                <img src="/logo.png" alt="Vitalia" className="h-14 w-auto object-contain" />
               </div>
               <div className="min-w-0">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-primary/80">
