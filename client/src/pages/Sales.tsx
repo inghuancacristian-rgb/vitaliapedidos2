@@ -212,6 +212,8 @@ export default function Sales() {
   const [globalDiscountValue, setGlobalDiscountValue] = useState(0);
   const [notes, setNotes] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [anonymousCustomerPhone, setAnonymousCustomerPhone] = useState("");
+  const [innerProductSearch, setInnerProductSearch] = useState("");
 
   const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod });
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
@@ -328,6 +330,7 @@ export default function Sales() {
     setGlobalDiscountValue(0);
     setNotes("");
     setCartItems([]);
+    setAnonymousCustomerPhone("");
   };
 
   const filteredProducts = useMemo(() => {
@@ -467,6 +470,7 @@ export default function Sales() {
     createSaleMutation.mutate({
       customerId: selectedCustomerId || undefined,
       customerName: selectedCustomerId ? undefined : anonymousCustomerName.trim() || "Cliente anónimo",
+      customerPhone: selectedCustomerId ? undefined : anonymousCustomerPhone.trim() || undefined,
       saleChannel,
       paymentMethod,
       paymentStatus,
@@ -779,11 +783,21 @@ export default function Sales() {
                       </div>
                     ) : null}
                     {!selectedCustomerId ? (
-                      <Input
-                        value={anonymousCustomerName}
-                        onChange={(event) => setAnonymousCustomerName(event.target.value)}
-                        placeholder="O escribe nombre libre / anónimo"
-                      />
+                      <div className="grid gap-2">
+                        <Input
+                          value={anonymousCustomerName}
+                          onChange={(event) => setAnonymousCustomerName(event.target.value)}
+                          placeholder="Nombre del cliente"
+                        />
+                        <Input
+                          value={anonymousCustomerPhone}
+                          onChange={(event) => setAnonymousCustomerPhone(event.target.value)}
+                          placeholder="Teléfono / Celular"
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">
+                          * Si ingresas datos, se guardará automáticamente como cliente nuevo.
+                        </p>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">Cliente seleccionado</Badge>

@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, Clipboard, ArrowLeft } from "lucide-react";
+import { Check, Clipboard, ArrowLeft, Search, Grid, Plus, ShoppingCart } from "lucide-react";
 
 export default function CreateOrder() {
   const { user } = useAuth();
@@ -45,6 +45,7 @@ export default function CreateOrder() {
   });
 
   const [showSummary, setShowSummary] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
 
   // Todos los hooks deben estar antes de cualquier condicional o return
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
@@ -108,6 +109,28 @@ export default function CreateOrder() {
       ...formData,
       items: formData.items.filter((_, i) => i !== index),
     });
+  };
+
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  const addToCartFromGallery = (product: any) => {
+    const existingIndex = formData.items.findIndex(i => i.productId === product.id);
+    if (existingIndex >= 0) {
+      const newItems = [...formData.items];
+      newItems[existingIndex].quantity += 1;
+      setFormData({ ...formData, items: newItems });
+    } else {
+      setFormData({
+        ...formData,
+        items: [...formData.items, { 
+          productId: product.id, 
+          productCode: product.code, 
+          quantity: 1, 
+          price: product.salePrice || 0 
+        }]
+      });
+    }
+    toast.success(`${product.name} añadido`);
   };
 
   const handleConfirmSubmit = () => {
@@ -375,9 +398,14 @@ export default function CreateOrder() {
           <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
             <CardHeader className="bg-emerald-600 text-white p-6 flex flex-row items-center justify-between">
               <CardTitle className="text-xl">Lista de Productos</CardTitle>
-              <Button type="button" variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg">
-                + Añadir Item
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" size="sm" onClick={() => setIsGalleryOpen(true)} className="rounded-full font-bold shadow-lg gap-2">
+                  <Grid className="h-4 w-4" /> Catálogo
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg">
+                  + Rápido
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               {formData.items.map((item, index) => (
@@ -399,10 +427,31 @@ export default function CreateOrder() {
                         <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          {products?.map((p: any) => (
+                        <SelectContent className="max-h-[300px]">
+                          <div className="p-2 sticky top-0 bg-white z-10 border-b">
+                             <div className="relative">
+                               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                               <Input
+                                 placeholder="Buscar producto..."
+                                 className="pl-8 h-9 text-xs"
+                                 value={productSearch}
+                                 onChange={(e) => setProductSearch(e.target.value)}
+                                 onClick={(e) => e.stopPropagation()}
+                                 onKeyDown={(e) => e.stopPropagation()}
+                               />
+                             </div>
+                          </div>
+                          {products?.filter((p: any) => 
+                            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                            p.code.toLowerCase().includes(productSearch.toLowerCase())
+                          ).map((p: any) => (
                             <SelectItem key={p.id} value={p.code}>
-                              {p.name}
+                              <div className="flex flex-col">
+                                <span className="font-bold">{p.name}</span>
+                                <span className={`text-[10px] ${p.stock <= p.minStock ? 'text-red-500 font-black' : 'text-slate-400'}`}>
+                                  Stock: {p.stock} uds.
+                                </span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -530,6 +579,67 @@ export default function CreateOrder() {
                 {createOrderMutation.isPending ? "Creando..." : "Confirmar y Crear"}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Catálogo / Galería de Productos */}
+      <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-[2.5rem] p-0">
+          <DialogHeader className="p-6 bg-slate-900 text-white">
+            <DialogTitle className="text-2xl font-black">Catálogo de Productos</DialogTitle>
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por nombre o código..."
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-slate-500 rounded-xl"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+              />
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {products?.filter((p: any) => 
+                p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                p.code.toLowerCase().includes(productSearch.toLowerCase())
+              ).map((product: any) => (
+                <Card key={product.id} className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow cursor-pointer rounded-2xl group" onClick={() => addToCartFromGallery(product)}>
+                  <div className="aspect-square bg-slate-200 relative">
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Plus className="h-8 w-8" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <Badge variant={product.stock <= product.minStock ? "destructive" : "secondary"} className="rounded-full px-2 py-0.5 text-[10px] font-bold">
+                        Stock: {product.stock}
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-3">
+                    <p className="font-bold text-sm text-slate-800 line-clamp-1">{product.name}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-emerald-600 font-black text-sm">{formatCurrency(product.salePrice)}</span>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full bg-emerald-50 text-emerald-600">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+          <div className="p-4 bg-white border-t flex justify-between items-center px-8">
+            <div className="flex items-center gap-2 text-slate-500">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="font-bold">{formData.items.length} productos en lista</span>
+            </div>
+            <Button onClick={() => setIsGalleryOpen(false)} className="rounded-xl font-bold bg-slate-900 px-8">
+              Listo
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

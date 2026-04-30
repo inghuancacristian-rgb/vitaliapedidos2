@@ -10,6 +10,7 @@ import {
   getSaleItemsBySaleId,
   markSalePaymentCompleted,
 } from "../db";
+import { ensureCustomerRecord } from "./customer_utils";
 
 const discountTypeSchema = z.enum(["none", "percentage", "fixed"]);
 const paymentMethodSchema = z.enum(["cash", "qr", "transfer"]);
@@ -94,6 +95,7 @@ export const salesRouter = router({
       z.object({
         customerId: z.number().optional(),
         customerName: z.string().optional(),
+        customerPhone: z.string().optional(),
         saleChannel: z.enum(["local", "delivery"]).default("local"),
         orderId: z.number().optional(),
         paymentMethod: paymentMethodSchema,
@@ -135,11 +137,26 @@ export const salesRouter = router({
       const total = Math.max(0, subtotal - discountAmount);
       const saleNumber = await getNextSaleNumber();
 
+      let customerId = input.customerId;
+
+      // Si no hay ID pero hay nombre y teléfono, intentamos asegurar el registro
+      if (!customerId && input.customerName && input.customerPhone) {
+        const customer = await ensureCustomerRecord({
+          clientNumber: input.customerPhone,
+          clientName: input.customerName,
+          zone: "Venta Directa",
+          sourceChannel: "other"
+        });
+        if (customer) {
+          customerId = customer.id;
+        }
+      }
+
       try {
         const result = await createSaleWithItems({
           saleNumber,
-          customerId: input.customerId,
-          customerName: input.customerId ? undefined : input.customerName,
+          customerId,
+          customerName: customerId ? undefined : input.customerName,
           saleChannel: input.saleChannel,
           orderId: input.orderId,
           soldBy: ctx.user!.id,
