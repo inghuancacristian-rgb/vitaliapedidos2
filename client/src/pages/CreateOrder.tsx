@@ -535,5 +535,4 @@ export default function CreateOrder() {
       </Dialog>
     </div>
   );
-  );
 }
