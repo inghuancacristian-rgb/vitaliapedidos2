@@ -768,11 +768,15 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
   const finishedProducts = inventory.filter((item: any) => item.product?.category === "finished_product");
   const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material" || item.product?.category === "supplies");
   
-  const calculateTotal = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.price || 0) / 100)), 0);
+  const calculateTotalCost = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.price || 0) / 100)), 0);
+  const calculateTotalSale = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.salePrice || 0) / 100)), 0);
   
-  const totalFinished = calculateTotal(finishedProducts);
-  const totalRaw = calculateTotal(rawMaterials);
-  const grandTotal = totalFinished + totalRaw;
+  const totalCostFinished = calculateTotalCost(finishedProducts);
+  const totalSaleFinished = calculateTotalSale(finishedProducts);
+  const totalCostRaw = calculateTotalCost(rawMaterials);
+  const totalSaleRaw = calculateTotalSale(rawMaterials);
+  const grandTotalCost = totalCostFinished + totalCostRaw;
+  const grandTotalSale = totalSaleFinished + totalSaleRaw;
 
   return (
     <div className="hidden print:block bg-white text-slate-900 w-full min-h-screen p-8 font-sans">
@@ -791,20 +795,26 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
                 <th className="py-2 font-semibold">Producto</th>
                 <th className="py-2 text-center font-semibold">Cant.</th>
                 <th className="py-2 text-right font-semibold">Costo Unit.</th>
-                <th className="py-2 text-right font-semibold">Valor Total</th>
+                <th className="py-2 text-right font-semibold">Total Costo</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Precio Venta</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Total Venta</th>
               </tr>
             </thead>
             <tbody>
               {finishedProducts.map((item: any) => {
-                const price = (item.product?.price || 0) / 100;
-                const total = item.quantity * price;
+                const costPrice = (item.product?.price || 0) / 100;
+                const salePrice = (item.product?.salePrice || 0) / 100;
+                const totalCost = item.quantity * costPrice;
+                const totalSale = item.quantity * salePrice;
                 return (
                   <tr key={item.id} className="border-b border-slate-100">
                     <td className="py-2 text-slate-500">{item.product?.code}</td>
                     <td className="py-2 font-medium">{item.product?.name}</td>
                     <td className="py-2 text-center">{item.quantity}</td>
-                    <td className="py-2 text-right">{formatCurrency(Math.round(price * 100))}</td>
-                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(total * 100))}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(costPrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(totalCost * 100))}</td>
+                    <td className="py-2 text-right text-blue-700">{formatCurrency(Math.round(salePrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold text-blue-800">{formatCurrency(Math.round(totalSale * 100))}</td>
                   </tr>
                 );
               })}
@@ -812,7 +822,8 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
             <tfoot>
               <tr>
                 <td colSpan={4} className="py-3 text-right font-bold">Subtotal Terminados:</td>
-                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalFinished * 100))}</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostFinished * 100))}</td>
+                <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleFinished * 100))}</td>
               </tr>
             </tfoot>
           </table>
@@ -829,20 +840,26 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
                 <th className="py-2 font-semibold">Insumo</th>
                 <th className="py-2 text-center font-semibold">Cant.</th>
                 <th className="py-2 text-right font-semibold">Costo Unit.</th>
-                <th className="py-2 text-right font-semibold">Valor Total</th>
+                <th className="py-2 text-right font-semibold">Total Costo</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Precio Venta</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Total Venta</th>
               </tr>
             </thead>
             <tbody>
               {rawMaterials.map((item: any) => {
-                const price = (item.product?.price || 0) / 100;
-                const total = item.quantity * price;
+                const costPrice = (item.product?.price || 0) / 100;
+                const salePrice = (item.product?.salePrice || 0) / 100;
+                const totalCost = item.quantity * costPrice;
+                const totalSale = item.quantity * salePrice;
                 return (
                   <tr key={item.id} className="border-b border-slate-100">
                     <td className="py-2 text-slate-500">{item.product?.code}</td>
                     <td className="py-2 font-medium">{item.product?.name}</td>
                     <td className="py-2 text-center">{item.quantity}</td>
-                    <td className="py-2 text-right">{formatCurrency(Math.round(price * 100))}</td>
-                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(total * 100))}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(costPrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(totalCost * 100))}</td>
+                    <td className="py-2 text-right text-blue-700">{formatCurrency(Math.round(salePrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold text-blue-800">{formatCurrency(Math.round(totalSale * 100))}</td>
                   </tr>
                 );
               })}
@@ -850,16 +867,23 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
             <tfoot>
               <tr>
                 <td colSpan={4} className="py-3 text-right font-bold">Subtotal Insumos:</td>
-                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalRaw * 100))}</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostRaw * 100))}</td>
+                <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleRaw * 100))}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       )}
 
-      <div className="mt-12 border-t-4 border-slate-900 pt-6 flex justify-between items-center">
-        <h2 className="text-xl font-black uppercase">Total Valuacion Inventario:</h2>
-        <span className="text-2xl font-black">{formatCurrency(Math.round(grandTotal * 100))}</span>
+      <div className="mt-12 border-t-4 border-slate-900 pt-6 flex flex-col items-end space-y-2">
+        <div className="flex justify-between items-center w-2/3">
+          <h2 className="text-xl font-bold uppercase text-slate-700">Total Valuacion (Costo):</h2>
+          <span className="text-2xl font-bold">{formatCurrency(Math.round(grandTotalCost * 100))}</span>
+        </div>
+        <div className="flex justify-between items-center w-2/3">
+          <h2 className="text-xl font-black uppercase text-blue-900">Total Valuacion (Precio Venta):</h2>
+          <span className="text-2xl font-black text-blue-900">{formatCurrency(Math.round(grandTotalSale * 100))}</span>
+        </div>
       </div>
     </div>
   );
