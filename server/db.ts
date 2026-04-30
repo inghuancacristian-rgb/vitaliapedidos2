@@ -632,20 +632,33 @@ export async function getOrdersByDeliveryPerson(userId: number) {
     .where(eq(orders.deliveryPersonId, userId));
 }
 
-// Deduce inventory when an order is created
+// Deduce inventory when an order is created (FEFO: First Expired, First Out)
 export async function deductInventoryForOrder(orderId: number, orderNumber: string, items: InsertOrderItem[]) {
   const db = await getDb();
   if (!db) {
     for (const item of items) {
-      const inv = MOCK_INVENTORY.find(i => i.productId === item.productId);
-      if (inv && inv.quantity > 0) {
-        const deductQty = Math.min(item.quantity, inv.quantity);
-        inv.quantity -= deductQty;
-        inv.lastUpdated = new Date();
-      } else if (inv) {
-        inv.quantity -= item.quantity;
-        inv.lastUpdated = new Date();
+      // En modo demo, buscamos lotes del producto ordenados por fecha de vencimiento
+      const batches = MOCK_INVENTORY
+        .filter(i => i.productId === item.productId)
+        .sort((a, b) => {
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        });
+
+      let remainingToDeduct = item.quantity;
+      for (const batch of batches) {
+        if (remainingToDeduct <= 0) break;
+        const deduct = Math.min(batch.quantity, remainingToDeduct);
+        batch.quantity -= deduct;
+        remainingToDeduct -= deduct;
       }
+
+      // Si falta stock, restamos del primer lote (permitir stock negativo en demo si es necesario)
+      if (remainingToDeduct > 0 && batches.length > 0) {
+        batches[0].quantity -= remainingToDeduct;
+      }
+
       MOCK_MOVEMENTS.push({
         id: MOCK_MOVEMENTS.length + 1,
         productId: item.productId,
@@ -662,13 +675,33 @@ export async function deductInventoryForOrder(orderId: number, orderNumber: stri
 
   await db.transaction(async (tx: any) => {
     for (const item of items) {
-      const invRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
-      const inv = invRows[0];
-      if (inv) {
-        const newQty = inv.quantity - item.quantity;
-        await tx.update(inventory).set({ quantity: newQty, lastUpdated: new Date() })
-          .where(eq(inventory.productId, item.productId));
+      // Buscar lotes ordenados por fecha de vencimiento (FEFO)
+      const batches = await tx.select()
+        .from(inventory)
+        .where(eq(inventory.productId, item.productId))
+        .orderBy(inventory.expiryDate);
+
+      let remainingToDeduct = item.quantity;
+      for (const batch of batches) {
+        if (remainingToDeduct <= 0) break;
+        const deduct = Math.min(batch.quantity, remainingToDeduct);
+        if (deduct > 0) {
+          await tx.update(inventory)
+            .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
+            .where(eq(inventory.id, batch.id));
+          remainingToDeduct -= deduct;
+        }
       }
+
+      // Si aún queda por descontar (stock insuficiente en lotes registrados), 
+      // descontar del lote con fecha de vencimiento más lejana o crear un registro por defecto
+      if (remainingToDeduct > 0 && batches.length > 0) {
+        const lastBatch = batches[batches.length - 1];
+        await tx.update(inventory)
+          .set({ quantity: lastBatch.quantity - remainingToDeduct, lastUpdated: new Date() })
+          .where(eq(inventory.id, lastBatch.id));
+      }
+
       await tx.insert(inventoryMovements).values({
         productId: item.productId,
         type: "exit",
@@ -3030,4 +3063,79 @@ export async function updateDeliveryExtraLoadStatus(id: number, status: "loaded"
     await tx.update(deliveryExtraLoad).set({ status, updatedAt: new Date() }).where(eq(deliveryExtraLoad.id, id));
     return { success: true };
   });
+}
+
+// =============================================
+// Alertas Inteligentes de Inventario (Opción 5)
+// =============================================
+export async function getSmartInventoryAlerts() {
+  const db = await getDb();
+  const daysToLookBack = 30;
+  const today = new Date();
+  const startDate = new Date();
+  startDate.setDate(today.getDate() - daysToLookBack);
+  const startDateStr = getLocalDateKey(startDate);
+
+  // 1. Obtener todos los productos activos
+  const allProducts = await getAllProducts();
+  const inventoryData = await getAllInventory();
+
+  // 2. Obtener ventas de los últimos 30 días para calcular velocidad
+  let salesVelocity: Record<number, number> = {};
+
+  if (!db) {
+    const recentSales = MOCK_SALE_ITEMS.filter(item => {
+      const sale = MOCK_SALES.find(s => s.id === item.saleId);
+      return sale && getLocalDateKey(sale.createdAt) >= startDateStr;
+    });
+
+    recentSales.forEach(item => {
+      salesVelocity[item.productId] = (salesVelocity[item.productId] || 0) + item.quantity;
+    });
+  } else {
+    const results = await db.select({
+      productId: saleItems.productId,
+      totalQuantity: sql<number>`sum(${saleItems.quantity})`,
+    })
+    .from(saleItems)
+    .innerJoin(sales, eq(saleItems.saleId, sales.id))
+    .where(and(
+      ne(sales.status, "cancelled"),
+      sql`DATE(${sales.createdAt}) >= ${startDateStr}`
+    ))
+    .groupBy(saleItems.productId);
+
+    results.forEach((r: any) => {
+      salesVelocity[r.productId] = r.totalQuantity;
+    });
+  }
+
+  // 3. Cruzar datos para generar alertas
+  const alerts = allProducts.map(product => {
+    const productInventory = inventoryData.filter(i => i.productId === product.id);
+    const totalStock = productInventory.reduce((sum, i) => sum + i.quantity, 0);
+    const velocity30d = salesVelocity[product.id] || 0;
+    const dailyVelocity = velocity30d / daysToLookBack;
+
+    let daysRemaining = dailyVelocity > 0 ? Math.floor(totalStock / dailyVelocity) : 999;
+    
+    // Un lote próximo a vencer (en menos de 7 días)
+    const urgentExpiry = productInventory.find(i => {
+      if (!i.expiryDate) return false;
+      const daysToExpiry = (new Date(i.expiryDate).getTime() - today.getTime()) / (1000 * 3600 * 24);
+      return daysToExpiry >= 0 && daysToExpiry <= 7;
+    });
+
+    return {
+      productId: product.id,
+      productName: product.name,
+      totalStock,
+      dailyVelocity: dailyVelocity.toFixed(2),
+      daysRemaining,
+      urgentExpiry: urgentExpiry ? urgentExpiry.expiryDate : null,
+      status: daysRemaining < 7 ? "critical" : daysRemaining < 15 ? "warning" : "ok"
+    };
+  }).filter(a => a.status !== "ok" || a.urgentExpiry);
+
+  return alerts;
 }

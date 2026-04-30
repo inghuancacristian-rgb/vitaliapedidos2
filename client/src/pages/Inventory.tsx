@@ -77,6 +77,8 @@ function AdjustInventoryDialog({
   setRegisterPurchase,
   paymentMethod,
   setPaymentMethod,
+  batchNumber,
+  setBatchNumber,
   onSubmit,
   isPending,
 }: {
@@ -97,6 +99,8 @@ function AdjustInventoryDialog({
   setRegisterPurchase: (value: boolean) => void;
   paymentMethod: "cash" | "qr" | "transfer";
   setPaymentMethod: (value: "cash" | "qr" | "transfer") => void;
+  batchNumber: string;
+  setBatchNumber: (value: string) => void;
   onSubmit: () => void;
   isPending: boolean;
 }) {
@@ -223,16 +227,28 @@ function AdjustInventoryDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="reason">Motivo</Label>
+              <Label htmlFor="batch">Número de Lote</Label>
               <Input
-                id="reason"
+                id="batch"
                 type="text"
-                placeholder="Ajuste manual"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                placeholder="Ej: LOTE-2024-001"
+                value={batchNumber}
+                onChange={(e) => setBatchNumber(e.target.value)}
                 className="h-11 rounded-xl border-white/70 bg-white/80"
               />
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="reason">Motivo</Label>
+            <Input
+              id="reason"
+              type="text"
+              placeholder="Ajuste manual"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="h-11 rounded-xl border-white/70 bg-white/80"
+            />
           </div>
 
           <Button onClick={onSubmit} disabled={isPending} className="h-11 w-full">
@@ -257,6 +273,7 @@ export default function Inventory() {
   const [type, setType] = useState<"entry" | "exit" | "adjustment">("adjustment");
   const [price, setPrice] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
   const [registerPurchase, setRegisterPurchase] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
 
@@ -371,6 +388,7 @@ export default function Inventory() {
       reason: reason || "Ajuste manual",
       type,
       expiryDate: expiryDate || undefined,
+      batchNumber: batchNumber || undefined,
       registerPurchase,
       paymentMethod: registerPurchase ? paymentMethod : undefined,
     });
@@ -505,6 +523,8 @@ export default function Inventory() {
             </button>
           </div>
         </section>
+
+        <SmartAlerts />
 
         {lowStockItems.length > 0 ? (
           <Card className="overflow-hidden border-red-200/70 bg-[linear-gradient(180deg,rgba(254,226,226,0.9),rgba(255,255,255,0.92))]">
@@ -903,5 +923,49 @@ function InfoBlock({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
       <p className={`mt-1 text-sm font-bold ${accent || "text-slate-900"}`}>{value}</p>
     </div>
+  );
+}
+
+function SmartAlerts() {
+  const { data: alerts, isLoading } = trpc.inventory.getSmartAlerts.useQuery();
+
+  if (isLoading || !alerts || alerts.length === 0) return null;
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/30 overflow-hidden shadow-sm no-print">
+      <CardHeader className="py-4">
+        <div className="flex items-center gap-2 text-amber-700">
+          <Sparkles className="h-5 w-5" />
+          <CardTitle className="text-base font-bold">Asistente de Inventario Inteligente</CardTitle>
+        </div>
+        <CardDescription className="text-amber-600/80">Análisis basado en la velocidad de ventas de los últimos 30 días.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="divide-y divide-amber-100">
+          {alerts.map((alert: any) => (
+            <div key={alert.productId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+              <div className="flex items-center gap-3">
+                <div className={`h-2 w-2 rounded-full ${alert.status === 'critical' ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+                <div>
+                  <p className="font-bold text-slate-900">{alert.productName}</p>
+                  <p className="text-xs text-slate-500">Stock: {alert.totalStock} uds. | Venta: {alert.dailyVelocity} uds/día</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:items-end gap-1">
+                <Badge variant={alert.status === 'critical' ? 'destructive' : 'outline'} className="w-fit">
+                  {alert.daysRemaining <= 0 ? '¡Sin Stock!' : `Quedan ~${alert.daysRemaining} días`}
+                </Badge>
+                {alert.urgentExpiry && (
+                  <p className="text-[10px] text-red-600 font-bold flex items-center gap-1">
+                    <TriangleAlert className="h-3 w-3" /> Vence: {new Date(alert.urgentExpiry).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

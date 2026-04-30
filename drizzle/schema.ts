@@ -92,6 +92,7 @@ export type InsertProduct = typeof products.$inferInsert;
 export const inventory = mysqlTable("inventory", {
   id: int("id").autoincrement().primaryKey(),
   productId: int("productId").notNull().references(() => products.id),
+  batchNumber: varchar("batchNumber", { length: 50 }), // Nuevo: Número de lote
   quantity: int("quantity").notNull().default(0),
   minStock: int("minStock").notNull().default(10),
   expiryDate: varchar("expiryDate", { length: 10 }), // Formato: YYYY-MM-DD

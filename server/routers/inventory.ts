@@ -15,6 +15,7 @@ import {
   getPurchasesByProductId,
   recordInventoryEntryAsPurchase,
   getOnOrderQuantities,
+  getSmartInventoryAlerts,
 } from "../db";
 import { TRPCError } from "@trpc/server";
 
@@ -510,4 +511,8 @@ export const inventoryRouter = router({
         timeline,
       };
     }),
+
+  getSmartAlerts: protectedProcedure.query(async () => {
+    return await getSmartInventoryAlerts();
+  }),
 });
