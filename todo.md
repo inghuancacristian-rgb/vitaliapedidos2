@@ -174,3 +174,17 @@
 - [x] Registrar CREATE, UPDATE, DELETE en entidades principales
 - [x] Incluir usuario, fecha, valores anteriores y nuevos
 - [x] Índices para búsquedas eficientes por entidad, usuario y fecha
+
+## Gestión de Carga de Repartidores (NUEVO - Abril 2026)
+- [x] Crear tabla delivery_extra_load para productos adicionales (Venta Libre/Muestras)
+- [x] Implementar API para asignar, listar y actualizar estado de carga extra
+- [x] Añadir interfaz de administración para gestionar carga de cada repartidor
+- [x] Actualizar página de carga del repartidor para mostrar items adicionales
+- [x] Sincronizar movimientos de inventario al asignar o devolver carga extra
+
+## Profesionalización UX/UI y Edición de Pedidos
+- [x] Rediseño Premium Mobile-First del listado de pedidos
+- [x] Implementar diálogo de confirmación y resumen antes de crear/editar pedido
+- [x] Añadir funcionalidad "Copiar para WhatsApp" con formato profesional
+- [x] Crear módulo de edición de pedidos administrativo con reversión de inventario
+- [x] Corregir diseño sobrepuesto en dispositivos móviles

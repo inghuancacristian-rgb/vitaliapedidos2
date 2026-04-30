@@ -20,7 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 export default function DeliveryPersons() {
   const { data: deliveryPersons, refetch } = trpc.users.listDeliveryPersons.useQuery();
@@ -33,6 +34,40 @@ export default function DeliveryPersons() {
     name: "",
     email: "",
     role: "user",
+  });
+
+  // Estado para gestión de carga extra
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<any>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [newLoadData, setNewLoadData] = useState({
+    productId: "",
+    quantity: 1,
+    type: "sale" as "sale" | "sample",
+    notes: "",
+  });
+
+  const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
+  const { data: currentExtraLoad, refetch: refetchExtraLoad } = trpc.orders.getExtraLoad.useQuery(
+    { deliveryPersonId: selectedPerson?.id, date: selectedDate },
+    { enabled: !!selectedPerson }
+  );
+
+  const assignLoadMutation = trpc.orders.assignExtraLoad.useMutation({
+    onSuccess: () => {
+      toast.success("Carga asignada correctamente");
+      setNewLoadData({ productId: "", quantity: 1, type: "sale", notes: "" });
+      refetchExtraLoad();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateLoadStatusMutation = trpc.orders.updateExtraLoadStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Estado actualizado");
+      refetchExtraLoad();
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const createMutation = trpc.users.createDeliveryPerson.useMutation({
@@ -302,6 +337,18 @@ export default function DeliveryPersons() {
                     <Button
                       size="sm"
                       variant="outline"
+                      className="gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                      onClick={() => {
+                        setSelectedPerson(person);
+                        setLoadDialogOpen(true);
+                      }}
+                    >
+                      <Package className="h-4 w-4" />
+                      Carga Extra
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleEdit(person)}
                     >
                       <Edit2 className="h-4 w-4" />
@@ -335,6 +382,144 @@ export default function DeliveryPersons() {
           ))
         )}
       </div>
+
+      {/* Diálogo de Gestión de Carga Extra */}
+      <Dialog open={loadDialogOpen} onOpenChange={setLoadDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Gestión de Carga: {selectedPerson?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 space-y-2">
+                <Label>Fecha de Carga</Label>
+                <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+              </div>
+            </div>
+
+            <Card className="border-dashed">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Asignar Nuevo Item Extra</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Producto</Label>
+                    <Select 
+                      value={newLoadData.productId} 
+                      onValueChange={(val) => setNewLoadData({...newLoadData, productId: val})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar producto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map(p => (
+                          <SelectItem key={p.id} value={p.id.toString()}>
+                            {p.name} (Stock: {p.stock})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cantidad</Label>
+                    <Input 
+                      type="number" 
+                      value={newLoadData.quantity} 
+                      onChange={(e) => setNewLoadData({...newLoadData, quantity: parseInt(e.target.value) || 1})} 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Propósito</Label>
+                    <Select 
+                      value={newLoadData.type} 
+                      onValueChange={(val: any) => setNewLoadData({...newLoadData, type: val})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sale">Venta Directa (Ruta)</SelectItem>
+                        <SelectItem value="sample">Degustación / Muestra</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notas</Label>
+                    <Input 
+                      placeholder="Ej: Para evento en Zona Sur" 
+                      value={newLoadData.notes}
+                      onChange={(e) => setNewLoadData({...newLoadData, notes: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700" 
+                  disabled={!newLoadData.productId || assignLoadMutation.isPending}
+                  onClick={() => {
+                    assignLoadMutation.mutate({
+                      deliveryPersonId: selectedPerson.id,
+                      productId: parseInt(newLoadData.productId),
+                      quantity: newLoadData.quantity,
+                      type: newLoadData.type,
+                      date: selectedDate,
+                      notes: newLoadData.notes,
+                    });
+                  }}
+                >
+                  Confirmar Asignación
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-3">
+              <h3 className="font-bold text-sm">Carga Extra Asignada ({selectedDate})</h3>
+              {!currentExtraLoad || currentExtraLoad.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No hay carga extra para esta fecha</p>
+              ) : (
+                <div className="border rounded-lg divide-y">
+                  {currentExtraLoad.map((item: any) => (
+                    <div key={item.id} className="p-3 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate">{item.productName}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {item.type === 'sale' ? 'Venta Libre' : 'Degustación'} • Cant: {item.quantity}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          item.status === 'loaded' ? 'outline' : 
+                          item.status === 'returned' ? 'secondary' : 'default'
+                        }>
+                          {item.status === 'loaded' ? 'En Camión' : 
+                           item.status === 'sold' ? 'Vendido' : 
+                           item.status === 'used' ? 'Entregado' : 'Devuelto'}
+                        </Badge>
+                        {item.status === 'loaded' && (
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-red-500"
+                            onClick={() => updateLoadStatusMutation.mutate({ id: item.id, status: 'returned' })}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

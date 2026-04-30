@@ -52,6 +52,8 @@ import {
   quotationItems,
   InsertQuotation,
   InsertQuotationItem,
+  deliveryExtraLoad,
+  InsertDeliveryExtraLoad,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { getSession } from "./auth";
@@ -87,6 +89,7 @@ function syncMocksToDisk() {
     MOCK_SALE_ITEMS,
     MOCK_QUOTATIONS,
     MOCK_QUOTATION_ITEMS,
+    MOCK_DELIVERY_EXTRA_LOAD,
   };
   try {
     fs.writeFileSync(MOCK_DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
@@ -107,7 +110,8 @@ function loadMocks() {
       MOCK_OPERATIONAL_EXPENSES,
       MOCK_FINANCIAL_TRANSACTIONS, MOCK_CASH_CLOSURES,
       MOCK_CASH_OPENINGS, MOCK_SALES, MOCK_SALE_ITEMS,
-      MOCK_QUOTATIONS, MOCK_QUOTATION_ITEMS
+      MOCK_QUOTATIONS, MOCK_QUOTATION_ITEMS,
+      MOCK_DELIVERY_EXTRA_LOAD
     };
     for (const [key, arr] of Object.entries(arrays)) {
       if (data[key] && Array.isArray(data[key])) {
@@ -365,7 +369,8 @@ export async function updateLastSignedInById(userId: number) {
 // Clientes
 const MOCK_CUSTOMERS: any[] = [];
 const MOCK_QUOTATIONS: any[] = [];
-const MOCK_QUOTATION_ITEMS: any[] = [];
+export const MOCK_QUOTATION_ITEMS: any[] = [];
+export const MOCK_DELIVERY_EXTRA_LOAD: any[] = [];
 
 export async function getCustomerByNumber(clientNumber: string) {
   const db = await getDb();
@@ -2877,4 +2882,152 @@ export async function updateQuotationStatus(quotationId: number, status: "pendin
 
   await db.update(quotations).set({ status, updatedAt: new Date() }).where(eq(quotations.id, quotationId));
   return { success: true };
+}
+
+// =============================================
+// Carga Extra de Repartidores
+// =============================================
+export async function assignDeliveryExtraLoad(data: InsertDeliveryExtraLoad) {
+  const db = await getDb();
+  
+  // 1. Descontar del inventario central
+  const { productId, quantity, deliveryPersonId, type } = data;
+  
+  if (!db) {
+    const inventoryItem = MOCK_INVENTORY.find(i => i.productId === productId);
+    if (!inventoryItem || inventoryItem.quantity < quantity) {
+      throw new Error("Stock insuficiente en almacén central");
+    }
+    inventoryItem.quantity -= quantity;
+    inventoryItem.lastUpdated = new Date();
+    
+    // Registrar movimiento
+    await createInventoryMovement({
+      productId,
+      type: "exit",
+      quantity,
+      reason: `Carga Extra Repartidor (${type === 'sale' ? 'Venta' : 'Muestra'})`,
+      userId: deliveryPersonId,
+    });
+
+    const newId = MOCK_DELIVERY_EXTRA_LOAD.length + 1;
+    MOCK_DELIVERY_EXTRA_LOAD.push({
+      ...data,
+      id: newId,
+      status: "loaded",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    syncMocksToDisk();
+    return { insertId: newId };
+  }
+
+  return await db.transaction(async (tx) => {
+    // Validar stock
+    const inv = await tx.select().from(inventory).where(eq(inventory.productId, productId)).limit(1);
+    if (!inv[0] || inv[0].quantity < quantity) {
+      throw new Error("Stock insuficiente en almacén central");
+    }
+
+    // Descontar
+    await tx.update(inventory).set({ 
+      quantity: inv[0].quantity - quantity,
+      lastUpdated: new Date() 
+    }).where(eq(inventory.productId, productId));
+
+    // Registrar movimiento
+    await tx.insert(inventoryMovements).values({
+      productId,
+      type: "exit",
+      quantity,
+      reason: `Carga Extra Repartidor (${type === 'sale' ? 'Venta' : 'Muestra'})`,
+      userId: deliveryPersonId,
+    });
+
+    // Crear carga extra
+    const result = await tx.insert(deliveryExtraLoad).values(data);
+    return result;
+  });
+}
+
+export async function getDeliveryExtraLoad(deliveryPersonId: number, date: string) {
+  const db = await getDb();
+  if (!db) {
+    return MOCK_DELIVERY_EXTRA_LOAD
+      .filter(item => item.deliveryPersonId === deliveryPersonId && item.date === date)
+      .map(item => {
+        const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
+        return { ...item, productName: product?.name || "Desconocido" };
+      });
+  }
+
+  return await db.select({
+    ...deliveryExtraLoad,
+    productName: products.name,
+  })
+    .from(deliveryExtraLoad)
+    .leftJoin(products, eq(deliveryExtraLoad.productId, products.id))
+    .where(and(
+      eq(deliveryExtraLoad.deliveryPersonId, deliveryPersonId),
+      eq(deliveryExtraLoad.date, date)
+    ));
+}
+
+export async function updateDeliveryExtraLoadStatus(id: number, status: "loaded" | "sold" | "used" | "returned", userId: number) {
+  const db = await getDb();
+  
+  if (!db) {
+    const index = MOCK_DELIVERY_EXTRA_LOAD.findIndex(i => i.id === id);
+    if (index === -1) throw new Error("Carga extra no encontrada");
+    
+    const item = MOCK_DELIVERY_EXTRA_LOAD[index];
+    const oldStatus = item.status;
+    
+    // Si se devuelve, reingresar stock
+    if (status === "returned" && oldStatus !== "returned") {
+      const inv = MOCK_INVENTORY.find(i => i.productId === item.productId);
+      if (inv) {
+        inv.quantity += item.quantity;
+        inv.lastUpdated = new Date();
+      }
+      await createInventoryMovement({
+        productId: item.productId,
+        type: "entry",
+        quantity: item.quantity,
+        reason: "Devolución Carga Extra Repartidor",
+        userId,
+      });
+    }
+
+    MOCK_DELIVERY_EXTRA_LOAD[index].status = status;
+    MOCK_DELIVERY_EXTRA_LOAD[index].updatedAt = new Date();
+    syncMocksToDisk();
+    return { success: true };
+  }
+
+  return await db.transaction(async (tx) => {
+    const items = await tx.select().from(deliveryExtraLoad).where(eq(deliveryExtraLoad.id, id)).limit(1);
+    const item = items[0];
+    if (!item) throw new Error("Carga extra no encontrada");
+
+    if (status === "returned" && item.status !== "returned") {
+      const inv = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
+      if (inv[0]) {
+        await tx.update(inventory).set({ 
+          quantity: inv[0].quantity + item.quantity,
+          lastUpdated: new Date() 
+        }).where(eq(inventory.productId, item.productId));
+      }
+      await tx.insert(inventoryMovements).values({
+        productId: item.productId,
+        type: "entry",
+        quantity: item.quantity,
+        reason: "Devolución Carga Extra Repartidor",
+        userId,
+      });
+    }
+
+    await tx.update(deliveryExtraLoad).set({ status, updatedAt: new Date() }).where(eq(deliveryExtraLoad.id, id));
+    return { success: true };
+  });
 }

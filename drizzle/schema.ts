@@ -468,3 +468,20 @@ export const quotationItems = mysqlTable("quotationItems", {
 
 export type QuotationItem = typeof quotationItems.$inferSelect;
 export type InsertQuotationItem = typeof quotationItems.$inferInsert;
+
+// Tabla de Carga Extra de Repartidor (Muestras, Venta Libre, etc.)
+export const deliveryExtraLoad = mysqlTable("delivery_extra_load", {
+  id: int("id").autoincrement().primaryKey(),
+  deliveryPersonId: int("deliveryPersonId").notNull().references(() => users.id),
+  productId: int("productId").notNull().references(() => products.id),
+  quantity: int("quantity").notNull(),
+  type: mysqlEnum("type", ["sale", "sample"]).default("sale").notNull(), // sale = Venta Libre, sample = Degustación
+  status: mysqlEnum("status", ["loaded", "sold", "used", "returned"]).default("loaded").notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // Formato YYYY-MM-DD
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DeliveryExtraLoad = typeof deliveryExtraLoad.$inferSelect;
+export type InsertDeliveryExtraLoad = typeof deliveryExtraLoad.$inferInsert;

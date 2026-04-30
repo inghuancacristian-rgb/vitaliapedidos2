@@ -22,6 +22,9 @@ import {
   deductInventoryForOrder,
   restoreInventoryForOrder,
   getOrdersByDeliveryPerson,
+  assignDeliveryExtraLoad,
+  getDeliveryExtraLoad,
+  updateDeliveryExtraLoadStatus,
 } from "../db";
 import { getLocalDateKey, pad2 } from "../_core/date_utils";
 import { TRPCError } from "@trpc/server";
@@ -656,5 +659,46 @@ export const ordersRouter = router({
         await updateOrder(input.orderId, { status: input.status });
       }
       return { success: true };
+  }),
+
+  // Carga Extra
+  assignExtraLoad: protectedProcedure
+    .input(z.object({
+      deliveryPersonId: z.number(),
+      productId: z.number(),
+      quantity: z.number(),
+      type: z.enum(["sale", "sample"]),
+      date: z.string(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      return await assignDeliveryExtraLoad(input);
+    }),
+
+  getExtraLoad: protectedProcedure
+    .input(z.object({
+      deliveryPersonId: z.number(),
+      date: z.string(),
+    }))
+    .query(async ({ input }) => {
+      return await getDeliveryExtraLoad(input.deliveryPersonId, input.date);
+    }),
+
+  getMyExtraLoad: protectedProcedure
+    .input(z.object({
+      date: z.string(),
+    }))
+    .query(async ({ input, ctx }) => {
+      return await getDeliveryExtraLoad(ctx.user.id, input.date);
+    }),
+
+  updateExtraLoadStatus: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(["loaded", "sold", "used", "returned"]),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return await updateDeliveryExtraLoadStatus(input.id, input.status, ctx.user.id);
     }),
 });

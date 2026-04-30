@@ -36,7 +36,16 @@ export default function DeliveryLoad() {
   const [search, setSearch] = useState<string>("");
 
   const { data, isLoading } = trpc.orders.getMyLoad.useQuery({ date, status });
+  const { data: extraLoad, refetch: refetchExtraLoad } = trpc.orders.getMyExtraLoad.useQuery({ date });
   const entries = (data as LoadEntry[]) || [];
+
+  const updateExtraStatusMutation = trpc.orders.updateExtraLoadStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Estado de carga extra actualizado");
+      refetchExtraLoad();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const storageKey = `deliveryLoadChecks:${date}`;
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -379,76 +388,141 @@ export default function DeliveryLoad() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Detalle por pedido</CardTitle>
-              <CardDescription>Checklist de carga por pedido.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {filteredEntries.map((entry) => {
-                  const order = entry.order;
-                  const customer = entry.customer;
-                  const tel = customer?.phone || customer?.whatsapp || null;
-                  const totalItems = (entry.items || []).length;
-                  const checkedItems = (entry.items || []).filter((item: any) => checked[`${order.id}:${item.id ?? item.productId}`]).length;
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Detalle por pedido</CardTitle>
+                <CardDescription>Checklist de carga por pedido.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {filteredEntries.map((entry) => {
+                    const order = entry.order;
+                    const customer = entry.customer;
+                    const tel = customer?.phone || customer?.whatsapp || null;
+                    const totalItems = (entry.items || []).length;
+                    const checkedItems = (entry.items || []).filter((item: any) => checked[`${order.id}:${item.id ?? item.productId}`]).length;
 
-                  return (
-                    <div key={order.id} className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <p className="font-semibold truncate">Pedido #{order.orderNumber}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {order.deliveryDate ? `Fecha: ${order.deliveryDate}` : ""}{order.deliveryTime ? ` | Hora: ${order.deliveryTime}` : ""} | Zona: {order.zone || "-"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            Cliente: {customer?.name || "-"}{tel ? ` | ${tel}` : ""} | Pago: {paymentMethodLabel(order.paymentMethod)} | Total: {formatCurrency(order.totalPrice)}
-                          </p>
-                          {order.notes && (
-                            <p className="text-[10px] text-amber-600 font-medium truncate mt-0.5">
-                              Nota: {order.notes}
+                    return (
+                      <div key={order.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate">Pedido #{order.orderNumber}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {order.deliveryDate ? `Fecha: ${order.deliveryDate}` : ""}{order.deliveryTime ? ` | Hora: ${order.deliveryTime}` : ""} | Zona: {order.zone || "-"}
                             </p>
-                          )}
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              Cliente: {customer?.name || "-"}{tel ? ` | ${tel}` : ""} | Pago: {paymentMethodLabel(order.paymentMethod)} | Total: {formatCurrency(order.totalPrice)}
+                            </p>
+                            {order.notes && (
+                              <p className="text-[10px] text-amber-600 font-medium truncate mt-0.5">
+                                Nota: {order.notes}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline">{order.status}</Badge>
+                            <Badge variant="secondary">{checkedItems}/{totalItems}</Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge variant="outline">{order.status}</Badge>
-                          <Badge variant="secondary">{checkedItems}/{totalItems}</Badge>
+
+                        <div className="mt-3 rounded-lg border bg-white">
+                          <div className="divide-y">
+                            <div className="px-3 py-2 flex items-center justify-between gap-2 bg-slate-50/40">
+                              <Button type="button" size="sm" variant="outline" onClick={() => setOrderAll(order.id, true, entry.items)}>
+                                Marcar todo
+                              </Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setOrderAll(order.id, false, entry.items)}>
+                                Limpiar
+                              </Button>
+                            </div>
+                            {(entry.items || []).map((item: any) => {
+                              const key = `${order.id}:${item.id ?? item.productId}`;
+                              const isChecked = !!checked[key];
+                              return (
+                                <div key={key} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <Checkbox checked={isChecked} onCheckedChange={(val) => toggleItem(key, val === true)} />
+                                    <span className={`truncate ${isChecked ? "line-through text-muted-foreground" : ""}`}>
+                                      {item.productName || `Producto #${item.productId}`}
+                                    </span>
+                                  </div>
+                                  <span className="font-mono font-bold">{item.quantity}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
-                      <div className="mt-3 rounded-lg border bg-white">
-                        <div className="divide-y">
-                          <div className="px-3 py-2 flex items-center justify-between gap-2 bg-slate-50/40">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setOrderAll(order.id, true, entry.items)}>
-                              Marcar todo
+            {/* Carga Extra */}
+            {extraLoad && extraLoad.length > 0 && (
+              <Card className="border-emerald-100 bg-emerald-50/20">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-5 w-5 text-emerald-600" />
+                    Carga Extra / Muestras
+                  </CardTitle>
+                  <CardDescription>Productos adicionales asignados para venta libre o degustación.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y border-t border-emerald-100">
+                    {extraLoad.map((item: any) => (
+                      <div key={item.id} className="px-4 py-4 flex flex-col gap-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-bold text-slate-900">{item.productName}</p>
+                            <div className="flex gap-2 mt-1">
+                              <Badge variant="secondary" className="text-[10px] font-black uppercase">
+                                {item.type === 'sale' ? 'Para Venta' : 'Muestra/Degustación'}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px] font-black uppercase">
+                                Cant: {item.quantity}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Badge className={
+                            item.status === 'loaded' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
+                            item.status === 'returned' ? 'bg-slate-100 text-slate-700' :
+                            'bg-emerald-100 text-emerald-700'
+                          }>
+                            {item.status === 'loaded' ? 'En Camión' : 
+                             item.status === 'sold' ? 'Vendido' : 
+                             item.status === 'used' ? 'Entregado' : 'Devuelto'}
+                          </Badge>
+                        </div>
+                        
+                        {item.status === 'loaded' && (
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-10 rounded-xl"
+                              onClick={() => updateExtraStatusMutation.mutate({ id: item.id, status: item.type === 'sale' ? 'sold' : 'used' })}
+                            >
+                              {item.type === 'sale' ? 'Marcar como Vendido' : 'Marcar como Entregado'}
                             </Button>
-                            <Button type="button" size="sm" variant="ghost" onClick={() => setOrderAll(order.id, false, entry.items)}>
-                              Limpiar
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="flex-1 border-slate-200 h-10 rounded-xl"
+                              onClick={() => updateExtraStatusMutation.mutate({ id: item.id, status: 'returned' })}
+                            >
+                              Devolver
                             </Button>
                           </div>
-                          {(entry.items || []).map((item: any) => {
-                            const key = `${order.id}:${item.id ?? item.productId}`;
-                            const isChecked = !!checked[key];
-                            return (
-                              <div key={key} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <Checkbox checked={isChecked} onCheckedChange={(val) => toggleItem(key, val === true)} />
-                                  <span className={`truncate ${isChecked ? "line-through text-muted-foreground" : ""}`}>
-                                    {item.productName || `Producto #${item.productId}`}
-                                  </span>
-                                </div>
-                                <span className="font-mono font-bold">{item.quantity}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       )}
     </div>
