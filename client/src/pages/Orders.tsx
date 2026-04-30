@@ -923,14 +923,22 @@ export default function Orders() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">¿Quién cancela?</label>
-                <Select value={cancelData.cancelledBy} onValueChange={(val: any) => setCancelData({ ...cancelData, cancelledBy: val })}>
-                  <SelectTrigger><SelectValue placeholder="Selecciona quién cancela" /></SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value="client">Cliente</SelectItem>
-                    <SelectItem value="company">Empresa</SelectItem>
-                    <SelectItem value="system">Sistema</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  {(["client", "company", "system"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setCancelData(prev => ({ ...prev, cancelledBy: opt })); }}
+                      className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+                        cancelData.cancelledBy === opt
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"
+                      }`}
+                    >
+                      {opt === "client" ? "Cliente" : opt === "company" ? "Empresa" : "Sistema"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
@@ -939,7 +947,7 @@ export default function Orders() {
                 <Textarea 
                   placeholder="Escribe el motivo aquí (obligatorio)..."
                   value={cancelData.reason}
-                  onChange={(e) => setCancelData({ ...cancelData, reason: e.target.value })}
+                  onChange={(e) => setCancelData(prev => ({ ...prev, reason: e.target.value }))}
                   className={!cancelData.reason ? "border-red-200 focus-visible:ring-red-300" : ""}
                 />
                 {!cancelData.reason && (
@@ -959,6 +967,7 @@ export default function Orders() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
 
         {/* Diálogo de Reprogramación */}
         <Dialog open={rescheduleOrderId !== null} onOpenChange={(open) => !open && setRescheduleOrderId(null)}>
