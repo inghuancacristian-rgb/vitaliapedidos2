@@ -545,8 +545,24 @@ export async function getInventoryByProductId(productId: number) {
 
 export async function getAllInventory() {
   const db = await getDb();
-  if (!db) return MOCK_INVENTORY;
-  return await db.select().from(inventory);
+  if (!db) {
+    return MOCK_INVENTORY.map(inv => ({
+      ...inv,
+      product: MOCK_PRODUCTS.find(p => p.id === inv.productId)
+    }));
+  }
+
+  const results = await db.select({
+    inventory: inventory,
+    product: products
+  })
+  .from(inventory)
+  .leftJoin(products, eq(inventory.productId, products.id));
+
+  return results.map(r => ({
+    ...r.inventory,
+    product: r.product
+  }));
 }
 
 export async function updateInventory(productId: number, quantity: number, expiryDate?: string | null, batchNumber?: string | null) {
