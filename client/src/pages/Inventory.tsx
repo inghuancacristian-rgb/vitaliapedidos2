@@ -14,6 +14,7 @@ import {
   Edit2,
   Sparkles,
   TriangleAlert,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -418,7 +419,7 @@ export default function Inventory() {
 
   return (
     <div className="page-shell">
-      <div className="page-container space-y-6">
+      <div className="page-container space-y-6 print:hidden">
         <section className="hero-panel p-5 sm:p-7 md:p-8">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
@@ -443,7 +444,14 @@ export default function Inventory() {
               </p>
             </div>
 
-            {user?.role === "admin" && isMobile ? <AddProductDialog onProductAdded={() => refetch()} /> : null}
+            {user?.role === "admin" && isMobile ? (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => window.print()} variant="outline" className="gap-2 bg-white/80 no-print">
+                  <Printer className="h-4 w-4" /> Imprimir Inventario
+                </Button>
+                <AddProductDialog onProductAdded={() => refetch()} />
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -541,7 +549,14 @@ export default function Inventory() {
                 {displayItems.length} registros visibles en la vista actual.
               </p>
             </div>
-            {!isMobile && user?.role === "admin" ? <AddProductDialog onProductAdded={() => refetch()} /> : null}
+            {!isMobile && user?.role === "admin" ? (
+              <div className="flex gap-2">
+                <Button onClick={() => window.print()} variant="outline" className="gap-2 bg-white/80 no-print">
+                  <Printer className="h-4 w-4" /> Imprimir
+                </Button>
+                <AddProductDialog onProductAdded={() => refetch()} />
+              </div>
+            ) : null}
           </CardHeader>
 
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
@@ -742,6 +757,109 @@ export default function Inventory() {
             ) : null}
           </CardContent>
         </Card>
+      </div>
+
+      <PrintInventoryContent inventory={inventory || []} />
+    </div>
+  );
+}
+
+function PrintInventoryContent({ inventory }: { inventory: any[] }) {
+  const finishedProducts = inventory.filter((item: any) => item.product?.category === "finished_product");
+  const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material" || item.product?.category === "supplies");
+  
+  const calculateTotal = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.price || 0) / 100)), 0);
+  
+  const totalFinished = calculateTotal(finishedProducts);
+  const totalRaw = calculateTotal(rawMaterials);
+  const grandTotal = totalFinished + totalRaw;
+
+  return (
+    <div className="hidden print:block bg-white text-slate-900 w-full min-h-screen p-8 font-sans">
+      <div className="text-center mb-8 border-b-2 border-slate-200 pb-6">
+        <h1 className="text-2xl font-black uppercase tracking-wider text-slate-900">Valuacion de Inventario</h1>
+        <p className="text-sm text-slate-500 mt-1">Generado el {new Date().toLocaleDateString("es-BO")} a las {new Date().toLocaleTimeString("es-BO")}</p>
+      </div>
+
+      {finishedProducts.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Productos Terminados</h2>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-300">
+                <th className="py-2 font-semibold">Codigo</th>
+                <th className="py-2 font-semibold">Producto</th>
+                <th className="py-2 text-center font-semibold">Cant.</th>
+                <th className="py-2 text-right font-semibold">Costo Unit.</th>
+                <th className="py-2 text-right font-semibold">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {finishedProducts.map((item: any) => {
+                const price = (item.product?.price || 0) / 100;
+                const total = item.quantity * price;
+                return (
+                  <tr key={item.id} className="border-b border-slate-100">
+                    <td className="py-2 text-slate-500">{item.product?.code}</td>
+                    <td className="py-2 font-medium">{item.product?.name}</td>
+                    <td className="py-2 text-center">{item.quantity}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(price * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(total * 100))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Terminados:</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalFinished * 100))}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {rawMaterials.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Insumos y Materias Primas</h2>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-300">
+                <th className="py-2 font-semibold">Codigo</th>
+                <th className="py-2 font-semibold">Insumo</th>
+                <th className="py-2 text-center font-semibold">Cant.</th>
+                <th className="py-2 text-right font-semibold">Costo Unit.</th>
+                <th className="py-2 text-right font-semibold">Valor Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rawMaterials.map((item: any) => {
+                const price = (item.product?.price || 0) / 100;
+                const total = item.quantity * price;
+                return (
+                  <tr key={item.id} className="border-b border-slate-100">
+                    <td className="py-2 text-slate-500">{item.product?.code}</td>
+                    <td className="py-2 font-medium">{item.product?.name}</td>
+                    <td className="py-2 text-center">{item.quantity}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(price * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(total * 100))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Insumos:</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalRaw * 100))}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-12 border-t-4 border-slate-900 pt-6 flex justify-between items-center">
+        <h2 className="text-xl font-black uppercase">Total Valuacion Inventario:</h2>
+        <span className="text-2xl font-black">{formatCurrency(Math.round(grandTotal * 100))}</span>
       </div>
     </div>
   );

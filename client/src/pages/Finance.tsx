@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DollarSign, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Receipt, WalletCards, Wallet, Printer, Eye, FileText, CheckCircle2, XCircle, AlertTriangle, History, Download, X, ArrowRightLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, parseInputAmount } from "@/lib/currency";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -814,12 +814,12 @@ function OpenCashDialog() {
   });
 
   const handleSubmit = () => {
-    const openingAmount = parseFloat(form.openingAmount);
+    const openingAmount = parseInputAmount(form.openingAmount);
     if (Number.isNaN(openingAmount) || openingAmount < 0) { toast.error("Ingresa un fondo inicial valido"); return; }
     if (!form.openingDate) { toast.error("Selecciona la fecha de apertura"); return; }
     if (!form.responsibleUserId) { toast.error("Selecciona el usuario responsable"); return; }
     mutation.mutate({
-      openingAmount, paymentMethod: form.paymentMethod as "cash" | "qr" | "transfer",
+      openingAmount: Math.round(openingAmount * 100), paymentMethod: form.paymentMethod as "cash" | "qr" | "transfer",
       openingDate: form.openingDate, responsibleUserId: parseInt(form.responsibleUserId, 10),
     });
   };
@@ -838,7 +838,7 @@ function OpenCashDialog() {
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2"><Label htmlFor="openingAmount">Fondo inicial</Label>
-            <Input id="openingAmount" type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.openingAmount} onChange={(e) => setForm({ ...form, openingAmount: e.target.value })} /></div>
+            <Input id="openingAmount" type="text" inputMode="decimal" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.openingAmount} onChange={(e) => setForm({ ...form, openingAmount: e.target.value })} /></div>
           <div className="space-y-2"><Label htmlFor="paymentMethod">Caja a Aperturar</Label>
             <Select value={form.paymentMethod} onValueChange={(val: any) => setForm({ ...form, paymentMethod: val })}>
               <SelectTrigger id="paymentMethod"><SelectValue placeholder="Seleccione Caja" /></SelectTrigger>
@@ -1141,7 +1141,7 @@ function AddExpenseDialog() {
                 <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
               ))}</SelectContent></Select></div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Monto</Label><Input type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" onChange={(e) => setExpense({ ...expense, amount: parseFloat(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Monto</Label><Input type="text" inputMode="decimal" onFocus={(e) => e.target.select()} placeholder="0.00" onChange={(e) => setExpense({ ...expense, amount: e.target.value })} /></div>
             <div className="space-y-2"><Label>Categoria</Label>
               <Select onValueChange={(v: any) => setExpense({ ...expense, type: v })}>
                 <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
@@ -1165,7 +1165,7 @@ function TransferDialog() {
     onError: (error) => toast.error(error.message || "Error al realizar el traspaso"),
   });
   const handleSubmit = () => {
-    const amount = parseFloat(form.amount);
+    const amount = parseInputAmount(form.amount);
     if (isNaN(amount) || amount <= 0) { toast.error("Ingresa un monto valido"); return; }
     if (form.fromMethod === form.toMethod) { toast.error("Las cajas deben ser distintas"); return; }
     mutation.mutate({ fromMethod: form.fromMethod as "cash" | "qr" | "transfer", toMethod: form.toMethod as "cash" | "qr" | "transfer", amount: Math.round(amount * 100), notes: form.notes });
@@ -1186,7 +1186,7 @@ function TransferDialog() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="cash">Caja Efectivo</SelectItem><SelectItem value="qr">Caja QR</SelectItem><SelectItem value="transfer">Cuenta Bancaria</SelectItem></SelectContent>
             </Select></div>
-          <div className="space-y-2"><Label>Monto a transferir</Label><Input type="number" step="any" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
+          <div className="space-y-2"><Label>Monto a transferir</Label><Input type="text" inputMode="decimal" onFocus={(e) => e.target.select()} placeholder="0.00" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} /></div>
           <div className="space-y-2"><Label>Concepto (Opcional)</Label><Input placeholder="Ej. Deposito al banco" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           <Button className="w-full" onClick={handleSubmit} disabled={mutation.isPending}>{mutation.isPending ? "Procesando..." : "Confirmar Traspaso"}</Button>
         </div>

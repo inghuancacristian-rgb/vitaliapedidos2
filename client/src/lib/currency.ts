@@ -46,3 +46,19 @@ export function formatPriceInput(amount: number): string {
   const centavos = amount % 100;
   return `${bolivianos}.${centavos.toString().padStart(2, "0")}`;
 }
+
+/**
+ * Parsea un input de texto que representa moneda, aceptando comas o puntos como decimales.
+ * Evita el problema del navegador con type="number" donde 55.00 se convierte en 5500.
+ */
+export function parseInputAmount(value: string | number): number {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  
+  // Reemplazar coma por punto para el parseo
+  let cleaned = value.replace(/,/g, '.');
+  
+  // Si alguien pone múltiples puntos o formato raro, nos quedamos con el parseo básico
+  // Ya que este input es type="text", el usuario verá exactamente lo que escribe.
+  return parseFloat(cleaned) || 0;
+}
