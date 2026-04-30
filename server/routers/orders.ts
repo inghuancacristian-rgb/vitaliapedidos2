@@ -294,9 +294,28 @@ export const ordersRouter = router({
         });
       }
 
+      // Verificar si el numero de pedido ya existe para evitar errores de concurrencia
+      let finalOrderNumber = input.orderNumber;
+      let existingOrder = await getOrderByNumber(finalOrderNumber);
+      
+      if (existingOrder) {
+        // Generar un nuevo número de forma automática si ya existe
+        const allOrders = await getAllOrders();
+        const orderNumbers = allOrders
+          .map((o: any) => {
+            const match = o.orderNumber?.match(/\d+/);
+            return match ? parseInt(match[0]) : 0;
+          })
+          .filter((n: number) => !isNaN(n) && n > 0);
+          
+        const maxExisting = orderNumbers.length > 0 ? Math.max(...orderNumbers) : 0;
+        const nextNumber = maxExisting + 1;
+        finalOrderNumber = `ORD-${String(nextNumber).padStart(3, "0")}`;
+      }
+
       // Crear pedido
       const orderResult = await createOrder({
-        orderNumber: input.orderNumber,
+        orderNumber: finalOrderNumber,
         customerId: customer.id,
         zone: input.zone,
         deliveryDate: input.deliveryDate,
@@ -311,7 +330,7 @@ export const ordersRouter = router({
       });
 
       // Obtener el ID del pedido creado
-      const newOrder = await getOrderByNumber(input.orderNumber);
+      const newOrder = await getOrderByNumber(finalOrderNumber);
       if (!newOrder) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
