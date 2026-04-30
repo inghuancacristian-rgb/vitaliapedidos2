@@ -110,6 +110,7 @@ export const inventoryMovements = mysqlTable("inventoryMovements", {
   userId: int("userId").references(() => users.id), // Nuevo: Usuario que realizó el movimiento
   orderId: int("orderId").references(() => orders.id), // Nuevo: Pedido vinculado
   saleId: int("saleId").references(() => sales.id), // Nuevo: Venta vinculada
+  batchNumber: varchar("batchNumber", { length: 50 }), // Nuevo: Lote asociado al movimiento
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -219,6 +220,7 @@ export const purchaseItems = mysqlTable("purchaseItems", {
   productId: int("productId").notNull().references(() => products.id),
   quantity: int("quantity").notNull(),
   price: int("price").notNull(),
+  batchNumber: varchar("batchNumber", { length: 50 }), // Nuevo: Lote
   expiryDate: varchar("expiryDate", { length: 10 }), // Lote con fecha de vencimiento
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

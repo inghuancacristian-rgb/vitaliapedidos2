@@ -304,6 +304,7 @@ export const inventoryRouter = router({
         reason: z.string().optional(),
         type: z.enum(["entry", "exit", "adjustment"]).optional(),
         expiryDate: z.string().optional(),
+        batchNumber: z.string().optional(),
         registerPurchase: z.boolean().optional(),
         paymentMethod: z.enum(["cash", "qr", "transfer"]).optional(),
       })
@@ -317,7 +318,7 @@ export const inventoryRouter = router({
       const product = await getProductById(input.productId);
       const newQuantity = (inv?.quantity || 0) + input.quantity;
       
-      await updateInventory(input.productId, newQuantity, input.expiryDate);
+      await updateInventory(input.productId, newQuantity, input.expiryDate, input.batchNumber);
 
       const notes: string[] = [];
       if (input.price !== undefined && product && input.price !== product.price) {
@@ -337,6 +338,7 @@ export const inventoryRouter = router({
           userId: ctx.user.id,
           type: input.type || (input.quantity === 0 ? "adjustment" : input.quantity > 0 ? "entry" : "exit"),
           quantity: Math.abs(input.quantity),
+          batchNumber: input.batchNumber,
           reason: input.reason || "Ajuste manual",
           notes: notes.length > 0 ? notes.join(". ") : undefined,
         });
@@ -359,6 +361,7 @@ export const inventoryRouter = router({
           input.quantity,
           effectivePrice,
           input.expiryDate,
+          input.batchNumber,
           input.reason,
           input.paymentMethod,
           ctx.user.id

@@ -549,25 +549,54 @@ export async function getAllInventory() {
   return await db.select().from(inventory);
 }
 
-export async function updateInventory(productId: number, quantity: number, expiryDate?: string | null) {
+export async function updateInventory(productId: number, quantity: number, expiryDate?: string | null, batchNumber?: string | null) {
   const db = await getDb();
   if (!db) {
-    const inv = MOCK_INVENTORY.find(inv => inv.productId === productId);
+    // Modo Demo: Buscar lote específico o crear uno nuevo
+    let inv = MOCK_INVENTORY.find(inv => 
+      inv.productId === productId && 
+      (batchNumber ? inv.batchNumber === batchNumber : !inv.batchNumber)
+    );
+
     if (inv) {
       inv.quantity = quantity;
-      if (expiryDate !== undefined) {
-        inv.expiryDate = expiryDate ? new Date(expiryDate) : null;
-      }
+      if (expiryDate !== undefined) inv.expiryDate = expiryDate ? new Date(expiryDate) : null;
       inv.lastUpdated = new Date();
-      syncMocksToDisk();
+    } else {
+      MOCK_INVENTORY.push({
+        id: MOCK_INVENTORY.length + 1,
+        productId,
+        batchNumber: batchNumber || null,
+        quantity,
+        minStock: 5,
+        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        lastUpdated: new Date()
+      });
     }
+    syncMocksToDisk();
     return;
   }
-  const updateData: any = { quantity };
-  if (expiryDate !== undefined) {
-    updateData.expiryDate = expiryDate ? new Date(expiryDate) : null;
+
+  // Real DB: Buscar lote por productId y batchNumber
+  const existing = await db.select().from(inventory).where(and(
+    eq(inventory.productId, productId),
+    batchNumber ? eq(inventory.batchNumber, batchNumber) : isNull(inventory.batchNumber)
+  )).limit(1);
+
+  if (existing.length > 0) {
+    const updateData: any = { quantity, lastUpdated: new Date() };
+    if (expiryDate !== undefined) updateData.expiryDate = expiryDate || null;
+    return await db.update(inventory).set(updateData).where(eq(inventory.id, existing[0].id));
+  } else {
+    // Crear nuevo lote
+    return await db.insert(inventory).values({
+      productId,
+      batchNumber: batchNumber || null,
+      quantity,
+      expiryDate: expiryDate || null,
+      lastUpdated: new Date()
+    });
   }
-  return await db.update(inventory).set(updateData).where(eq(inventory.productId, productId));
 }
 
 // Pedidos
@@ -689,27 +718,39 @@ export async function deductInventoryForOrder(orderId: number, orderNumber: stri
           await tx.update(inventory)
             .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
             .where(eq(inventory.id, batch.id));
+          
+          await tx.insert(inventoryMovements).values({
+            productId: item.productId,
+            type: "exit",
+            quantity: deduct,
+            batchNumber: batch.batchNumber,
+            reason: `Pedido reservado ${orderNumber}`,
+            orderId: orderId,
+            createdAt: new Date()
+          });
+
           remainingToDeduct -= deduct;
         }
       }
 
       // Si aún queda por descontar (stock insuficiente en lotes registrados), 
-      // descontar del lote con fecha de vencimiento más lejana o crear un registro por defecto
+      // Si falta stock (sobre-venta), restamos del primer lote el excedente
       if (remainingToDeduct > 0 && batches.length > 0) {
-        const lastBatch = batches[batches.length - 1];
+        const firstBatch = batches[0];
         await tx.update(inventory)
-          .set({ quantity: lastBatch.quantity - remainingToDeduct, lastUpdated: new Date() })
-          .where(eq(inventory.id, lastBatch.id));
+          .set({ quantity: firstBatch.quantity - remainingToDeduct, lastUpdated: new Date() })
+          .where(eq(inventory.id, firstBatch.id));
+        
+        await tx.insert(inventoryMovements).values({
+          productId: item.productId,
+          type: "exit",
+          quantity: remainingToDeduct,
+          batchNumber: firstBatch.batchNumber,
+          reason: `Pedido reservado (EXCEDENTE) ${orderNumber}`,
+          orderId: orderId,
+          createdAt: new Date()
+        });
       }
-
-      await tx.insert(inventoryMovements).values({
-        productId: item.productId,
-        type: "exit",
-        quantity: item.quantity,
-        reason: `Pedido reservado ${orderNumber}`,
-        orderId: orderId,
-        createdAt: new Date()
-      });
     }
   });
 }
@@ -1430,6 +1471,7 @@ export async function recordInventoryEntryAsPurchase(
   quantity: number,
   price: number,
   expiryDate?: string | null,
+  batchNumber?: string | null,
   reason?: string,
   paymentMethod?: "cash" | "qr" | "transfer",
   userId?: number
@@ -1473,6 +1515,7 @@ export async function recordInventoryEntryAsPurchase(
       productId,
       quantity,
       price,
+      batchNumber: batchNumber || null,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       createdAt: new Date()
     });
@@ -1529,6 +1572,7 @@ export async function recordInventoryEntryAsPurchase(
       productId,
       quantity,
       price,
+      batchNumber: batchNumber || null,
       expiryDate: expiryDate || null,
     });
 
@@ -2300,9 +2344,10 @@ export async function getProductsWithStock() {
   const [allProducts, allInventory] = await Promise.all([getAllProducts(), getAllInventory()]);
 
   return allProducts.map((product: any) => {
-    const stockItem = allInventory.find((item: any) => item.productId === product.id);
-    const stock = stockItem?.quantity || 0;
-    const minStock = stockItem?.minStock || 0;
+    const productBatches = allInventory.filter((item: any) => item.productId === product.id);
+    const stock = productBatches.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    // Tomamos el stock mínimo del primer lote que tenga uno definido, o por defecto 5
+    const minStock = productBatches.find(b => b.minStock != null)?.minStock || 5;
 
     return {
       ...product,
@@ -2323,10 +2368,10 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         throw new Error(`Producto ${item.productId} no disponible para la venta`);
       }
 
-      const inventoryItem = MOCK_INVENTORY.find((entry: any) => entry.productId === item.productId);
-      const currentStock = inventoryItem?.quantity || 0;
-      if (currentStock < item.quantity) {
-        throw new Error(`Stock insuficiente para ${product.name}. Disponible: ${currentStock}`);
+      const productBatches = MOCK_INVENTORY.filter((entry: any) => entry.productId === item.productId);
+      const totalStock = productBatches.reduce((sum, b) => sum + b.quantity, 0);
+      if (totalStock < item.quantity) {
+        throw new Error(`Stock insuficiente para ${product.name}. Disponible: ${totalStock}`);
       }
     }
 
@@ -2370,10 +2415,21 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         createdAt: new Date(),
       });
 
-      const inventoryItem = MOCK_INVENTORY.find((entry: any) => entry.productId === item.productId);
-      if (inventoryItem) {
-        inventoryItem.quantity -= item.quantity;
-        inventoryItem.lastUpdated = new Date();
+      const productBatches = MOCK_INVENTORY
+        .filter((entry: any) => entry.productId === item.productId)
+        .sort((a, b) => {
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        });
+
+      let remaining = item.quantity;
+      for (const batch of productBatches) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(batch.quantity, remaining);
+        batch.quantity -= deduct;
+        remaining -= deduct;
+        batch.lastUpdated = new Date();
       }
 
       await createInventoryMovement({
@@ -2437,11 +2493,34 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         throw new Error(`Producto ${item.productId} no disponible para la venta`);
       }
 
-      const inventoryRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
-      const inventoryItem = inventoryRows[0];
-      const currentStock = inventoryItem?.quantity || 0;
-      if (currentStock < item.quantity) {
-        throw new Error(`Stock insuficiente para ${product.name}. Disponible: ${currentStock}`);
+      const productBatches = await tx.select()
+        .from(inventory)
+        .where(eq(inventory.productId, item.productId))
+        .orderBy(inventory.expiryDate);
+
+      let remaining = item.quantity;
+      for (const batch of productBatches) {
+        if (remaining <= 0) break;
+        const deduct = Math.min(batch.quantity, remaining);
+        if (deduct > 0) {
+          await tx.update(inventory)
+            .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
+            .where(eq(inventory.id, batch.id));
+          
+          await tx.insert(inventoryMovements).values({
+            productId: item.productId,
+            type: "exit",
+            quantity: deduct,
+            batchNumber: batch.batchNumber,
+            reason: `Venta ${payload.saleNumber}`,
+            notes: `Salida por venta ${payload.saleNumber}`,
+            saleId,
+            orderId: payload.orderId,
+            userId: payload.soldBy,
+          });
+          
+          remaining -= deduct;
+        }
       }
 
       await tx.insert(saleItems).values({
@@ -2456,11 +2535,6 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         finalUnitPrice: item.finalUnitPrice,
         subtotal: item.subtotal,
       });
-
-      await tx.update(inventory).set({
-        quantity: currentStock - item.quantity,
-        lastUpdated: new Date(),
-      }).where(eq(inventory.productId, item.productId));
 
       await tx.insert(inventoryMovements).values({
         productId: item.productId,
