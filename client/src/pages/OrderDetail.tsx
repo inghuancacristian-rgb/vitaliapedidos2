@@ -4,11 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useRoute, useLocation } from "wouter";
-import { MessageCircle, MapPin, DollarSign, Receipt, Banknote, QrCode, Building2, AlertCircle, Calendar } from "lucide-react";
+import { MessageCircle, MapPin, DollarSign, Receipt, Banknote, QrCode, Building2, AlertCircle, Calendar, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 export default function OrderDetail() {
   const { user } = useAuth();
@@ -17,6 +21,17 @@ export default function OrderDetail() {
   const orderId = params?.orderId ? parseInt(params.orderId) : null;
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
+
+  // Estado para diálogo de baja (admin)
+  const [showDismissDialog, setShowDismissDialog] = useState(false);
+  const [cancelData, setCancelData] = useState<{ cancelledBy: "client" | "company" | "system"; reason: string }>({
+    cancelledBy: "client",
+    reason: "",
+  });
+
+  // Estado para diálogo de solicitud de baja (repartidor)
+  const [showCancellationRequestDialog, setShowCancellationRequestDialog] = useState(false);
+  const [cancellationRequestReason, setCancellationRequestReason] = useState("");
 
   const { data: orderDetails, isLoading } = trpc.orders.getDetails.useQuery(
     { orderId: orderId || 0 },
@@ -27,6 +42,33 @@ export default function OrderDetail() {
   const recordPaymentMutation = trpc.orders.recordPayment.useMutation();
   const updateStatusMutation = trpc.orders.updateStatus.useMutation();
   const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod });
+
+  // Mutación: dar de baja definitiva (Admin) — restaura inventario automáticamente
+  const dismissMutation = trpc.orders.dismissOrder.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido dado de baja. El inventario ha sido restaurado.");
+      setShowDismissDialog(false);
+      setCancelData({ cancelledBy: "client", reason: "" });
+      utils.orders.getDetails.invalidate({ orderId: orderId! });
+      utils.orders.list.invalidate();
+      utils.orders.listForDelivery.invalidate();
+      utils.inventory.listInventory.invalidate();
+      setLocation("/orders");
+    },
+    onError: (err: any) => toast.error(`Error: ${err.message}`),
+  });
+
+  // Mutación: solicitar baja (Repartidor) — el admin debe aprobar
+  const requestCancellationMutation = trpc.orders.requestCancellation.useMutation({
+    onSuccess: () => {
+      toast.success("Solicitud de baja enviada al administrador.");
+      setShowCancellationRequestDialog(false);
+      setCancellationRequestReason("");
+      utils.orders.getDetails.invalidate({ orderId: orderId! });
+      utils.orders.listForDelivery.invalidate();
+    },
+    onError: (err: any) => toast.error(`Error: ${err.message}`),
+  });
 
   if (!orderId || isLoading) {
     return (
@@ -333,6 +375,68 @@ export default function OrderDetail() {
           </Card>
         )}
 
+        {/* Botón: Dar de baja (Admin) */}
+        {user?.role === "admin" && order.status !== "cancelled" && order.status !== "delivered" && (
+          <Card className="mb-6 border-red-100 bg-red-50/30">
+            <CardHeader>
+              <CardTitle className="text-red-700 text-base flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Cancelar Pedido
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                Al dar de baja este pedido, los productos asignados volverán automáticamente al inventario.
+              </p>
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={() => setShowDismissDialog(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Dar de Baja el Pedido
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Botón: Solicitar baja (Repartidor) */}
+        {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
+          <Card className="mb-6 border-orange-100 bg-orange-50/30">
+            <CardHeader>
+              <CardTitle className="text-orange-700 text-base flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                Solicitar Baja
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                Si el cliente canceló o no se pudo entregar, solicita la baja al administrador. Los productos volverán al inventario una vez aprobado.
+              </p>
+              <Button
+                variant="outline"
+                className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+                onClick={() => setShowCancellationRequestDialog(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Solicitar Dar de Baja
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Alerta: baja ya solicitada */}
+        {order.cancellationRequested === 1 && order.status !== "cancelled" && (
+          <Alert className="mb-6 bg-orange-50 border-orange-200">
+            <Trash2 className="h-4 w-4 text-orange-600" />
+            <AlertTitle className="text-orange-800">Solicitud de Baja Pendiente</AlertTitle>
+            <AlertDescription className="text-orange-700">
+              Este pedido tiene una solicitud de baja pendiente de aprobación por el administrador.
+              {order.cancellationReason && ` Motivo: ${order.cancellationReason}`}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Formulario de pago */}
         {order.paymentStatus === "pending" && (
           <Card className="mb-6 border-2 border-emerald-200 bg-emerald-50/30">
@@ -407,6 +511,99 @@ export default function OrderDetail() {
           </Card>
         )}
       </div>
+
+      {/* Diálogo: Dar de Baja definitiva (Admin) */}
+      <Dialog open={showDismissDialog} onOpenChange={setShowDismissDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Dar de Baja el Pedido</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+              ⚠️ Los productos de este pedido volverán al inventario automáticamente.
+            </div>
+            <div className="space-y-2">
+              <Label>¿Quién cancela?</Label>
+              <Select
+                value={cancelData.cancelledBy}
+                onValueChange={(val: any) => setCancelData({ ...cancelData, cancelledBy: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona quién cancela" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="company">Empresa</SelectItem>
+                  <SelectItem value="system">Sistema</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo de la baja</Label>
+              <Textarea
+                placeholder="Escribe el motivo aquí..."
+                value={cancelData.reason}
+                onChange={(e) => setCancelData({ ...cancelData, reason: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDismissDialog(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={dismissMutation.isPending || !cancelData.reason.trim()}
+              onClick={() => {
+                if (!orderId) return;
+                dismissMutation.mutate({
+                  orderId,
+                  cancelledBy: cancelData.cancelledBy,
+                  reason: cancelData.reason,
+                });
+              }}
+            >
+              {dismissMutation.isPending ? "Procesando..." : "Confirmar Baja"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo: Solicitar baja (Repartidor) */}
+      <Dialog open={showCancellationRequestDialog} onOpenChange={setShowCancellationRequestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitar Dar de Baja</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Esta solicitud será enviada al administrador para su aprobación. Los productos volverán al inventario una vez aprobada.
+            </p>
+            <div className="space-y-2">
+              <Label>Motivo</Label>
+              <Textarea
+                placeholder="Ej: Cliente no responde, dirección incorrecta, cliente canceló, etc."
+                value={cancellationRequestReason}
+                onChange={(e) => setCancellationRequestReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancellationRequestDialog(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={requestCancellationMutation.isPending || cancellationRequestReason.trim().length < 3}
+              onClick={() => {
+                if (!orderId) return;
+                requestCancellationMutation.mutate({
+                  orderId,
+                  reason: cancellationRequestReason,
+                });
+              }}
+            >
+              {requestCancellationMutation.isPending ? "Enviando..." : "Enviar Solicitud"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

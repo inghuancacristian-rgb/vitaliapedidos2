@@ -652,6 +652,17 @@ export default function Orders() {
                           </Button>
                         </Link>
                       )}
+
+                      {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
+                        <Button
+                          variant="outline"
+                          className="h-12 px-4 rounded-2xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2"
+                          onClick={() => setCancellationRequestOrderId(order.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Dar de Baja</span>
+                        </Button>
+                      )}
                       
                       {user?.role === "admin" && order.status !== "cancelled" && (
                         <Button 
