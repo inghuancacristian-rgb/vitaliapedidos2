@@ -918,11 +918,14 @@ export default function Orders() {
               <DialogTitle>Dar de baja pedido</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                ⚠️ Los productos de este pedido volverán al inventario automáticamente.
+              </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">¿Quién cancela?</label>
                 <Select value={cancelData.cancelledBy} onValueChange={(val: any) => setCancelData({ ...cancelData, cancelledBy: val })}>
                   <SelectTrigger><SelectValue placeholder="Selecciona quién cancela" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     <SelectItem value="client">Cliente</SelectItem>
                     <SelectItem value="company">Empresa</SelectItem>
                     <SelectItem value="system">Sistema</SelectItem>
@@ -930,18 +933,28 @@ export default function Orders() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Motivo de la baja</label>
+                <label className="text-sm font-medium">
+                  Motivo de la baja <span className="text-red-500">*</span>
+                </label>
                 <Textarea 
-                  placeholder="Escribe el motivo aquí..."
+                  placeholder="Escribe el motivo aquí (obligatorio)..."
                   value={cancelData.reason}
                   onChange={(e) => setCancelData({ ...cancelData, reason: e.target.value })}
+                  className={!cancelData.reason ? "border-red-200 focus-visible:ring-red-300" : ""}
                 />
+                {!cancelData.reason && (
+                  <p className="text-xs text-red-500">Debes escribir el motivo para confirmar la baja.</p>
+                )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDismissOrderId(null)}>Cancelar</Button>
-              <Button variant="destructive" onClick={() => dismissOrderId && dismissMutation.mutate({ orderId: dismissOrderId, ...cancelData })} disabled={dismissMutation.isPending || !cancelData.reason}>
-                Confirmar Baja
+              <Button variant="outline" onClick={() => { setDismissOrderId(null); setCancelData({ cancelledBy: "client", reason: "" }); }}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={dismissMutation.isPending || !cancelData.reason.trim()}
+                onClick={() => dismissOrderId && dismissMutation.mutate({ orderId: dismissOrderId, ...cancelData })}
+              >
+                {dismissMutation.isPending ? "Procesando..." : "Confirmar Baja"}
               </Button>
             </DialogFooter>
           </DialogContent>
