@@ -1744,7 +1744,6 @@ export async function checkCashRegisterOpening(dbOrTx: any, userId: number, paym
     .where(
       and(
         eq(cashOpenings.responsibleUserId, userId),
-        eq(cashOpenings.openingDate, dateKey),
         sql`(${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash'))`,
         eq(cashOpenings.status, "open")
       )
@@ -1752,7 +1751,7 @@ export async function checkCashRegisterOpening(dbOrTx: any, userId: number, paym
     .limit(1);
 
   if (existing.length === 0) {
-    throw new Error(`No existe una apertura de caja activa para ${paymentMethod === 'cash' ? 'Efectivo' : paymentMethod.toUpperCase()} en la fecha ${dateKey}. Por favor, realice la apertura de caja primero.`);
+    throw new Error(`No existe una apertura de caja activa para ${paymentMethod === 'cash' ? 'Efectivo' : paymentMethod.toUpperCase()}. Por favor, realice la apertura de caja primero.`);
   }
 }
 
