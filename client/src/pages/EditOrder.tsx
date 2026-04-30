@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -11,32 +12,45 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { useLocation, useRoute } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 import { formatCurrency, formatPriceInput, parsePrice } from "@/lib/currency";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { CustomerLookup } from "@/components/CustomerLookup";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Check, Clipboard, ArrowLeft } from "lucide-react";
 
 export default function EditOrder() {
   const { user } = useAuth();
+  const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
-  const [, params] = useRoute("/edit-order/:id");
-  const orderId = params?.id ? parseInt(params.id) : 0;
+  const orderId = parseInt(id || "0");
 
+  const [showSummary, setShowSummary] = useState(false);
   const [formData, setFormData] = useState({
     orderNumber: "",
     clientNumber: "",
     clientName: "",
     zone: "",
+    sourceChannel: "other" as "facebook" | "tiktok" | "marketplace" | "referral" | "other",
     deliveryDate: "",
     deliveryTime: "",
     paymentMethod: "cash" as "qr" | "cash" | "transfer",
     deliveryPersonId: "",
-    items: [{ productId: 0, productCode: "", quantity: 1, price: 0 }],
+    notes: "",
+    status: "",
+    items: [] as { productId: number; productCode: string; quantity: number; price: number }[],
   });
 
-  const { data: products } = trpc.inventory.listProducts.useQuery();
+  const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
   const { data: deliveryPersons } = trpc.users.listDeliveryPersons.useQuery();
   const { data: orderDetails, isLoading: isLoadingOrder } = trpc.orders.getDetails.useQuery(
     { orderId },
@@ -45,13 +59,11 @@ export default function EditOrder() {
 
   const updateOrderMutation = trpc.orders.update.useMutation({
     onSuccess: async () => {
+      toast.success("Pedido actualizado exitosamente");
       await Promise.all([
         utils.orders.list.invalidate(),
-        utils.orders.listForDelivery.invalidate(),
-        utils.customers.list.invalidate(),
-        utils.customers.getInsights.invalidate(),
+        utils.orders.getDetails.invalidate({ orderId }),
       ]);
-      toast.success("Pedido actualizado exitosamente");
       setLocation("/orders");
     },
     onError: (error) => {
@@ -59,32 +71,30 @@ export default function EditOrder() {
     },
   });
 
-  // Populate form data once orderDetails and products are loaded
   useEffect(() => {
-    if (orderDetails?.order && products) {
-      const existingItems = orderDetails.items.map((item: any) => {
-        const product = products.find((p: any) => p.id === item.productId);
-        return {
+    if (orderDetails) {
+      const { order, items, customer } = orderDetails;
+      setFormData({
+        orderNumber: order.orderNumber || "",
+        clientNumber: customer?.clientNumber || "",
+        clientName: customer?.name || "",
+        zone: order.zone || "",
+        sourceChannel: (order.sourceChannel as any) || "other",
+        deliveryDate: order.deliveryDate || "",
+        deliveryTime: order.deliveryTime || "",
+        paymentMethod: (order.paymentMethod as any) || "cash",
+        deliveryPersonId: order.deliveryPersonId?.toString() || "",
+        notes: order.notes || "",
+        status: order.status || "pending",
+        items: items.map((item: any) => ({
           productId: item.productId,
-          productCode: product?.code || "",
+          productCode: item.productCode || "",
           quantity: item.quantity,
           price: item.price,
-        };
-      });
-
-      setFormData({
-        orderNumber: orderDetails.order.orderNumber,
-        clientNumber: orderDetails.customer?.clientNumber || "",
-        clientName: orderDetails.customer?.name || "",
-        zone: orderDetails.order.zone,
-        deliveryDate: orderDetails.order.deliveryDate || "",
-        deliveryTime: orderDetails.order.deliveryTime || "",
-        paymentMethod: (orderDetails.order.paymentMethod || "cash") as any,
-        deliveryPersonId: orderDetails.order.deliveryPersonId?.toString() || "",
-        items: existingItems.length > 0 ? existingItems : [{ productId: 0, productCode: "", quantity: 1, price: 0 }],
+        })),
       });
     }
-  }, [orderDetails, products]);
+  }, [orderDetails]);
 
   if (user?.role !== "admin") {
     return (
@@ -94,8 +104,8 @@ export default function EditOrder() {
     );
   }
 
-  if (isLoadingOrder || !products) {
-    return <div className="p-8 text-center text-muted-foreground">Cargando pedido...</div>;
+  if (isLoadingOrder) {
+    return <div className="p-8 text-center font-bold text-slate-500 animate-pulse">Cargando datos del pedido...</div>;
   }
 
   const handleAddItem = () => {
@@ -121,201 +131,268 @@ export default function EditOrder() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.clientName.trim() || !formData.clientNumber.trim()) {
-      toast.error("El nombre y número de cliente son requeridos para guardar editado");
-      return;
-    }
-
-    if (!formData.deliveryDate) {
-      toast.error("La fecha de entrega es requerida");
-      return;
-    }
-
+  const handleUpdateSubmit = () => {
     const totalPrice = formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
+    
     updateOrderMutation.mutate({
-      orderId,
-      clientNumber: formData.clientNumber,
-      clientName: formData.clientName,
-      zone: formData.zone,
-      deliveryDate: formData.deliveryDate,
-      deliveryTime: formData.deliveryTime,
-      paymentMethod: formData.paymentMethod,
+      id: orderId,
+      ...formData,
       deliveryPersonId: formData.deliveryPersonId ? parseInt(formData.deliveryPersonId) : undefined,
       totalPrice,
-      items: formData.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price,
-      })),
     });
   };
 
   const totalPrice = formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+  const getSummaryText = () => {
+    const itemsText = formData.items
+      .map((item) => {
+        const prod = products?.find((p) => p.id === item.productId);
+        return `• ${item.quantity}x ${prod?.name || item.productCode} - ${formatCurrency(item.price * item.quantity)}`;
+      })
+      .join("\n");
+
+    return `*RESUMEN DE PEDIDO #${formData.orderNumber}*\n\n` +
+      `*Cliente:* ${formData.clientName}\n` +
+      `*Celular:* ${formData.clientNumber}\n` +
+      `*Zona:* ${formData.zone}\n` +
+      `*Fecha:* ${formData.deliveryDate}\n` +
+      `*Método:* ${formData.paymentMethod.toUpperCase()}\n\n` +
+      `*Productos:*\n${itemsText}\n\n` +
+      `*TOTAL:* ${formatCurrency(totalPrice)}\n\n` +
+      `_Vitalia - Operación Diaria_`;
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(getSummaryText());
+    toast.success("Resumen copiado al portapapeles");
+  };
+
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Editar Pedido {formData.orderNumber}</h1>
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/orders")} className="rounded-full bg-white shadow-sm border border-slate-200">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Editar Pedido</h1>
+            <p className="text-slate-500 font-medium">Actualiza los detalles del pedido #{formData.orderNumber}</p>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Información básica */}
-          <Card className="mb-6">
-            <CardHeader>
-            <CardTitle>Información del Pedido</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <CustomerLookup
-              clientNumber={formData.clientNumber}
-              clientName={formData.clientName}
-              zone={formData.zone}
-              onChange={(patch) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  ...patch,
-                }))
-              }
-            />
+        <div className="space-y-6">
+          {/* Información del Cliente */}
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-slate-900 text-white p-6">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Check className="h-5 w-5 text-emerald-400" />
+                Información del Cliente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <CustomerLookup
+                clientNumber={formData.clientNumber}
+                clientName={formData.clientName}
+                zone={formData.zone}
+                sourceChannel={formData.sourceChannel}
+                onChange={(patch) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    ...patch,
+                  }))
+                }
+              />
 
-              <div>
-                <Label htmlFor="clientNumber">Número de Cliente / Celular</Label>
-                <Input
-                  id="clientNumber"
-                  value={formData.clientNumber}
-                  onChange={(e) => setFormData({ ...formData, clientNumber: e.target.value })}
-                  placeholder="Ej: 7887295"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Estado del Pedido</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendiente</SelectItem>
+                      <SelectItem value="assigned">Asignado</SelectItem>
+                      <SelectItem value="in_transit">En tránsito</SelectItem>
+                      <SelectItem value="delivered">Entregado</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                      <SelectItem value="rescheduled">Reprogramado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Número de Pedido</Label>
+                  <Input value={formData.orderNumber} readOnly className="h-12 bg-slate-50 border-slate-100 font-mono font-bold text-slate-600" />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="clientName">Nombre del Cliente</Label>
-                <Input
-                  id="clientName"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                  placeholder="ej: Juan García"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Celular</Label>
+                  <Input
+                    className="h-12 rounded-xl border-slate-200 shadow-sm"
+                    value={formData.clientNumber}
+                    onChange={(e) => setFormData({ ...formData, clientNumber: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Nombre Completo</Label>
+                  <Input
+                    className="h-12 rounded-xl border-slate-200 shadow-sm"
+                    value={formData.clientName}
+                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="zone">Zona de Entrega</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-slate-700">Zona / Dirección</Label>
                 <Input
-                  id="zone"
+                  className="h-12 rounded-xl border-slate-200 shadow-sm"
                   value={formData.zone}
                   onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                  required
                 />
               </div>
 
-              <div>
-                <Label htmlFor="paymentMethod">Método de Pago</Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      paymentMethod: value as "qr" | "cash" | "transfer",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Efectivo</SelectItem>
-                    <SelectItem value="qr">QR</SelectItem>
-                    <SelectItem value="transfer">Transferencia</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Canal</Label>
+                  <Select
+                    value={formData.sourceChannel}
+                    onValueChange={(val: any) => setFormData(prev => ({ ...prev, sourceChannel: val }))}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="tiktok">TikTok</SelectItem>
+                      <SelectItem value="marketplace">Marketplace</SelectItem>
+                      <SelectItem value="referral">Referido</SelectItem>
+                      <SelectItem value="other">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Pago</Label>
+                  <Select
+                    value={formData.paymentMethod}
+                    onValueChange={(val: any) => setFormData(prev => ({ ...prev, paymentMethod: val }))}
+                  >
+                    <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white shadow-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Efectivo</SelectItem>
+                      <SelectItem value="qr">QR</SelectItem>
+                      <SelectItem value="transfer">Transferencia</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  value={formData.deliveryDate}
-                  onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Fecha Entrega</Label>
+                  <Input
+                    type="date"
+                    className="h-12 rounded-xl border-slate-200 shadow-sm"
+                    value={formData.deliveryDate}
+                    onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-bold text-slate-700">Hora</Label>
+                  <Input
+                    type="time"
+                    className="h-12 rounded-xl border-slate-200 shadow-sm"
+                    value={formData.deliveryTime}
+                    onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="deliveryTime">Hora de Entrega</Label>
-                <Input
-                  id="deliveryTime"
-                  type="time"
-                  value={formData.deliveryTime}
-                  onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="deliveryPerson">Asignar a Repartidor</Label>
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-slate-700">Repartidor Asignado</Label>
                 <Select
                   value={formData.deliveryPersonId}
-                  onValueChange={(value) => setFormData({ ...formData, deliveryPersonId: value })}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, deliveryPersonId: val }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin repartidor asignado" />
+                  <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white shadow-sm">
+                    <SelectValue placeholder="Seleccionar repartidor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {deliveryPersons?.map((person) => (
-                      <SelectItem key={person.id} value={person.id.toString()}>
-                        {person.name}
-                      </SelectItem>
+                    {deliveryPersons?.map((p) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-slate-700">Observaciones</Label>
+                <Textarea
+                  className="rounded-xl border-slate-200 shadow-sm min-h-[100px]"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Instrucciones especiales para la entrega..."
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Items del pedido */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Productos</CardTitle>
+          {/* Productos */}
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-emerald-600 text-white p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">Lista de Productos</CardTitle>
+              <Button variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg">
+                + Añadir Item
+              </Button>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {formData.items.map((item, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Label>Producto</Label>
+            <CardContent className="p-6 space-y-4">
+              {formData.items.length === 0 && (
+                <p className="text-center py-8 text-slate-400 italic">No hay productos en el pedido</p>
+              )}
+              {formData.items.map((item, index) => (
+                <div key={index} className="p-5 rounded-3xl bg-slate-50/50 border border-slate-100 flex flex-col gap-4 relative group">
+                   <div className="flex flex-col gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Producto Seleccionado</Label>
                       <Select
                         value={item.productCode}
-                        onValueChange={(value) => {
-                          const selectedProduct = products?.find((p: any) => p.code === value);
+                        onValueChange={(val) => {
+                          const prod = products?.find(p => p.code === val);
                           const newItems = [...formData.items];
-                          newItems[index].productCode = value;
-                          newItems[index].productId = selectedProduct?.id || 0;
-                          newItems[index].price = selectedProduct?.salePrice || 0;
+                          newItems[index] = {
+                            ...newItems[index],
+                            productCode: val,
+                            productId: prod?.id || 0,
+                            price: prod?.salePrice || 0,
+                          };
                           setFormData({ ...formData, items: newItems });
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {products?.map((p: any) => (
-                            <SelectItem key={p.id} value={p.code}>
-                              {p.name}
-                            </SelectItem>
+                          {products?.map(p => (
+                            <SelectItem key={p.id} value={p.code}>{p.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <div className="w-20">
-                      <Label>Cantidad</Label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad</Label>
                       <Input
                         type="number"
-                        min="1"
+                        className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm text-center font-bold"
                         value={item.quantity}
                         onChange={(e) => {
                           const newItems = [...formData.items];
@@ -324,12 +401,10 @@ export default function EditOrder() {
                         }}
                       />
                     </div>
-
-                    <div className="w-32">
-                      <Label>Precio Venta (Bs.)</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precio Bs.</Label>
                       <Input
-                        type="text"
-                        placeholder="0.00"
+                        className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm text-right font-mono font-bold"
                         value={formatPriceInput(item.price)}
                         onChange={(e) => {
                           const newItems = [...formData.items];
@@ -338,58 +413,85 @@ export default function EditOrder() {
                         }}
                       />
                     </div>
-
-                    {formData.items.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveItem(index)}
-                      >
-                        Eliminar
-                      </Button>
-                    )}
                   </div>
-                ))}
+                  <Button 
+                    variant="ghost" 
+                    className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8 self-center font-bold text-xs" 
+                    onClick={() => handleRemoveItem(index)}
+                  >
+                    Quitar Producto
+                  </Button>
+                </div>
+              ))}
 
-                <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
-                  Agregar Producto
-                </Button>
+              <div className="pt-6 flex justify-between items-center border-t border-slate-100">
+                <div className="flex flex-col">
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Monto Total</span>
+                  <span className="text-4xl font-black text-emerald-600 tracking-tighter">{formatCurrency(totalPrice)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Resumen */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Resumen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center text-lg">
-                <p className="font-semibold">Total:</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totalPrice)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Botones de acción */}
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setLocation("/orders")}
-              className="flex-1"
-            >
-              Cancelar
+          <div className="flex gap-4">
+            <Button variant="outline" className="flex-1 h-16 rounded-[1.5rem] font-bold text-slate-600 border-slate-200 shadow-sm" onClick={() => setLocation("/orders")}>
+              Descartar
             </Button>
-            <Button type="submit" disabled={updateOrderMutation.isPending} className="flex-1">
-              {updateOrderMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+            <Button
+              className="flex-1 h-16 rounded-[1.5rem] font-black text-lg bg-slate-900 shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              onClick={() => setShowSummary(true)}
+              disabled={formData.items.length === 0}
+            >
+              Guardar Cambios
             </Button>
           </div>
-        </form>
+        </div>
       </div>
+
+      {/* Diálogo de Resumen */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl z-[150]">
+          <DialogHeader className="bg-slate-900 text-white p-8 text-center">
+            <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                <Check className="h-8 w-8 text-white" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Revisar Pedido</DialogTitle>
+            <DialogDescription className="text-slate-400 font-medium">
+              Verifica los datos antes de actualizar la base de datos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-8 space-y-6 bg-white">
+            <div className="space-y-4">
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Cliente</span>
+                 <span className="font-bold text-slate-800">{formData.clientName}</span>
+               </div>
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Zona</span>
+                 <span className="font-bold text-slate-800">{formData.zone}</span>
+               </div>
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Entrega</span>
+                 <span className="font-bold text-slate-800">{formData.deliveryDate} {formData.deliveryTime}</span>
+               </div>
+               <div className="pt-4 flex justify-between items-center">
+                 <span className="text-slate-900 font-black text-lg uppercase">Total</span>
+                 <span className="text-3xl font-black text-emerald-600">{formatCurrency(totalPrice)}</span>
+               </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-4">
+              <Button onClick={copyToClipboard} variant="outline" className="w-full h-14 rounded-2xl gap-3 font-bold border-slate-200 text-slate-600 hover:bg-slate-50">
+                <Clipboard className="h-5 w-5" />
+                Copiar para WhatsApp
+              </Button>
+              <Button onClick={handleUpdateSubmit} className="w-full h-16 rounded-2xl gap-3 font-black text-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100" disabled={updateOrderMutation.isPending}>
+                {updateOrderMutation.isPending ? "Procesando..." : "Confirmar Cambios"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

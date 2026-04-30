@@ -17,6 +17,14 @@ import { toast } from "sonner";
 import { formatCurrency, formatPriceInput, parsePrice } from "@/lib/currency";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { CustomerLookup } from "@/components/CustomerLookup";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Check, Clipboard, ArrowLeft } from "lucide-react";
 
 export default function CreateOrder() {
   const { user } = useAuth();
@@ -35,6 +43,8 @@ export default function CreateOrder() {
     notes: "",
     items: [{ productId: 0, productCode: "", quantity: 1, price: 0 }],
   });
+
+  const [showSummary, setShowSummary] = useState(false);
 
   // Todos los hooks deben estar antes de cualquier condicional o return
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
@@ -100,20 +110,7 @@ export default function CreateOrder() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validar campos requeridos
-    if (!formData.clientName.trim()) {
-      toast.error("El nombre del cliente es requerido");
-      return;
-    }
-
-    if (!formData.deliveryDate) {
-      toast.error("La fecha de entrega es requerida");
-      return;
-    }
-
+  const handleConfirmSubmit = () => {
     const totalPrice = formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     createOrderMutation.mutate({
@@ -136,19 +133,76 @@ export default function CreateOrder() {
     });
   };
 
+  const getSummaryText = () => {
+    const itemsText = formData.items
+      .map((item) => {
+        const prod = products?.find((p: any) => p.code === item.productCode);
+        return `• ${item.quantity}x ${prod?.name || item.productCode} - ${formatCurrency(item.price * item.quantity)}`;
+      })
+      .join("\n");
+
+    return `*RESUMEN DE NUEVO PEDIDO #${formData.orderNumber}*\n\n` +
+      `*Cliente:* ${formData.clientName}\n` +
+      `*Celular:* ${formData.clientNumber}\n` +
+      `*Zona:* ${formData.zone}\n` +
+      `*Fecha:* ${formData.deliveryDate}\n` +
+      `*Método:* ${formData.paymentMethod.toUpperCase()}\n\n` +
+      `*Productos:*\n${itemsText}\n\n` +
+      `*TOTAL:* ${formatCurrency(totalPrice)}\n\n` +
+      `_Vitalia - Operación Diaria_`;
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(getSummaryText());
+    toast.success("Resumen copiado al portapapeles");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validar campos requeridos
+    if (!formData.clientName.trim()) {
+      toast.error("El nombre del cliente es requerido");
+      return;
+    }
+
+    if (!formData.deliveryDate) {
+      toast.error("La fecha de entrega es requerida");
+      return;
+    }
+
+    if (formData.items.some(item => item.productId === 0)) {
+      toast.error("Selecciona productos válidos");
+      return;
+    }
+
+    setShowSummary(true);
+  };
+
   const totalPrice = formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Crear Nuevo Pedido</h1>
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => setLocation("/orders")} className="rounded-full bg-white shadow-sm border border-slate-200">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Crear Pedido</h1>
+            <p className="text-slate-500 font-medium">Registra una nueva entrega para Vitalia</p>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información básica */}
-          <Card className="mb-6">
-            <CardHeader>
-            <CardTitle>Información del Pedido</CardTitle>
-          </CardHeader>
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-slate-900 text-white p-6">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Check className="h-5 w-5 text-emerald-400" />
+                Información del Pedido
+              </CardTitle>
+            </CardHeader>
           <CardContent className="space-y-4">
             <CustomerLookup
               clientNumber={formData.clientNumber}
@@ -304,29 +358,33 @@ export default function CreateOrder() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notas del pedido</Label>
+                <Label htmlFor="notes" className="text-sm font-bold text-slate-700">Notas del pedido</Label>
                 <Textarea
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Ej: Llamar antes de entregar, dejar en conserjería, etc."
                   rows={2}
+                  className="rounded-xl border-slate-200 shadow-sm min-h-[100px]"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Items del pedido */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Productos</CardTitle>
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
+            <CardHeader className="bg-emerald-600 text-white p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-xl">Lista de Productos</CardTitle>
+              <Button type="button" variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg">
+                + Añadir Item
+              </Button>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {formData.items.map((item, index) => (
-                  <div key={index} className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Label>Producto</Label>
+            <CardContent className="p-6 space-y-4">
+              {formData.items.map((item, index) => (
+                <div key={index} className="p-5 rounded-3xl bg-slate-50/50 border border-slate-100 flex flex-col gap-4 relative group">
+                  <div className="flex flex-col gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Producto</Label>
                       <Select
                         value={item.productCode}
                         onValueChange={(value) => {
@@ -338,7 +396,7 @@ export default function CreateOrder() {
                           setFormData({ ...formData, items: newItems });
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -349,21 +407,16 @@ export default function CreateOrder() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {item.productId > 0 && products?.find((p: any) => p.id === item.productId) && (
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-tight">
-                            En inventario: {products.find((p: any) => p.id === item.productId)?.stock || 0} unidades
-                          </span>
-                        </div>
-                      )}
                     </div>
+                  </div>
 
-                    <div className="w-20">
-                      <Label>Cantidad</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cantidad</Label>
                       <Input
                         type="number"
                         min="1"
+                        className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm text-center font-bold"
                         value={item.quantity}
                         onChange={(e) => {
                           const newItems = [...formData.items];
@@ -372,12 +425,11 @@ export default function CreateOrder() {
                         }}
                       />
                     </div>
-
-                    <div className="w-32">
-                      <Label>Precio Venta (Bs.)</Label>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Precio Bs.</Label>
                       <Input
                         type="text"
-                        placeholder="0.00"
+                        className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm text-right font-mono font-bold"
                         value={formatPriceInput(item.price)}
                         onChange={(e) => {
                           const newItems = [...formData.items];
@@ -386,67 +438,102 @@ export default function CreateOrder() {
                         }}
                       />
                     </div>
-
-                    {formData.items.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRemoveItem(index)}
-                      >
-                        Eliminar
-                      </Button>
-                    )}
                   </div>
-                ))}
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddItem}
-                  className="w-full"
-                >
-                  Agregar Producto
-                </Button>
-              </div>
+                  {formData.items.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8 self-center font-bold text-xs"
+                      onClick={() => handleRemoveItem(index)}
+                    >
+                      Quitar Producto
+                    </Button>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
 
           {/* Resumen */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Resumen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center text-lg">
-                <p className="font-semibold">Total:</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totalPrice)}
-                </p>
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden rounded-[2rem]">
+            <CardContent className="p-8">
+              <div className="flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Monto Total</span>
+                  <span className="text-4xl font-black text-emerald-600 tracking-tighter">{formatCurrency(totalPrice)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Botones de acción */}
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => setLocation("/orders")}
-              className="flex-1"
+              className="flex-1 h-16 rounded-[1.5rem] font-bold text-slate-600 border-slate-200 shadow-sm"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={createOrderMutation.isPending}
-              className="flex-1"
+              className="flex-1 h-16 rounded-[1.5rem] font-black text-lg bg-slate-900 shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
-              {createOrderMutation.isPending ? "Creando..." : "Crear Pedido"}
+              {createOrderMutation.isPending ? "Procesando..." : "Siguiente"}
             </Button>
           </div>
         </form>
       </div>
+
+      {/* Diálogo de Resumen */}
+      <Dialog open={showSummary} onOpenChange={setShowSummary}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl z-[150]">
+          <DialogHeader className="bg-slate-900 text-white p-8 text-center">
+            <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                <Check className="h-8 w-8 text-white" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Confirmar Pedido</DialogTitle>
+            <DialogDescription className="text-slate-400 font-medium">
+              Verifica los datos antes de registrar el pedido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-8 space-y-6 bg-white">
+            <div className="space-y-4">
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Cliente</span>
+                 <span className="font-bold text-slate-800">{formData.clientName}</span>
+               </div>
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Zona</span>
+                 <span className="font-bold text-slate-800">{formData.zone}</span>
+               </div>
+               <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                 <span className="text-slate-400 text-xs font-bold uppercase">Entrega</span>
+                 <span className="font-bold text-slate-800">{formData.deliveryDate} {formData.deliveryTime}</span>
+               </div>
+               <div className="pt-4 flex justify-between items-center">
+                 <span className="text-slate-900 font-black text-lg uppercase">Total</span>
+                 <span className="text-3xl font-black text-emerald-600">{formatCurrency(totalPrice)}</span>
+               </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-4">
+              <Button onClick={copyToClipboard} variant="outline" className="w-full h-14 rounded-2xl gap-3 font-bold border-slate-200 text-slate-600 hover:bg-slate-50">
+                <Clipboard className="h-5 w-5" />
+                Copiar para WhatsApp
+              </Button>
+              <Button onClick={handleConfirmSubmit} className="w-full h-16 rounded-2xl gap-3 font-black text-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100" disabled={createOrderMutation.isPending}>
+                {createOrderMutation.isPending ? "Creando..." : "Confirmar y Crear"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
   );
 }

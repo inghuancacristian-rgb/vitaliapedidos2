@@ -396,42 +396,46 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Gestión de Pedidos</h1>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Gestión de Pedidos</h1>
+            <p className="text-slate-500 font-medium mt-1">Administra y monitorea todas las entregas de Vitalia</p>
+          </div>
           {user?.role === "admin" && (
             <Link href="/create-order">
-              <Button className="bg-slate-900 hover:bg-slate-800 gap-2">
-                <Plus className="h-4 w-4" />
+              <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-200 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Plus className="h-6 w-6" />
                 Nuevo Pedido
               </Button>
             </Link>
           )}
         </div>
 
-        <Card className="mb-8 border-none shadow-sm">
-          <CardContent className="p-4">
-            <div className={`grid grid-cols-1 md:grid-cols-2 ${user?.role === "admin" ? "lg:grid-cols-6" : "lg:grid-cols-5"} gap-4`}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Card className="mb-10 border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/80 backdrop-blur-md">
+          <CardContent className="p-6">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4`}>
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
                 <Input 
-                  placeholder="Buscar por número..." 
-                  className="pl-10"
+                  placeholder="Número de pedido..." 
+                  className="h-12 pl-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Input 
                 type="date"
+                className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
               />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
                   <SelectItem value="all">Todos los estados</SelectItem>
                   <SelectItem value="pending">Pendientes</SelectItem>
                   <SelectItem value="assigned">Asignados</SelectItem>
@@ -442,20 +446,20 @@ export default function Orders() {
                 </SelectContent>
               </Select>
               <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
                   <SelectValue placeholder="Ordenar por hora" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
                   <SelectItem value="time_asc">Hora (↑)</SelectItem>
                   <SelectItem value="time_desc">Hora (↓)</SelectItem>
                 </SelectContent>
               </Select>
               {user?.role === "admin" && (
                 <Select value={deliveryPersonFilter} onValueChange={setDeliveryPersonFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
                     <SelectValue placeholder="Repartidor" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
                     <SelectItem value="all">Todos los repartidores</SelectItem>
                     <SelectItem value="none">Sin repartidor</SelectItem>
                     {((deliveryPersons as any[]) || [])
@@ -470,7 +474,7 @@ export default function Orders() {
               )}
               <Button 
                 variant="ghost" 
-                className="text-slate-500"
+                className="h-12 rounded-2xl text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 font-bold"
                 onClick={() => {
                   setSearchTerm("");
                   setStatusFilter("all");
@@ -479,25 +483,28 @@ export default function Orders() {
                   setDeliveryPersonFilter("all");
                 }}
               >
-                Limpiar filtros
+                Limpiar
               </Button>
             </div>
 
             {user?.role === "admin" && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">
-                  Hoja del dÃ­a (repartidor + fecha): {sheetDate}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={sheetDeliveryPersonId === null}
-                    onClick={() => setIsSheetOpen(true)}
-                  >
-                    Ver hoja de reparto
-                  </Button>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-50">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Hoja del día: <span className="text-slate-600">{sheetDate}</span>
+                  </p>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 px-6 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm"
+                  disabled={sheetDeliveryPersonId === null}
+                  onClick={() => setIsSheetOpen(true)}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Hoja de Reparto
+                </Button>
               </div>
             )}
           </CardContent>
@@ -508,77 +515,113 @@ export default function Orders() {
             <p className="text-slate-500">No se encontraron pedidos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {sortedOrders.map((order: any) => (
-              <Card key={order.id} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-bold">Pedido #{order.orderNumber}</h3>
-                      <Badge className={getStatusColor(order.status)}>
-                        {getStatusLabel(order.status)}
-                      </Badge>
-                      {order.rescheduleRequested === 1 && (
-                        <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 font-bold">
-                          REP. SOLICITADA
-                        </Badge>
-                      )}
-                      {order.cancellationRequested === 1 && (
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 font-bold">
-                          BAJA SOLICITADA
-                        </Badge>
-                      )}
+              <Card key={order.id} className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-300 rounded-[2.5rem] overflow-hidden bg-white group">
+                <CardContent className="p-0">
+                  <div className="p-6 md:p-8 flex flex-col gap-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-2xl font-black text-slate-900 tracking-tight">#{order.orderNumber}</h3>
+                          <Badge className={`${getStatusColor(order.status)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-sm`}>
+                            {getStatusLabel(order.status)}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{order.zone}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total</p>
+                        <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(order.totalPrice)}</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1">Zona: {order.zone}</p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Entrega</p>
+                        <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                           <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                           {order.deliveryDate}
+                        </div>
+                        {order.deliveryTime && (
+                           <p className="text-xs text-slate-500 font-medium mt-0.5 ml-5">{order.deliveryTime}</p>
+                        )}
+                      </div>
+                      <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Repartidor</p>
+                        <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                           <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                           <span className="truncate">{order.deliveryPersonName || "Sin asignar"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(order.rescheduleRequested === 1 || order.cancellationRequested === 1) && (
+                      <div className="flex flex-col gap-2">
+                        {order.rescheduleRequested === 1 && (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100">
+                            <Calendar className="h-4 w-4 animate-pulse" />
+                            <span className="text-xs font-black uppercase">Reprogramación Solicitada</span>
+                          </div>
+                        )}
+                        {order.cancellationRequested === 1 && (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100">
+                            <Trash2 className="h-4 w-4 animate-pulse" />
+                            <span className="text-xs font-black uppercase">Baja Solicitada</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {order.notes && (
-                      <p className="text-sm text-amber-600 font-medium mb-1">Nota: {order.notes}</p>
-                    )}
-                    {order.deliveryDate && (
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Entrega programada: {order.deliveryDate} {order.deliveryTime ? `a las ${order.deliveryTime}` : ""}
-                      </p>
-                    )}
-                    {order.deliveryPersonName && (
-                      <p className="text-sm text-muted-foreground mb-1">Repartidor: {order.deliveryPersonName}</p>
-                    )}
-                    <p className="text-sm font-bold mt-2">Total: {formatCurrency(order.totalPrice)}</p>
-                    {order.status === "cancelled" && order.cancelReason && (
-                      <p className="text-xs text-red-600 mt-2">
-                        Motivo baja: <span className="font-medium">{order.cancelReason}</span>
-                      </p>
-                    )}
-                    {order.cancellationRequested === 1 && order.cancellationReason && (
-                      <p className="text-xs text-orange-700 mt-2">
-                        Baja solicitada: <span className="font-medium">{order.cancellationReason}</span>
-                      </p>
+                      <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50">
+                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
+                        <p className="text-sm text-amber-800 font-medium leading-relaxed italic">"{order.notes}"</p>
+                      </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {user?.role === "admin" && (
-                      <Link href={`/order/${order.id}`}>
-                        <Button variant="outline" size="sm" className="gap-2">
-                          <Eye className="h-4 w-4" />
-                          Ver
-                        </Button>
-                      </Link>
-                    )}
-                    {user?.role === "admin" && (
+
+                  <div className="p-4 md:p-6 bg-slate-50/50 border-t border-slate-50 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-green-600 border-green-200 hover:bg-green-50"
+                        variant="ghost"
+                        size="icon"
+                        className="h-12 w-12 rounded-2xl bg-white text-emerald-500 hover:bg-emerald-50 shadow-sm border border-slate-100"
                         onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
                       >
-                        <MessageCircle className="h-4 w-4" />
-                        WhatsApp
+                        <MessageCircle className="h-6 w-6" />
                       </Button>
-                    )}
-                    {user?.role === "admin" && order.status !== "cancelled" && (
-                      <>
+                      {user?.role === "admin" && (
+                        <Link href={`/order/${order.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-12 w-12 rounded-2xl bg-white text-blue-500 hover:bg-blue-50 shadow-sm border border-slate-100"
+                          >
+                            <Eye className="h-6 w-6" />
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {user?.role === "admin" && (
+                        <Link href={`/edit-order/${order.id}`}>
+                          <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 text-slate-700 font-bold hover:bg-white hover:shadow-md transition-all gap-2">
+                            <Edit className="h-4 w-4" />
+                            <span className="hidden sm:inline">Editar</span>
+                          </Button>
+                        </Link>
+                      )}
+
+                      {user?.role === "admin" && order.status !== "cancelled" && (
                         <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className={`gap-2 ${order.rescheduleRequested === 1 ? 'bg-orange-600 text-white hover:bg-orange-700' : 'text-orange-600 border-orange-200'}`}
+                          variant={order.rescheduleRequested === 1 ? "default" : "outline"}
+                          className={`h-12 px-6 rounded-2xl font-bold transition-all gap-2 ${
+                            order.rescheduleRequested === 1 
+                              ? 'bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700' 
+                              : 'border-orange-100 text-orange-600 hover:bg-orange-50'
+                          }`}
                           onClick={() => {
                             setRescheduleOrderId(order.id);
                             if (order.rescheduleRequested === 1) {
@@ -597,74 +640,29 @@ export default function Orders() {
                           }}
                         >
                           <Calendar className="h-4 w-4" />
-                          {order.rescheduleRequested === 1 ? "Atender Solicitud" : "Reprogramar"}
+                          <span className="hidden sm:inline">{order.rescheduleRequested === 1 ? "Revisar" : "Agenda"}</span>
                         </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm" 
-                          className="gap-2"
-                          onClick={() => setDismissOrderId(order.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Baja
-                        </Button>
-                      </>
-                    )}
-                    {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
-                      <>
+                      )}
+
+                      {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
                         <Link href={`/order/${order.id}`}>
-                          <Button variant="default" size="sm" className="gap-2 bg-green-600 hover:bg-green-700">
-                            <DollarSign className="h-4 w-4" />
-                            Entregar / Cobrar
+                          <Button className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2">
+                            <DollarSign className="h-5 w-5" />
+                            Cobrar
                           </Button>
                         </Link>
+                      )}
+                      
+                      {user?.role === "admin" && order.status !== "cancelled" && (
                         <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="gap-2 text-orange-600 border-orange-200"
-                          onClick={() => {
-                            setRescheduleOrderId(order.id);
-                            setRescheduleData({ reason: "", date: order.deliveryDate || "", time: order.deliveryTime || "" });
-                          }}
+                          variant="ghost"
+                          className="h-12 w-12 rounded-2xl text-red-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => setDismissOrderId(order.id)}
                         >
-                          <Calendar className="h-4 w-4" />
-                          Reprogramar
+                          <Trash2 className="h-5 w-5" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 text-red-600 border-red-200"
-                          disabled={order.cancellationRequested === 1}
-                          onClick={() => {
-                            setCancellationRequestOrderId(order.id);
-                            setCancellationRequestReason(order.cancellationReason || "");
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {order.cancellationRequested === 1 ? "Baja solicitada" : "Baja"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 text-green-600 border-green-200 hover:bg-green-50"
-                          onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </Button>
-                      </>
-                    )}
-                    {user?.role === "user" && order.status === "delivered" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => setViewDeliveredOrderId(order.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver productos
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

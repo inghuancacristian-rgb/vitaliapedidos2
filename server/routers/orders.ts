@@ -349,9 +349,98 @@ export const ordersRouter = router({
       }
 
       // Descontar stock del inventario y registrar en historial
-      await deductInventoryForOrder(newOrder.id, input.orderNumber, input.items);
+      await deductInventoryForOrder(newOrder.id, finalOrderNumber, input.items);
 
       return newOrder;
+    }),
+
+  // Actualizar pedido
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        orderNumber: z.string(),
+        clientNumber: z.string(),
+        clientName: z.string(),
+        zone: z.string(),
+        sourceChannel: z.enum(["facebook", "tiktok", "marketplace", "referral", "other"]),
+        deliveryDate: z.string(),
+        deliveryTime: z.string().optional(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            quantity: z.number(),
+            price: z.number(),
+          })
+        ),
+        totalPrice: z.number(),
+        paymentMethod: z.enum(["qr", "cash", "transfer"]).optional(),
+        deliveryPersonId: z.number().optional(),
+        notes: z.string().optional(),
+        status: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // Obtener el pedido actual para revertir inventario
+      const currentOrder = await getOrderById(input.id);
+      if (!currentOrder) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Order not found" });
+      }
+
+      // 1. Revertir inventario de los items actuales antes de borrarlos
+      const currentItems = await getOrderItems(input.id);
+      await restoreInventoryForOrder(input.id, currentOrder.orderNumber || "", currentItems as any);
+
+      // 2. Asegurar registro del cliente
+      const customer = await ensureCustomerRecord({
+        clientNumber: input.clientNumber,
+        clientName: input.clientName,
+        zone: input.zone,
+        sourceChannel: input.sourceChannel,
+      });
+
+      if (!customer) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update customer",
+        });
+      }
+
+      // 3. Actualizar el pedido
+      await updateOrder(input.id, {
+        orderNumber: input.orderNumber,
+        customerId: customer.id,
+        zone: input.zone,
+        deliveryDate: input.deliveryDate,
+        deliveryTime: input.deliveryTime,
+        totalPrice: input.totalPrice,
+        paymentMethod: input.paymentMethod,
+        deliveryPersonId: input.deliveryPersonId,
+        status: input.status || (input.deliveryPersonId ? "assigned" : "pending"),
+        notes: input.notes,
+        sourceChannel: input.sourceChannel,
+        updatedAt: new Date(),
+      });
+
+      // 4. Actualizar items (borrar y crear de nuevo)
+      await deleteOrderItems(input.id);
+      for (const item of input.items) {
+        await createOrderItem({
+          orderId: input.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+        });
+      }
+
+      // 5. Descontar stock del nuevo inventario
+      await deductInventoryForOrder(input.id, input.orderNumber, input.items);
+
+      return { success: true };
     }),
 
   // Obtener detalles del pedido
