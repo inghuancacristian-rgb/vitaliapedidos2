@@ -170,7 +170,7 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
           Agregar Producto
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-950 border-white/40 shadow-2xl rounded-[1.8rem]">
         <DialogHeader>
           <DialogTitle>Anadir Nuevo Producto</DialogTitle>
           <p className="text-sm text-muted-foreground mt-1">
@@ -191,27 +191,28 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="code">SKU (Codigo)</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="code" className="text-sm font-semibold text-slate-700">SKU (Codigo)</Label>
               <Input
                 id="code"
                 placeholder="Ej: COCO-001"
                 value={formData.code}
+                className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, code: e.target.value }))
                 }
               />
             </div>
-            <div>
-              <Label htmlFor="category">Categoria</Label>
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-semibold text-slate-700">Categoria</Label>
               <Select
                 value={formData.category}
                 onValueChange={(value) =>
                   setFormData((prev) => ({ ...prev, category: value }))
                 }
               >
-                <SelectTrigger id="category">
+                <SelectTrigger id="category" className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -223,30 +224,34 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="price">Precio de Compra (Bs.)</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price" className="text-sm font-semibold text-slate-700">Precio de Compra (Bs.)</Label>
               <Input
                 id="price"
                 type="number"
                 step="any"
+                inputMode="decimal"
                 onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.price}
+                className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, price: e.target.value }))
                 }
               />
             </div>
-            <div>
-              <Label htmlFor="salePrice">Precio de Venta (Bs.)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="salePrice" className="text-sm font-semibold text-slate-700">Precio de Venta (Bs.)</Label>
               <Input
                 id="salePrice"
                 type="number"
                 step="any"
+                inputMode="decimal"
                 onFocus={(e) => e.target.select()}
                 placeholder="0"
                 value={formData.salePrice}
+                className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, salePrice: e.target.value }))
                 }
