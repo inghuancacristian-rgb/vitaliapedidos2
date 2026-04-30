@@ -55,31 +55,13 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { getSession } from "./auth";
+import { getLocalDateKey, pad2, toValidDate } from "./_core/date_utils";
 
 let _db: any = null;
 let _pool: any = null;
 
 const MOCK_DATA_FILE = path.join(process.cwd(), "server", "demo_data.json");
 
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function toValidDate(value: unknown): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
-  }
-
-  const parsed = new Date(value as any);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function getLocalDateKey(value: unknown): string | null {
-  const date = toValidDate(value);
-  if (!date) return null;
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
 
 function syncMocksToDisk() {
   if (process.env.DATABASE_URL) return;

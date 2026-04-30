@@ -20,18 +20,9 @@ import {
   getOrderItems,
   updateCashOpeningStatus,
 } from "../db";
+import { getLocalDateKey, pad2 } from "../_core/date_utils";
 import { TRPCError } from "@trpc/server";
 
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function getLocalDateKey(value: unknown): string | null {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value as any);
-  if (Number.isNaN(date.getTime())) return null;
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
 
 export const financeRouter = router({
   getTransactions: protectedProcedure.query(async ({ ctx }) => {
@@ -268,9 +259,8 @@ export const financeRouter = router({
     const userId = ctx.user?.id;
     if (!userId) return { hasActive: false };
     
-    const now = new Date();
-    const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-    const today = new Date(now.getTime() - offsetMs).toISOString().split("T")[0];
+    const today = getLocalDateKey(new Date());
+    if (!today) return { hasActive: false };
     
     const method = input?.paymentMethod || "cash";
     const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, method);

@@ -23,18 +23,9 @@ import {
   restoreInventoryForOrder,
   getOrdersByDeliveryPerson,
 } from "../db";
+import { getLocalDateKey, pad2 } from "../_core/date_utils";
 import { TRPCError } from "@trpc/server";
 
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function getLocalDateKey(value: unknown): string | null {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value as any);
-  if (Number.isNaN(date.getTime())) return null;
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
 
 async function ensureCustomerRecord(input: {
   clientNumber: string;
