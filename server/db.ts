@@ -140,6 +140,7 @@ function loadMocks() {
     console.error("Failed to load mocks from disk:", err);
   }
 }
+loadMocks();
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
