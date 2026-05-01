@@ -651,6 +651,8 @@ export async function getAllOrders() {
   }).from(orders)
     .leftJoin(users, eq(orders.deliveryPersonId, users.id))
     .leftJoin(customers, eq(orders.customerId, customers.id));
+}
+
 export async function getRepurchaseSuggestions() {
   const db = await getDb();
   let ordersData: any[];
