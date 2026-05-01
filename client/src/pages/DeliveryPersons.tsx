@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash, WalletCards } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 
 export default function DeliveryPersons() {
@@ -66,6 +66,13 @@ export default function DeliveryPersons() {
     onSuccess: () => {
       toast.success("Estado actualizado");
       refetchExtraLoad();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const openCashMutation = trpc.finance.openCashRegister.useMutation({
+    onSuccess: () => {
+      toast.success("Caja aperturada correctamente con Bs. 0.00");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -345,6 +352,25 @@ export default function DeliveryPersons() {
                     >
                       <Package className="h-4 w-4" />
                       Carga Extra
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                      onClick={() => {
+                        const today = new Date().toISOString().split("T")[0];
+                        openCashMutation.mutate({
+                          openingAmount: 0,
+                          paymentMethod: "cash",
+                          openingDate: today,
+                          responsibleUserId: person.id,
+                          notes: "Apertura rápida desde lista de repartidores",
+                        });
+                      }}
+                      disabled={openCashMutation.isPending}
+                    >
+                      <WalletCards className="h-4 w-4" />
+                      Aperturar Caja
                     </Button>
                     <Button
                       size="sm"
