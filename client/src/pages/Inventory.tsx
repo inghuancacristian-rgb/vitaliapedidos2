@@ -9,11 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
-  AlertTriangle,
   Box,
   Edit2,
   Sparkles,
-  TriangleAlert,
   Printer,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -446,12 +444,7 @@ export default function Inventory() {
                   <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
                   Inventario con mejor lectura
                 </span>
-                {lowStockItems.length > 0 ? (
-                  <span className="status-chip text-red-700">
-                    <TriangleAlert className="mr-1.5 h-3.5 w-3.5 text-red-600" />
-                    {lowStockItems.length} alertas de stock
-                  </span>
-                ) : null}
+                </span>
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold text-slate-900 sm:text-4xl">
@@ -482,10 +475,7 @@ export default function Inventory() {
             <p className="text-sm font-semibold text-muted-foreground">Unidades en stock</p>
             <p className="kpi-value mt-3">{inventorySummary.units}</p>
           </div>
-          <div className="metric-card">
-            <p className="text-sm font-semibold text-muted-foreground">Stock bajo</p>
-            <p className="kpi-value mt-3">{inventorySummary.lowStock}</p>
-          </div>
+
           <div className="metric-card">
             <p className="text-sm font-semibold text-muted-foreground">Con vencimiento</p>
             <p className="kpi-value mt-3">{inventorySummary.expiring}</p>
@@ -526,38 +516,7 @@ export default function Inventory() {
 
         <SmartAlerts />
 
-        {lowStockItems.length > 0 ? (
-          <Card className="overflow-hidden border-red-200/70 bg-[linear-gradient(180deg,rgba(254,226,226,0.9),rgba(255,255,255,0.92))]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700">
-                <AlertTriangle className="h-5 w-5" />
-                {activeTab === "finished" ? "Productos" : "Insumos"} con stock bajo
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              {lowStockItems.map((item: any) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-3 rounded-[1.25rem] border border-red-200/80 bg-white/85 p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <ProductThumb item={item} />
-                    <div>
-                      <p className="font-bold text-slate-900">{item.product?.name}</p>
-                      <p className="text-sm text-muted-foreground">Codigo: {item.product?.code}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:text-right">
-                    <Badge variant="destructive" className="rounded-full">
-                      Stock: {item.quantity}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">Minimo: {item.minStock}</span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ) : null}
+
 
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -598,9 +557,6 @@ export default function Inventory() {
                               <p className="truncate text-base font-bold text-slate-900">{item.product?.name}</p>
                               <p className="text-sm text-muted-foreground">{item.product?.code}</p>
                             </div>
-                            <Badge variant={item.isLowStock ? "destructive" : "default"} className="rounded-full">
-                              {item.isLowStock ? "Bajo" : "Normal"}
-                            </Badge>
                           </div>
 
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -608,7 +564,7 @@ export default function Inventory() {
                             <InfoBlock label="Venta" value={item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"} accent="text-emerald-700" />
                             <InfoBlock label="Stock" value={`${item.quantity} uds.`} />
                             <InfoBlock label="Pedidos" value={`${item.onOrder || 0} uds.`} accent="text-orange-600" />
-                            <InfoBlock label="Minimo" value={`${item.minStock} uds.`} />
+
                             <InfoBlock
                               label="Margen"
                               value={margin != null ? formatCurrency(margin) : "-"}
@@ -673,9 +629,9 @@ export default function Inventory() {
                         <th className="px-4 py-4 text-right text-xs font-semibold uppercase">Dif / margen</th>
                         <th className="px-4 py-4 text-center font-semibold">Stock actual</th>
                         <th className="px-4 py-4 text-center font-semibold">Pedidos</th>
-                        <th className="px-4 py-4 text-center font-semibold">Stock minimo</th>
+
                         <th className="px-4 py-4 text-center font-semibold">Vencimiento</th>
-                        <th className="px-4 py-4 text-center font-semibold">Estado</th>
+
                         <th className="px-4 py-4 text-center font-semibold">Acciones</th>
                       </tr>
                     </thead>
@@ -715,15 +671,11 @@ export default function Inventory() {
                             </td>
                             <td className="px-4 py-4 text-center font-semibold text-slate-900">{item.quantity}</td>
                             <td className="px-4 py-4 text-center font-semibold text-orange-600">{item.onOrder || 0}</td>
-                            <td className="px-4 py-4 text-center text-muted-foreground">{item.minStock}</td>
+
                             <td className={`px-4 py-4 text-center text-sm ${getExpiryTone(item.expiryDate)}`}>
                               {item.expiryDate ? formatExpiryDate(item.expiryDate) : "-"}
                             </td>
-                            <td className="px-4 py-4 text-center">
-                              <Badge variant={item.isLowStock ? "destructive" : "default"} className="rounded-full">
-                                {item.isLowStock ? "Bajo" : "Normal"}
-                              </Badge>
-                            </td>
+
                             <td className="px-4 py-4">
                               <div className="flex flex-wrap items-center justify-center gap-2">
                                 <ProductHistoryDialog
