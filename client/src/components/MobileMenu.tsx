@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import {
 export default function MobileMenu() {
   const { user, logout } = useAuth();
   const [location] = useLocation();
+  const [open, setOpen] = useState(false);
 
   const isActive = (path: string) => location === path;
 
@@ -51,7 +53,7 @@ export default function MobileMenu() {
   const menuItems = user?.role === "admin" ? adminMenuItems : deliveryMenuItems;
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="outline" size="icon" className="md:hidden">
           <Menu className="h-6 w-6" />
@@ -101,7 +103,7 @@ export default function MobileMenu() {
               const Icon = item.icon;
 
               return (
-                <Link key={item.href} href={item.href}>
+                <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>
                   <Button
                     variant={isActive(item.href) ? "default" : "ghost"}
                     className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
