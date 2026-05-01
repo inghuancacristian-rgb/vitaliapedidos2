@@ -444,7 +444,6 @@ export default function Inventory() {
                   <Sparkles className="mr-1.5 h-3.5 w-3.5 text-primary" />
                   Inventario con mejor lectura
                 </span>
-                </span>
               </div>
 
               <h1 className="mt-5 text-3xl font-extrabold text-slate-900 sm:text-4xl">
