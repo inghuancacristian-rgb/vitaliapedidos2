@@ -651,6 +651,81 @@ export async function getAllOrders() {
   }).from(orders)
     .leftJoin(users, eq(orders.deliveryPersonId, users.id))
     .leftJoin(customers, eq(orders.customerId, customers.id));
+export async function getRepurchaseSuggestions() {
+  const db = await getDb();
+  let ordersData: any[];
+
+  if (!db) {
+    ordersData = [...MOCK_ORDERS].filter(o => o.status === "delivered");
+    // Attach customer info for mock
+    ordersData = ordersData.map(o => {
+      const customer = MOCK_CUSTOMERS.find(c => c.id === o.customerId);
+      return { ...o, customerPhone: customer?.phone, customerWhatsapp: customer?.whatsapp };
+    });
+  } else {
+    ordersData = await db.select({
+      id: orders.id,
+      customerId: orders.customerId,
+      customerName: orders.customerName,
+      createdAt: orders.createdAt,
+      status: orders.status,
+      customerPhone: customers.phone,
+      customerWhatsapp: customers.whatsapp,
+    })
+    .from(orders)
+    .leftJoin(customers, eq(orders.customerId, customers.id))
+    .where(eq(orders.status, "delivered"));
+  }
+
+  // Sort by date desc
+  ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const customerMap: Map<number, any[]> = new Map();
+  ordersData.forEach(o => {
+    if (!customerMap.has(o.customerId)) customerMap.set(o.customerId, []);
+    customerMap.get(o.customerId)!.push(o);
+  });
+
+  const suggestions: any[] = [];
+  const now = new Date();
+
+  for (const [customerId, customerOrders] of customerMap.entries()) {
+    if (customerOrders.length < 2) continue;
+
+    let totalDiff = 0;
+    let count = 0;
+    for (let i = 0; i < customerOrders.length - 1; i++) {
+      const d1 = new Date(customerOrders[i].createdAt);
+      const d2 = new Date(customerOrders[i+1].createdAt);
+      const diff = (d1.getTime() - d2.getTime()) / (1000 * 3600 * 24);
+      if (diff > 0.5) { // Evitar pedidos el mismo día
+        totalDiff += diff;
+        count++;
+      }
+    }
+    
+    if (count === 0) continue;
+    const avgDays = totalDiff / count;
+    
+    const lastOrder = customerOrders[0];
+    const lastOrderDate = new Date(lastOrder.createdAt);
+    const daysSinceLast = (now.getTime() - lastOrderDate.getTime()) / (1000 * 3600 * 24);
+
+    // Sugerir si estamos en la ventana de recompra (promedio +/- 2 días)
+    if (daysSinceLast >= Math.max(3, avgDays - 2) && daysSinceLast <= avgDays + 4) {
+      suggestions.push({
+        customerId,
+        customerName: lastOrder.customerName,
+        customerPhone: lastOrder.customerPhone,
+        customerWhatsapp: lastOrder.customerWhatsapp,
+        avgDays: Math.round(avgDays),
+        lastOrderDate: lastOrder.createdAt,
+        daysSinceLast: Math.floor(daysSinceLast),
+      });
+    }
+  }
+
+  return suggestions.sort((a, b) => b.daysSinceLast - a.daysSinceLast);
 }
 
 export async function getOrdersByDeliveryPerson(userId: number) {

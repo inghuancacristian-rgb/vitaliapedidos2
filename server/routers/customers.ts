@@ -7,6 +7,7 @@ import {
   getAllSales,
   getCustomerById,
   getCustomerByNumber,
+  getRepurchaseSuggestions,
   searchCustomers,
   updateCustomer,
 } from "../db";
@@ -161,6 +162,13 @@ function buildCustomerInsights(customers: any[], orders: any[], sales: any[]) {
 export const customersRouter = router({
   list: protectedProcedure.query(async () => {
     return await getAllCustomers();
+  }),
+
+  getRepurchaseSuggestions: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN" });
+    }
+    return await getRepurchaseSuggestions();
   }),
 
   search: protectedProcedure

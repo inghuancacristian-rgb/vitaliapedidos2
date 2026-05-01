@@ -7,6 +7,7 @@ import { AlertCircle, Package, Truck, TrendingUp, Eye } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency } from "@/lib/currency";
 import { useMemo, useState } from "react";
+import { RepurchaseSuggestions } from "@/components/RepurchaseSuggestions";
 
 function getLocalDateInputValue() {
   const now = new Date();
@@ -181,18 +182,11 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Alertas de Inventario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{stats?.lowStockProducts || 0}</div>
-              <p className="text-sm text-muted-foreground mt-2">Productos con stock bajo</p>
-              <Link href="/inventory" className="text-blue-600 hover:underline mt-4 inline-block">
-                Ver inventario →
-              </Link>
-            </CardContent>
           </Card>
+        </div>
+
+        <div className="mb-8">
+          <RepurchaseSuggestions />
         </div>
 
         {/* Tabla de pedidos del día */}
