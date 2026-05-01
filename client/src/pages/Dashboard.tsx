@@ -168,8 +168,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Ingresos y inventario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        {/* Ingresos */}
+        <div className="mb-8">
           <Card>
             <CardHeader>
               <CardTitle>Ingresos Totales (Global)</CardTitle>
@@ -180,8 +180,6 @@ export default function Dashboard() {
               </div>
               <p className="text-sm text-muted-foreground mt-2">Suma de todos los métodos de pago</p>
             </CardContent>
-          </Card>
-
           </Card>
         </div>
 
