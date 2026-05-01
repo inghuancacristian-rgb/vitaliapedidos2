@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
-import { Wallet, QrCode, Landmark, Receipt, AlertCircle, CheckCircle2, Truck, PackageCheck, BadgeCheck } from "lucide-react";
+import { Wallet, QrCode, Landmark, Receipt, AlertCircle, CheckCircle2, Truck, PackageCheck, BadgeCheck, Lock, ShieldAlert, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 function paymentMethodLabel(method?: string) {
@@ -41,6 +41,7 @@ export default function RepartidorFinance() {
   const { data: expected, isLoading: isLoadingExpected } = trpc.finance.getExpectedDaily.useQuery({ date: today });
   const { data: deliveryHistory } = trpc.finance.getDeliveryHistory.useQuery({ date: today });
   const { data: myClosures, isLoading: isLoadingClosures } = trpc.finance.listMyClosures.useQuery();
+  const { data: activeOpeningData, isLoading: isLoadingOpening } = trpc.finance.hasActiveOpening.useQuery();
 
   const submitMutation = trpc.finance.submitClosure.useMutation({
     onSuccess: () => {
@@ -150,6 +151,44 @@ export default function RepartidorFinance() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  const isBoxOpen = activeOpeningData?.hasActive;
+
+  if (!isBoxOpen && !isLoadingOpening) {
+    return (
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
+        <Card className="border-t-4 border-t-slate-400 shadow-xl overflow-hidden">
+          <CardHeader className="text-center pb-2 bg-slate-50/50">
+            <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+              <Lock className="w-8 h-8 text-slate-600" />
+            </div>
+            <CardTitle className="text-2xl font-black text-slate-800">Caja Cerrada</CardTitle>
+            <CardDescription className="text-slate-500 font-medium">
+              Tu caja no ha sido aperturada para hoy {today}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6 text-center">
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 flex gap-3 items-start text-left">
+               <ShieldAlert className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+               <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                 Para iniciar tu turno y registrar ventas o entregas, el administrador debe realizar la <strong>Apertura de Caja</strong> asignándote como responsable.
+               </p>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              className="w-full py-6 border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+              onClick={() => window.location.reload()}
+            >
+              <History className="w-4 h-4 mr-2" /> Verificar Estado Nuevamente
+            </Button>
+          </CardContent>
+        </Card>
+
+        <ClosuresList myClosures={myClosures} isLoading={isLoadingClosures} />
       </div>
     );
   }

@@ -1910,7 +1910,7 @@ export async function closeAllActiveOpeningsForUser(userId: number, date: string
   if (!db) {
     let changed = false;
     MOCK_CASH_OPENINGS.forEach(o => {
-      if (o.status === "open") {
+      if (o.responsibleUserId === userId && o.status === "open") {
         o.status = "closed";
         changed = true;
       }
@@ -1921,7 +1921,10 @@ export async function closeAllActiveOpeningsForUser(userId: number, date: string
   
   await db.update(cashOpenings)
     .set({ status: 'closed' })
-    .where(sql`${cashOpenings.status} = 'open'`);
+    .where(and(
+      eq(cashOpenings.responsibleUserId, userId),
+      eq(cashOpenings.status, 'open')
+    ));
 }
 
 export async function getAllCashOpenings() {

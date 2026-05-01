@@ -223,10 +223,10 @@ export const financeRouter = router({
         status: finalStatus
       });
 
-      if (isAdmin) {
-        const { closeAllActiveOpeningsForUser } = await import("../db");
-        await closeAllActiveOpeningsForUser(userId, input.date);
-      }
+      // Independientemente de si es admin o repartidor, al enviar un cierre
+      // se deben cerrar las aperturas activas para bloquear nuevas ventas
+      const { closeAllActiveOpeningsForUser } = await import("../db");
+      await closeAllActiveOpeningsForUser(userId, input.date);
 
       return result;
     }),
