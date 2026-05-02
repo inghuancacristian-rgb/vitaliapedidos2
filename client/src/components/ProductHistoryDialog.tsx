@@ -149,8 +149,8 @@ export function ProductHistoryDialog({
           Historial
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Seguimiento del producto</DialogTitle>
           <p className="text-sm text-muted-foreground">
             Historial completo de {productName}.
@@ -166,67 +166,67 @@ export function ProductHistoryDialog({
             No se pudo cargar el historial.
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-5">
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Codigo</p>
-                <p className="font-semibold">{data.product.code}</p>
+          <div className="flex flex-col gap-3 overflow-hidden flex-1 min-h-0">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 shrink-0">
+              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Código</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.product.code}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Stock actual</p>
-                <p className="font-semibold">{data.stock?.quantity ?? 0} unidades</p>
+              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Stock actual</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.stock?.quantity ?? 0} uds.</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Unidades compradas</p>
-                <p className="font-semibold">{data.summary.totalPurchasedUnits}</p>
+              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Compradas</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.summary.totalPurchasedUnits}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Unidades vendidas</p>
-                <p className="font-semibold">{data.summary.totalSoldUnits}</p>
+              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Vendidas</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.summary.totalSoldUnits}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-3">
-                <p className="text-xs text-muted-foreground">Estado actual</p>
-                <p className="font-semibold">
+              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Estado</p>
+                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">
                   {data.summary.currentStatus === "inactive" ? "Dado de baja" : "Activo"}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-lg border bg-muted/20 p-4">
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="font-medium">{data.product.name}</span>
+            <div className="rounded-lg border bg-muted/20 p-3 shrink-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
+                <span className="font-bold">{data.product.name}</span>
                 <span className="text-muted-foreground">
                   Compra: {formatCurrency(data.product.price)}
                 </span>
                 <span className="text-muted-foreground">
                   Venta: {formatCurrency(data.product.salePrice)}
                 </span>
-                <span className="text-muted-foreground">
-                  Eventos registrados: {data.summary.totalEvents}
+                <span className="text-muted-foreground font-medium">
+                  Eventos: {data.summary.totalEvents}
                 </span>
               </div>
             </div>
 
-            <ScrollArea className="h-[420px] rounded-lg border">
-              <div className="space-y-3 p-4">
+            <ScrollArea className="flex-1 min-h-0 rounded-lg border">
+              <div className="space-y-3 p-3 sm:p-4">
                 {data.timeline.map((event: any) => (
                   <div
                     key={event.id}
-                    className="rounded-lg border bg-background p-4 shadow-sm"
+                    className="rounded-lg border bg-background p-3 sm:p-4 shadow-sm"
                   >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-2">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
                           {getEventIcon(event.eventType)}
-                          <p className="font-semibold">{event.title}</p>
+                          <p className="font-semibold text-sm sm:text-base">{event.title}</p>
                           {getEventBadge(event.eventType)}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {event.description}
                         </p>
                         
                         {(event.orderNumber || event.saleNumber || event.userName || event.deliveryPersonName) && (
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[10px] sm:text-xs">
                             {event.orderNumber && (
                               <div className="flex items-center gap-1 text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-md">
                                 <Truck className="h-3 w-3" />
@@ -253,15 +253,15 @@ export function ProductHistoryDialog({
                             {event.userName && !event.deliveryPersonName && (
                               <div className="flex items-center gap-1 text-slate-600 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md">
                                 <User className="h-3 w-3" />
-                                {event.userName} {event.userRole && <span className="text-[10px] opacity-70">({event.userRole === 'admin' ? 'Admin' : 'Repartidor'})</span>}
+                                {event.userName} {event.userRole && <span className="text-[9px] sm:text-[10px] opacity-70">({event.userRole === 'admin' ? 'Admin' : 'Repartidor'})</span>}
                               </div>
                             )}
                           </div>
                         )}
                       </div>
 
-                      <div className="space-y-1 text-sm md:text-right">
-                        <p className="font-medium">{getQuantityLabel(event)}</p>
+                      <div className="space-y-0.5 text-xs sm:text-sm mt-2 md:mt-0 md:text-right">
+                        <p className="font-bold">{getQuantityLabel(event)}</p>
                         <p className="text-muted-foreground">
                           {formatDateTime(event.createdAt)}
                         </p>
@@ -269,8 +269,19 @@ export function ProductHistoryDialog({
                     </div>
                   </div>
                 ))}
+                {data.timeline.length === 0 && (
+                  <p className="text-center text-sm text-muted-foreground py-6">
+                    No hay eventos registrados
+                  </p>
+                )}
               </div>
             </ScrollArea>
+            
+            <div className="shrink-0 mt-2">
+              <Button onClick={() => setIsOpen(false)} className="w-full">
+                Cerrar historial
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
