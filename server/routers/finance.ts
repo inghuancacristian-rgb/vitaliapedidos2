@@ -367,6 +367,15 @@ export const financeRouter = router({
       return result;
     }),
 
+  // Reparar un cierre específico (solo admin) - ejecutar una vez
+  repairClosure: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      await processFinancialLiquidation(input.id);
+      return { success: true };
+    }),
+
   // Historial de transacciones por caja con filtros de fecha
   getBoxHistory: protectedProcedure
     .input(z.object({
@@ -378,19 +387,6 @@ export const financeRouter = router({
     .query(async ({ ctx, input }) => {
       if (ctx.user?.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
-      }
-
-      // AUTO-REPARACIÓN: Buscar cierres aprobados recientes que no tengan liquidación financiera
-      // Esto arregla retroactivamente casos como el del usuario actual (-4 -> 55)
-      const closures = await getAllCashClosures();
-      const unliquidated = closures.filter((c: any) => 
-        c.status === "approved" && 
-        c.userId === (ctx.user?.role === "admin" ? c.userId : ctx.user?.id)
-      );
-      
-      for (const c of unliquidated) {
-        // processFinancialLiquidation es idempotente o verifica si ya existen las transacciones
-        await processFinancialLiquidation(c.id);
       }
 
       const allTransactions = await getFinancialTransactions();

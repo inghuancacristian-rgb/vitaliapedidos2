@@ -2221,43 +2221,57 @@ export async function processFinancialLiquidation(closureId: number) {
   const closure = await getCashClosureById(closureId);
   if (!closure) return;
 
-  // 1. Asegurar que los ingresos por ventas están registrados
+  // PROTECCIÓN ANTI-DUPLICADOS: verificar si ya existe un registro de cierre para este ID
+  const existingClosureReport = await db
+    .select()
+    .from(financialTransactions)
+    .where(
+      and(
+        eq(financialTransactions.category, "closure_report" as any),
+        eq(financialTransactions.userId, closure.userId),
+        sql`${financialTransactions.notes} LIKE ${'%Cierre #' + closureId + '%'}`
+      )
+    )
+    .limit(1);
+
+  // Si ya existe, no procesar de nuevo
+  if (existingClosureReport.length > 0) return;
+
+  // 1. Registrar ingresos de ventas (órdenes entregadas)
   await createFinancialTransactionsForDeliveries(closureId, closure.userId, closure.date);
 
-  // 2. Procesar cada método de pago para llevar el saldo a cero
-  const methods: ("cash" | "qr" | "transfer")[] = ["cash", "qr", "transfer"];
-  
-  for (const method of methods) {
-    const reportedAmount = method === "cash" ? closure.reportedCash : 
-                          method === "qr" ? closure.reportedQr : 
-                          closure.reportedTransfer;
-    
-    // Calcular saldo actual para este usuario y método
-    const transactions = await getFinancialTransactions(closure.userId);
-    const methodTxs = transactions.filter((t: any) => t.paymentMethod === method);
-    
-    let currentBalance = 0;
-    methodTxs.forEach((t: any) => {
-      if (t.type === "income") currentBalance += t.amount;
-      else currentBalance -= t.amount;
+  // 2. Registrar el ingreso del monto reportado en efectivo
+  if (closure.reportedCash > 0) {
+    await createFinancialTransaction({
+      type: "income",
+      category: "closure_report",
+      amount: closure.reportedCash,
+      paymentMethod: "cash",
+      userId: closure.userId,
+      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
     });
+  }
 
-    // El usuario quiere que el saldo refleje el "Sobrante" (Reportado - Deuda)
-    // Para lograr que SaldoFinal = Reportado + BalanceAnterior (si BalanceAnterior es negativo)
-    // O simplemente SaldoFinal = Reportado - Esperado.
-    
-    // Si reportó 59 y tenía -4, el saldo debe quedar en 55.
-    // Eso significa que debemos ingresar los 59 reportados como un ingreso de ajuste.
-    if (reportedAmount > 0) {
-      await createFinancialTransaction({
-        type: "income",
-        category: "closure_report",
-        amount: reportedAmount,
-        paymentMethod: method,
-        userId: closure.userId,
-        notes: `Ingreso por Cierre de Caja #${closureId} (Reportado)`,
-      });
-    }
+  if (closure.reportedQr > 0) {
+    await createFinancialTransaction({
+      type: "income",
+      category: "closure_report",
+      amount: closure.reportedQr,
+      paymentMethod: "qr",
+      userId: closure.userId,
+      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
+    });
+  }
+
+  if (closure.reportedTransfer > 0) {
+    await createFinancialTransaction({
+      type: "income",
+      category: "closure_report",
+      amount: closure.reportedTransfer,
+      paymentMethod: "transfer",
+      userId: closure.userId,
+      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
+    });
   }
 }
 

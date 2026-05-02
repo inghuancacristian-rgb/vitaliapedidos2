@@ -875,6 +875,10 @@ function CashClosuresAdmin() {
     onSuccess: () => { toast.success("Cierre actualizado y nueva caja abierta"); refetch(); utils.finance.getCashOpenings.invalidate(); },
     onError: (err) => toast.error(`Error: ${err.message}`)
   });
+  const repairMutation = trpc.finance.repairClosure.useMutation({
+    onSuccess: () => { toast.success("Cierre reparado. Recarga el historial."); refetch(); utils.finance.getBoxHistory.invalidate(); },
+    onError: (err) => toast.error(`Error al reparar: ${err.message}`)
+  });
   const [selectedClosure, setSelectedClosure] = useState<any>(null);
   if (isLoading) return <div>Cargando cierres...</div>;
 
@@ -915,7 +919,12 @@ function CashClosuresAdmin() {
                       <Button size="sm" variant="ghost" className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 font-bold" onClick={() => updateMutation.mutate({ id: c.id, status: "approved" })} disabled={updateMutation.isPending}>Aprobar</Button>
                       <Button size="sm" variant="ghost" className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50 font-bold" onClick={() => updateMutation.mutate({ id: c.id, status: "rejected" })} disabled={updateMutation.isPending}>Rechazar</Button>
                     </>) : (
-                      <Button size="sm" variant="outline" className="h-8 gap-2" onClick={() => setSelectedClosure(c)}><Printer className="h-3 w-3" />Imprimir</Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="h-8 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => repairMutation.mutate({ id: c.id })} disabled={repairMutation.isPending} title="Forzar registro de ingresos si el saldo no se actualizó">
+                          {repairMutation.isPending ? "..." : "⚙ Reparar"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-8 gap-2" onClick={() => setSelectedClosure(c)}><Printer className="h-3 w-3" />Imprimir</Button>
+                      </div>
                     )}
                   </div>
                 </TableCell>
