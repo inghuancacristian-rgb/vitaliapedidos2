@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
+import { inventory } from "../../drizzle/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import {
   getAllProducts,
   createProduct,
@@ -320,8 +322,6 @@ export const inventoryRouter = router({
       const db = await import("../db").then(m => m.getDb());
       let existingInv = null;
       if (db) {
-        const { inventory } = await import("../db/schema");
-        const { eq, and, isNull } = await import("drizzle-orm");
         const res = await db.select().from(inventory).where(and(
           eq(inventory.productId, input.productId),
           input.batchNumber ? eq(inventory.batchNumber, input.batchNumber) : isNull(inventory.batchNumber)
