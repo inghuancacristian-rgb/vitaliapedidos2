@@ -553,10 +553,14 @@ export const generateArqueoPDF = (data: any) => {
   doc.setFont(undefined, "bold");
   if (totalDiff < 0) {
     doc.setTextColor(220, 53, 69);
+    doc.text(`Faltante Total: ${formatBs(Math.abs(totalDiff))}`, 20, finalY + 21);
   } else if (totalDiff > 0) {
+    doc.setTextColor(33, 150, 243); // Blue for Sobrante
+    doc.text(`Sobrante Total: ${formatBs(totalDiff)}`, 20, finalY + 21);
+  } else {
     doc.setTextColor(76, 175, 80);
+    doc.text(`Diferencia Total: Bs. 0.00 (CUADRADO)`, 20, finalY + 21);
   }
-  doc.text(`Diferencia Total: ${formatBs(totalDiff)}`, 20, finalY + 21);
   doc.setTextColor(40, 40, 40);
 
   // Firmas

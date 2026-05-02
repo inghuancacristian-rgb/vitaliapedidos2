@@ -186,12 +186,26 @@ export function ArqueoDialog({
                    <span className="text-muted-foreground">Esperado Sist:</span>
                    <span className="font-mono font-bold">{formatCurrency(expectedCash)}</span>
                  </div>
-                 <div className={`flex justify-between items-center p-2 rounded text-sm border ${cashDifference === 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
-                   <span className={cashDifference === 0 ? "text-green-800" : "text-red-800"}>Faltante/Sobrante:</span>
-                   <span className={`font-mono font-bold ${cashDifference === 0 ? "text-green-600" : "text-red-600"}`}>
-                     {cashDifference === 0 ? "OK 0.00" : formatCurrency(cashDifference)}
-                   </span>
-                 </div>
+                 {cashDifference < 0 ? (
+                   <div className="flex justify-between items-center p-2 rounded text-sm border bg-red-50 border-red-200">
+                     <span className="text-red-800 font-bold">Faltante:</span>
+                     <span className="font-mono font-bold text-red-600">
+                       {formatCurrency(Math.abs(cashDifference))}
+                     </span>
+                   </div>
+                 ) : cashDifference > 0 ? (
+                   <div className="flex justify-between items-center p-2 rounded text-sm border bg-blue-50 border-blue-200">
+                     <span className="text-blue-800 font-bold">Sobrante:</span>
+                     <span className="font-mono font-bold text-blue-600">
+                       {formatCurrency(cashDifference)}
+                     </span>
+                   </div>
+                 ) : (
+                   <div className="flex justify-between items-center p-2 rounded text-sm border bg-green-50 border-green-200">
+                     <span className="text-green-800 font-bold">Estado:</span>
+                     <span className="font-mono font-bold text-green-600">CUADRADO (OK)</span>
+                   </div>
+                 )}
                </div>
 
                <Separator />
@@ -212,8 +226,14 @@ export function ArqueoDialog({
                    <span className="font-mono font-bold">{formatCurrency(expectedQr)}</span>
                  </div>
                  <div className="flex justify-between text-xs px-2 py-1">
-                   <span>Diferencia:</span>
-                   <span className={`${qrDifference === 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(qrDifference)}</span>
+                   <span className="font-medium">Resultado:</span>
+                   {qrDifference < 0 ? (
+                     <span className="text-red-600 font-bold">Faltante: {formatCurrency(Math.abs(qrDifference))}</span>
+                   ) : qrDifference > 0 ? (
+                     <span className="text-blue-600 font-bold">Sobrante: {formatCurrency(qrDifference)}</span>
+                   ) : (
+                     <span className="text-green-600 font-bold">CUADRADO</span>
+                   )}
                  </div>
                </div>
 
@@ -233,8 +253,14 @@ export function ArqueoDialog({
                    <span className="font-mono font-bold">{formatCurrency(expectedTransfer)}</span>
                  </div>
                  <div className="flex justify-between text-xs px-2 py-1">
-                   <span>Diferencia:</span>
-                   <span className={`${transferDifference === 0 ? "text-green-600" : "text-red-600"}`}>{formatCurrency(transferDifference)}</span>
+                   <span className="font-medium">Resultado:</span>
+                   {transferDifference < 0 ? (
+                     <span className="text-red-600 font-bold">Faltante: {formatCurrency(Math.abs(transferDifference))}</span>
+                   ) : transferDifference > 0 ? (
+                     <span className="text-blue-600 font-bold">Sobrante: {formatCurrency(transferDifference)}</span>
+                   ) : (
+                     <span className="text-green-600 font-bold">CUADRADO</span>
+                   )}
                  </div>
                </div>
                

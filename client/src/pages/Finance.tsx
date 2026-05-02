@@ -898,7 +898,7 @@ function CashClosuresAdmin() {
                 <TableCell>{c.userName}</TableCell>
                 <TableCell className="text-right">{formatCurrency(totalExp)}</TableCell>
                 <TableCell className="text-right font-bold">{formatCurrency(totalRep)}
-                  <p className={`text-[10px] ${diff === 0 ? 'text-green-600' : 'text-red-600'}`}>{diff === 0 ? "OK" : diff > 0 ? `+${formatCurrency(diff)}` : `${formatCurrency(diff)}`}</p>
+                  <p className={`text-[10px] ${diff === 0 ? 'text-green-600' : diff > 0 ? 'text-blue-600' : 'text-red-600'}`}>{diff === 0 ? "OK" : diff > 0 ? `+${formatCurrency(diff)}` : `${formatCurrency(diff)}`}</p>
                 </TableCell>
                 <TableCell className="text-right">
                   <Badge variant="secondary">{formatCurrency(pending)}</Badge>
@@ -955,10 +955,12 @@ function ClosureDetailDialog({ closure, onClose }: { closure: any, onClose: () =
                 </TableBody></Table>
             </div>
           </div>
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${diff === 0 ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
-            {diff === 0 ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
-            <div><p className="font-bold text-sm">{diff === 0 ? 'CUADRE PERFECTO' : 'DESCUADRE DETECTADO'}</p>
-              <p className="text-xs">{diff === 0 ? 'No se detectaron diferencias.' : `Existe una diferencia de ${formatCurrency(diff)}.`}</p></div>
+          <div className={`p-4 rounded-lg flex items-center gap-3 ${diff === 0 ? 'bg-green-50 border border-green-200 text-green-800' : diff > 0 ? 'bg-blue-50 border border-blue-200 text-blue-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+            {diff === 0 ? <CheckCircle2 className="h-5 w-5" /> : diff > 0 ? <TrendingUp className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+            <div>
+              <p className="font-bold text-sm">{diff === 0 ? 'CUADRE PERFECTO' : diff > 0 ? 'SOBRANTE DETECTADO' : 'FALTANTE DETECTADO'}</p>
+              <p className="text-xs">{diff === 0 ? 'No se detectaron diferencias.' : `Existe una diferencia de ${formatCurrency(diff)}.`}</p>
+            </div>
           </div>
           {closure.adminNotes && <div className="mt-4 p-3 bg-slate-50 rounded border text-sm italic"><span className="font-bold not-italic">Notas Admin: </span>{closure.adminNotes}</div>}
           <DialogFooter className="mt-6 flex gap-2">

@@ -152,7 +152,12 @@ export default function ClosuresHistory() {
                       </TableCell>
 [... many lines omitted for brevity in this thought, but I will provide the full replacement in the tool call ...]
                       <TableCell className={`text-right font-mono text-sm font-bold ${
-                        closure.status === "approved" ? "text-green-600" : "text-orange-600"
+                        (() => {
+                          const totalReported = (closure.reportedCash || 0) + (closure.reportedQr || 0) + (closure.reportedTransfer || 0);
+                          const totalExpected = (closure.expectedCash || 0) + (closure.expectedQr || 0) + (closure.expectedTransfer || 0);
+                          const diff = totalReported - totalExpected;
+                          return diff === 0 ? "text-green-600" : diff > 0 ? "text-blue-600" : "text-red-600";
+                        })()
                       }`}>
                         {(() => {
                           const totalReported = (closure.reportedCash || 0) + (closure.reportedQr || 0) + (closure.reportedTransfer || 0);
@@ -236,7 +241,7 @@ export default function ClosuresHistory() {
                                         {formatBs((closure.expectedCash || 0) + (closure.expectedQr || 0) + (closure.expectedTransfer || 0))}
                                       </div>
                                     </div>
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 mt-3">
                                       <div className="text-xs text-blue-700 font-semibold mb-2">TOTAL REPORTADO (Repartidor)</div>
                                       <div className="flex justify-between mb-1">
                                         <span className="text-muted-foreground">Efectivo</span>
@@ -254,6 +259,43 @@ export default function ClosuresHistory() {
                                         {formatBs((closure.reportedCash || 0) + (closure.reportedQr || 0) + (closure.reportedTransfer || 0))}
                                       </div>
                                     </div>
+                                    {(() => {
+                                      const totalExp = (closure.expectedCash || 0) + (closure.expectedQr || 0) + (closure.expectedTransfer || 0);
+                                      const totalRep = (closure.reportedCash || 0) + (closure.reportedQr || 0) + (closure.reportedTransfer || 0);
+                                      const diff = totalRep - totalExp;
+                                      
+                                      if (diff === 0) {
+                                        return (
+                                          <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center gap-3 mt-4">
+                                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                            <div>
+                                              <p className="font-bold text-emerald-800 text-sm">CUADRE PERFECTO</p>
+                                              <p className="text-xs text-emerald-600">No se detectaron diferencias.</p>
+                                            </div>
+                                          </div>
+                                        );
+                                      } else if (diff > 0) {
+                                        return (
+                                          <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-3 mt-4">
+                                            <History className="h-5 w-5 text-blue-600" />
+                                            <div>
+                                              <p className="font-bold text-blue-800 text-sm">SOBRANTE DETECTADO</p>
+                                              <p className="text-xs text-blue-600">Existe un excedente de {formatBs(diff)}.</p>
+                                            </div>
+                                          </div>
+                                        );
+                                      } else {
+                                        return (
+                                          <div className="p-3 bg-red-50 rounded-lg border border-red-100 flex items-center gap-3 mt-4">
+                                            <AlertCircle className="h-5 w-5 text-red-600" />
+                                            <div>
+                                              <p className="font-bold text-red-800 text-sm">FALTANTE DETECTADO</p>
+                                              <p className="text-xs text-red-600">Existe un faltante de {formatBs(Math.abs(diff))}.</p>
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                    })()}
                                   </CardContent>
                                 </Card>
                               </div>

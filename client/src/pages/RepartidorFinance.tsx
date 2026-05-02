@@ -415,7 +415,7 @@ export default function RepartidorFinance() {
                </tbody>
             </table>
           </CardContent>
-          <div className={`p-3 text-center text-xs font-bold ${diffCents >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          <div className={`p-3 text-center text-xs font-bold ${diffCents === 0 ? 'bg-green-100 text-green-800' : diffCents > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
             {diffCents === 0 && totalExpectedBs > 0 ? "CUADRE PERFECTO" :
              diffCents > 0 ? `SOBRANTE DE Bs. ${(diffCents / 100).toFixed(2)}` :
              diffCents < 0 ? `FALTANTE DE Bs. ${(Math.abs(diffCents) / 100).toFixed(2)}` :
