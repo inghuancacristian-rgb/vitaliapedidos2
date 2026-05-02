@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import browserslist from "browserslist";
+import { browserslistToTargets } from "lightningcss";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -162,7 +164,14 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
+  css: {
+    transformer: "lightningcss",
+    lightningcss: {
+      targets: browserslistToTargets(browserslist(">= 0.2% and not dead or safari >= 14 or ios >= 14")),
+    },
+  },
   build: {
+    cssMinify: "lightningcss",
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
