@@ -879,13 +879,26 @@ function CashClosuresAdmin() {
     onSuccess: () => { toast.success("Cierre reparado. Recarga el historial."); refetch(); utils.finance.getBoxHistory.invalidate(); },
     onError: (err) => toast.error(`Error al reparar: ${err.message}`)
   });
+  const cleanupMutation = trpc.finance.cleanupDuplicateClosures.useMutation({
+    onSuccess: (res: any) => { toast.success(`Limpieza completada: ${res.deleted} duplicados eliminados.`); refetch(); utils.finance.getBoxHistory.invalidate(); },
+    onError: (err) => toast.error(`Error: ${err.message}`)
+  });
   const [selectedClosure, setSelectedClosure] = useState<any>(null);
   if (isLoading) return <div>Cargando cierres...</div>;
 
   return (
     <Card>
-      <CardHeader><CardTitle>Cierres de Caja Pendientes y Recientes</CardTitle>
-        <CardDescription>Valida los montos reportados por los repartidores contra el sistema.</CardDescription></CardHeader>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Cierres de Caja Pendientes y Recientes</CardTitle>
+            <CardDescription>Valida los montos reportados por los repartidores contra el sistema.</CardDescription>
+          </div>
+          <Button size="sm" variant="outline" className="text-slate-500 border-slate-200" onClick={() => cleanupMutation.mutate()} disabled={cleanupMutation.isPending}>
+            {cleanupMutation.isPending ? "Limpiando..." : "🧹 Limpiar Duplicados"}
+          </Button>
+        </div>
+      </CardHeader>
       <CardContent>
         <Table><TableHeader><TableRow>
           <TableHead>Fecha</TableHead><TableHead>Repartidor</TableHead>

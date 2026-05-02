@@ -377,6 +377,15 @@ export const financeRouter = router({
       return { success: true };
     }),
 
+  // Limpiar transacciones duplicadas de closure_report (solo admin)
+  cleanupDuplicateClosures: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      const { cleanupDuplicateClosureReports } = await import("../db");
+      const result = await cleanupDuplicateClosureReports();
+      return result;
+    }),
+
   // Historial de transacciones por caja con filtros de fecha
   getBoxHistory: protectedProcedure
     .input(z.object({

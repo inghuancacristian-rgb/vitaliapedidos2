@@ -2277,6 +2277,37 @@ export async function processFinancialLiquidation(closureId: number, force = fal
   }
 }
 
+export async function cleanupDuplicateClosureReports() {
+  const db = await getDb();
+  if (!db) return { deleted: 0 };
+
+  // Obtener todas las transacciones de closure_report ordenadas por fecha ASC
+  const allReports = await db
+    .select()
+    .from(financialTransactions)
+    .where(eq(financialTransactions.category, "closure_report" as any))
+    .orderBy(financialTransactions.createdAt);
+
+  const seenNotes = new Map<string, number>();
+  const toDelete: number[] = [];
+
+  for (const tx of allReports) {
+    const key = (tx.notes || "") + "|" + tx.paymentMethod;
+    if (seenNotes.has(key)) {
+      // Es un duplicado - eliminarlo
+      toDelete.push(tx.id!);
+    } else {
+      seenNotes.set(key, tx.id!);
+    }
+  }
+
+  for (const id of toDelete) {
+    await db.delete(financialTransactions).where(eq(financialTransactions.id, id));
+  }
+
+  return { deleted: toDelete.length };
+}
+
 export async function getExpectedDailyTotals(userId: number, date: string) {
   const db = await getDb();
   const totals = { cash: 0, qr: 0, transfer: 0 };
