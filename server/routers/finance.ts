@@ -116,6 +116,28 @@ export const financeRouter = router({
       return { success: true };
     }),
 
+  addExtraordinaryIncome: protectedProcedure
+    .input(
+      z.object({
+        amount: z.number().min(1, "El monto debe ser mayor a 0"),
+        paymentMethod: z.enum(["cash", "qr", "transfer"]),
+        category: z.enum(["donation", "loan", "gift", "other_income"]),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { createFinancialTransaction } = await import("../db");
+      
+      return await createFinancialTransaction({
+        type: "income",
+        category: input.category,
+        paymentMethod: input.paymentMethod,
+        amount: input.amount,
+        userId: ctx.user.id,
+        notes: input.notes,
+      });
+    }),
+
   addDeliveryExpense: protectedProcedure
     .input(z.object({
       deliveryPersonId: z.number(),

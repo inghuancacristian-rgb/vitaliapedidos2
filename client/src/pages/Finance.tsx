@@ -69,6 +69,10 @@ function categoryLabel(cat: string) {
     insurance: "Seguro",
     bank_fees: "Comisión Bancaria",
     other: "Otros",
+    donation: "Donación",
+    loan: "Préstamo",
+    gift: "Regalo",
+    other_income: "Otros Ingresos",
   };
   return labels[cat] || cat;
 }
@@ -167,6 +171,7 @@ export default function Finance() {
           />
           <TransferDialog />
           <OpenCashDialog />
+          <AddIncomeDialog />
           <AddExpenseDialog />
         </div>
       </div>
@@ -1121,6 +1126,97 @@ function ClosureDetailDialog({ closure, onClose }: { closure: any, onClose: () =
   );
 }
 
+function AddIncomeDialog() {
+  const [open, setOpen] = useState(false);
+  const utils = trpc.useUtils();
+  const [income, setIncome] = useState({ amount: "", paymentMethod: "cash" as const, category: "donation" as const, notes: "" });
+
+  const mutation = trpc.finance.addExtraordinaryIncome.useMutation({
+    onSuccess: () => { 
+      toast.success("Ingreso registrado con exito"); 
+      setOpen(false); 
+      setIncome({ amount: "", paymentMethod: "cash", category: "donation", notes: "" });
+      utils.finance.getTransactions.invalidate(); 
+    },
+    onError: (error) => toast.error(error.message || "Error al registrar ingreso")
+  });
+
+  const handleSubmit = () => {
+    const amount = parseInputAmount(income.amount);
+    if (isNaN(amount) || amount <= 0) { toast.error("Ingresa un monto valido"); return; }
+    mutation.mutate({ ...income, amount: Math.round(amount * 100) });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+          <ArrowUpRight className="h-4 w-4" /> Registrar Ingreso Extra
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nuevo Ingreso Extraordinario</DialogTitle>
+          <DialogDescription>Registra donaciones, prestamos o regalos que entran a caja.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Monto</Label>
+              <Input 
+                type="text" 
+                inputMode="decimal" 
+                onFocus={(e) => e.target.select()} 
+                placeholder="0.00" 
+                value={income.amount}
+                onChange={(e) => setIncome({ ...income, amount: e.target.value })} 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Metodo de Pago</Label>
+              <Select value={income.paymentMethod} onValueChange={(v: any) => setIncome({ ...income, paymentMethod: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Efectivo</SelectItem>
+                  <SelectItem value="qr">QR</SelectItem>
+                  <SelectItem value="transfer">Cuenta Bancaria</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Categoria de Ingreso</Label>
+            <Select value={income.category} onValueChange={(v: any) => setIncome({ ...income, category: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="donation">Donación</SelectItem>
+                <SelectItem value="loan">Préstamo</SelectItem>
+                <SelectItem value="gift">Regalo</SelectItem>
+                <SelectItem value="other_income">Otros Ingresos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Descripcion / Notas</Label>
+            <Input 
+              placeholder="Ej: Donacion de socio fundador" 
+              value={income.notes}
+              onChange={(e) => setIncome({ ...income, notes: e.target.value })} 
+            />
+          </div>
+          <Button 
+            className="w-full bg-emerald-600 hover:bg-emerald-700" 
+            onClick={handleSubmit} 
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? "Registrando..." : "Confirmar Ingreso"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AddExpenseDialog() {
   const [open, setOpen] = useState(false);
   const utils = trpc.useUtils();
@@ -1496,6 +1592,10 @@ function BasicTransactionDialog({ transaction, onClose, onPrint }: { transaction
     subsistence: "Viaticos / Comida",
     transfer: "Traspaso",
     transfer_between_registers: "Traspaso Cajas",
+    donation: "Donación",
+    loan: "Préstamo",
+    gift: "Regalo",
+    other_income: "Otros Ingresos",
   };
   const methodLabels: Record<string, string> = { cash: "Caja Efectivo", qr: "Caja QR", transfer: "Cuenta Bancaria" };
 
