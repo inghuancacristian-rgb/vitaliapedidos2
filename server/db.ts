@@ -2214,28 +2214,30 @@ export async function createFinancialTransactionsForDeliveries(closureId: number
   return { success: true };
 }
 
-export async function processFinancialLiquidation(closureId: number) {
+export async function processFinancialLiquidation(closureId: number, force = false) {
   const db = await getDb();
   if (!db) return;
 
   const closure = await getCashClosureById(closureId);
   if (!closure) return;
 
-  // PROTECCIÓN ANTI-DUPLICADOS: verificar si ya existe un registro de cierre para este ID
-  const existingClosureReport = await db
-    .select()
-    .from(financialTransactions)
-    .where(
-      and(
-        eq(financialTransactions.category, "closure_report" as any),
-        eq(financialTransactions.userId, closure.userId),
-        sql`${financialTransactions.notes} LIKE ${'%Cierre #' + closureId + '%'}`
+  if (!force) {
+    // PROTECCIÓN ANTI-DUPLICADOS: verificar si ya existe un registro de cierre para este ID
+    const existingClosureReport = await db
+      .select()
+      .from(financialTransactions)
+      .where(
+        and(
+          eq(financialTransactions.category, "closure_report" as any),
+          eq(financialTransactions.userId, closure.userId),
+          sql`${financialTransactions.notes} LIKE ${'%Cierre #' + closureId + '%'}`
+        )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  // Si ya existe, no procesar de nuevo
-  if (existingClosureReport.length > 0) return;
+    // Si ya existe, no procesar de nuevo
+    if (existingClosureReport.length > 0) return;
+  }
 
   // 1. Registrar ingresos de ventas (órdenes entregadas)
   await createFinancialTransactionsForDeliveries(closureId, closure.userId, closure.date);

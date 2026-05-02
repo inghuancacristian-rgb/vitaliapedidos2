@@ -372,7 +372,8 @@ export const financeRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
-      await processFinancialLiquidation(input.id);
+      // force=true para ignorar anti-duplicado y registrar siempre
+      await processFinancialLiquidation(input.id, true);
       return { success: true };
     }),
 
