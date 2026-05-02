@@ -47,9 +47,9 @@ export function ArqueoDialog({
   };
 
   const totalReportedCash = calculateTotalCash();
-  const cashDifference = totalReportedCash - expectedCash;
-  const qrDifference = (reportedQr * 100) - expectedQr;
-  const transferDifference = (reportedTransfer * 100) - expectedTransfer;
+  const cashDifference = totalReportedCash - Math.abs(expectedCash);
+  const qrDifference = (reportedQr * 100) - Math.abs(expectedQr);
+  const transferDifference = (reportedTransfer * 100) - Math.abs(expectedTransfer);
 
   const mutation = trpc.finance.submitClosure.useMutation({
     onSuccess: () => {

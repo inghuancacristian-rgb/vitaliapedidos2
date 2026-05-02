@@ -201,7 +201,7 @@ export default function RepartidorFinance() {
   const expectedQrBs = (expected?.qr || 0) / 100;
   const expectedTransferBs = (expected?.transfer || 0) / 100;
   const totalExpectedBs = expectedCashBs + expectedQrBs + expectedTransferBs;
-  const diffCents = (totalReported * 100) - ((expected?.cash || 0) + (expected?.qr || 0) + (expected?.transfer || 0));
+  const diffCents = (totalReported * 100) - (Math.abs(expected?.cash || 0) + Math.abs(expected?.qr || 0) + Math.abs(expected?.transfer || 0));
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">

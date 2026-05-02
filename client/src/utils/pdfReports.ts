@@ -537,7 +537,7 @@ export const generateArqueoPDF = (data: any) => {
 
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   
-  const totalExpected = data.expectedCash + data.expectedQr + data.expectedTransfer;
+  const totalExpected = Math.abs(data.expectedCash) + Math.abs(data.expectedQr) + Math.abs(data.expectedTransfer);
   const totalReported = data.reportedCash + data.reportedQr + data.reportedTransfer;
   const totalDiff = totalReported - totalExpected;
 
