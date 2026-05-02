@@ -149,7 +149,7 @@ export function ProductHistoryDialog({
           Historial
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] w-[95vw] flex flex-col p-4 sm:p-6 overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Seguimiento del producto</DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export function ProductHistoryDialog({
               </div>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 rounded-lg border">
+            <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-background">
               <div className="space-y-3 p-3 sm:p-4">
                 {data.timeline.map((event: any) => (
                   <div
@@ -275,7 +275,7 @@ export function ProductHistoryDialog({
                   </p>
                 )}
               </div>
-            </ScrollArea>
+            </div>
             
             <div className="shrink-0 mt-2">
               <Button onClick={() => setIsOpen(false)} className="w-full">
