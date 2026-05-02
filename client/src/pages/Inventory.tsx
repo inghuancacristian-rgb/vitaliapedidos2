@@ -87,8 +87,8 @@ function AdjustInventoryDialog({
   setQuantity: (value: string) => void;
   reason: string;
   setReason: (value: string) => void;
-  type: "entry" | "exit" | "adjustment";
-  setType: (value: "entry" | "exit" | "adjustment") => void;
+  type: "entry" | "exit" | "adjustment" | "production";
+  setType: (value: "entry" | "exit" | "adjustment" | "production") => void;
   price: string;
   setPrice: (value: string) => void;
   expiryDate: string;
@@ -121,10 +121,11 @@ function AdjustInventoryDialog({
             <select
               className="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-white/80 px-3 py-2 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring/40"
               value={type}
-              onChange={(e) => setType(e.target.value as "entry" | "exit" | "adjustment")}
+              onChange={(e) => setType(e.target.value as "entry" | "exit" | "adjustment" | "production")}
             >
               <option value="adjustment">Ajuste de stock</option>
-              <option value="entry">Entrada (compra o produccion)</option>
+              <option value="entry">Entrada (compra externa)</option>
+              <option value="production">Entrada por Producción (sin gasto)</option>
               <option value="exit">Salida (baja o perdida)</option>
             </select>
           </div>
@@ -268,7 +269,7 @@ export default function Inventory() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
-  const [type, setType] = useState<"entry" | "exit" | "adjustment">("adjustment");
+  const [type, setType] = useState<"entry" | "exit" | "adjustment" | "production">("adjustment");
   const [price, setPrice] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [batchNumber, setBatchNumber] = useState("");
@@ -295,6 +296,9 @@ export default function Inventory() {
       if (selectedItem?.product?.price != null && !price) {
         setPrice((selectedItem.product.price / 100).toFixed(2));
       }
+    } else if (type === "production") {
+      setRegisterPurchase(false);
+      setReason("Ingreso por Producción");
     } else {
       setRegisterPurchase(false);
     }
@@ -357,7 +361,7 @@ export default function Inventory() {
     
     if (type === "exit" && parsedQuantity > 0) {
       parsedQuantity = -parsedQuantity;
-    } else if (type === "entry" && parsedQuantity < 0) {
+    } else if ((type === "entry" || type === "production") && parsedQuantity < 0) {
       parsedQuantity = Math.abs(parsedQuantity);
     }
 
@@ -390,8 +394,8 @@ export default function Inventory() {
       productId: selectedItem.productId,
       quantity: parsedQuantity,
       price: priceInCents,
-      reason: reason || "Ajuste manual",
-      type,
+      reason: reason || (type === "production" ? "Ingreso por Producción" : "Ajuste manual"),
+      type: type === "production" ? "entry" : type,
       expiryDate: expiryDate || undefined,
       batchNumber: batchNumber || undefined,
       registerPurchase,

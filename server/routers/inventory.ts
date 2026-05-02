@@ -107,6 +107,13 @@ function classifyHistoryEvent(movement: any) {
   }
 
   if (movement.type === "entry") {
+    if (reason.includes("producci")) {
+      return {
+        eventType: "production",
+        title: "Ingreso por Producción",
+        description: notes || "Se registró entrada de producto terminado por producción.",
+      };
+    }
     return {
       eventType: "inventory_entry",
       title: "Entrada de inventario",
