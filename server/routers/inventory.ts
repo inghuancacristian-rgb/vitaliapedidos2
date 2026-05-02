@@ -314,10 +314,27 @@ export const inventoryRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      const inv = await getInventoryByProductId(input.productId);
       const product = await getProductById(input.productId);
-      const newQuantity = (inv?.quantity || 0) + input.quantity;
       
+      // Obtener el inventario específico para este lote/producto
+      const db = await import("../db").then(m => m.getDb());
+      let existingInv = null;
+      if (db) {
+        const { inventory } = await import("../db/schema");
+        const { eq, and, isNull } = await import("drizzle-orm");
+        const res = await db.select().from(inventory).where(and(
+          eq(inventory.productId, input.productId),
+          input.batchNumber ? eq(inventory.batchNumber, input.batchNumber) : isNull(inventory.batchNumber)
+        )).limit(1);
+        existingInv = res.length > 0 ? res[0] : null;
+      } else {
+        const { MOCK_INVENTORY } = await import("../db");
+        existingInv = MOCK_INVENTORY.find(i => i.productId === input.productId && (input.batchNumber ? i.batchNumber === input.batchNumber : !i.batchNumber)) || null;
+      }
+
+      const newQuantity = (existingInv?.quantity || 0) + input.quantity;
+      
+      const { updateInventory, createInventoryMovement, updateProductPrice, recordInventoryEntryAsPurchase } = await import("../db");
       await updateInventory(input.productId, newQuantity, input.expiryDate, input.batchNumber);
 
       const notes: string[] = [];

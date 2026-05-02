@@ -353,7 +353,14 @@ export default function Inventory() {
     if (!selectedItem) return;
 
     const priceInCents = price ? Math.round(parseFloat(price) * 100) : undefined;
-    const parsedQuantity = quantity ? parseInt(quantity, 10) : 0;
+    let parsedQuantity = quantity ? parseInt(quantity, 10) : 0;
+    
+    if (type === "exit" && parsedQuantity > 0) {
+      parsedQuantity = -parsedQuantity;
+    } else if (type === "entry" && parsedQuantity < 0) {
+      parsedQuantity = Math.abs(parsedQuantity);
+    }
+
     const currentExpiryDate = selectedItem.expiryDate
       ? new Date(selectedItem.expiryDate).toISOString().split("T")[0]
       : "";
