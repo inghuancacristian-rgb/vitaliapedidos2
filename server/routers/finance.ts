@@ -19,6 +19,7 @@ import {
   getAllOrders,
   getOrderItems,
   updateCashOpeningStatus,
+  processFinancialLiquidation,
 } from "../db";
 import { getLocalDateKey, pad2 } from "../_core/date_utils";
 import { TRPCError } from "@trpc/server";
@@ -250,6 +251,14 @@ export const financeRouter = router({
       const { closeAllActiveOpeningsForUser } = await import("../db");
       await closeAllActiveOpeningsForUser(userId, input.date);
 
+      // Capturar ID de forma robusta (soporta diferentes drivers de DB)
+      const closureId = (result as any).insertId || (Array.isArray(result) && result[0]?.insertId);
+
+      // Si es admin, liquidar financieramente ahora
+      if (isAdmin && closureId) {
+        await processFinancialLiquidation(Number(closureId));
+      }
+
       return result;
     }),
 
@@ -341,8 +350,8 @@ export const financeRouter = router({
       if (input.status === "approved") {
         const closure = await getCashClosureById(input.id);
         if (closure) {
-          // Registrar las transacciones de las entregas pendientes de registrar
-          await createFinancialTransactionsForDeliveries(input.id, closure.userId, closure.date);
+          // Liquidar financieramente el cierre (registra ventas, ajustes y retiro)
+          await processFinancialLiquidation(input.id);
           
           // Cerrar TODAS las aperturas de caja activas de este usuario (Efectivo, QR, Transferencia)
           const methods = ["cash", "qr", "transfer"];
@@ -369,6 +378,19 @@ export const financeRouter = router({
     .query(async ({ ctx, input }) => {
       if (ctx.user?.role !== "admin") {
         throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      // AUTO-REPARACIÓN: Buscar cierres aprobados recientes que no tengan liquidación financiera
+      // Esto arregla retroactivamente casos como el del usuario actual (-4 -> 55)
+      const closures = await getAllCashClosures();
+      const unliquidated = closures.filter((c: any) => 
+        c.status === "approved" && 
+        c.userId === (ctx.user?.role === "admin" ? c.userId : ctx.user?.id)
+      );
+      
+      for (const c of unliquidated) {
+        // processFinancialLiquidation es idempotente o verifica si ya existen las transacciones
+        await processFinancialLiquidation(c.id);
       }
 
       const allTransactions = await getFinancialTransactions();

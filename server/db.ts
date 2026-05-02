@@ -2214,6 +2214,53 @@ export async function createFinancialTransactionsForDeliveries(closureId: number
   return { success: true };
 }
 
+export async function processFinancialLiquidation(closureId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const closure = await getCashClosureById(closureId);
+  if (!closure) return;
+
+  // 1. Asegurar que los ingresos por ventas están registrados
+  await createFinancialTransactionsForDeliveries(closureId, closure.userId, closure.date);
+
+  // 2. Procesar cada método de pago para llevar el saldo a cero
+  const methods: ("cash" | "qr" | "transfer")[] = ["cash", "qr", "transfer"];
+  
+  for (const method of methods) {
+    const reportedAmount = method === "cash" ? closure.reportedCash : 
+                          method === "qr" ? closure.reportedQr : 
+                          closure.reportedTransfer;
+    
+    // Calcular saldo actual para este usuario y método
+    const transactions = await getFinancialTransactions(closure.userId);
+    const methodTxs = transactions.filter((t: any) => t.paymentMethod === method);
+    
+    let currentBalance = 0;
+    methodTxs.forEach((t: any) => {
+      if (t.type === "income") currentBalance += t.amount;
+      else currentBalance -= t.amount;
+    });
+
+    // El usuario quiere que el saldo refleje el "Sobrante" (Reportado - Deuda)
+    // Para lograr que SaldoFinal = Reportado + BalanceAnterior (si BalanceAnterior es negativo)
+    // O simplemente SaldoFinal = Reportado - Esperado.
+    
+    // Si reportó 59 y tenía -4, el saldo debe quedar en 55.
+    // Eso significa que debemos ingresar los 59 reportados como un ingreso de ajuste.
+    if (reportedAmount > 0) {
+      await createFinancialTransaction({
+        type: "income",
+        category: "closure_report",
+        amount: reportedAmount,
+        paymentMethod: method,
+        userId: closure.userId,
+        notes: `Ingreso por Cierre de Caja #${closureId} (Reportado)`,
+      });
+    }
+  }
+}
+
 export async function getExpectedDailyTotals(userId: number, date: string) {
   const db = await getDb();
   const totals = { cash: 0, qr: 0, transfer: 0 };
