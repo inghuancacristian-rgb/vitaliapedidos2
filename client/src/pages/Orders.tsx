@@ -58,6 +58,24 @@ export default function Orders() {
     { enabled: viewDeliveredOrderId !== null }
   );
 
+  const [deliverOrderId, setDeliverOrderId] = useState<number | null>(null);
+  const [deliverPaymentMethod, setDeliverPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod: deliverPaymentMethod });
+
+  const recordPaymentMutation = trpc.orders.recordPayment.useMutation({
+    onSuccess: () => {
+      toast.success(`Pedido entregado y pago registrado correctamente`);
+      setDeliverOrderId(null);
+      utils.orders.list.invalidate();
+      utils.orders.listForDelivery.invalidate();
+      utils.finance.getExpectedDaily.invalidate();
+      utils.finance.getMyStatus.invalidate();
+      utils.inventory.listInventory.invalidate();
+      utils.finance.getTransactions.invalidate();
+    },
+    onError: (err: any) => toast.error(err.message || "Error al registrar entrega"),
+  });
+
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const sheetDeliveryPersonId = Number.isFinite(Number(deliveryPersonFilter)) ? Number(deliveryPersonFilter) : null;
   const sheetDate = dateFilter || today;
@@ -645,12 +663,13 @@ export default function Orders() {
                       )}
 
                       {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
-                        <Link href={`/order/${order.id}`}>
-                          <Button className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2">
-                            <DollarSign className="h-5 w-5" />
-                            Cobrar
-                          </Button>
-                        </Link>
+                        <Button 
+                          className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2"
+                          onClick={() => setDeliverOrderId(order.id)}
+                        >
+                          <DollarSign className="h-5 w-5" />
+                          Entregar
+                        </Button>
                       )}
 
                       {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
@@ -784,6 +803,83 @@ export default function Orders() {
                   </Button>
                 </Link>
               ) : null}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo: entregar pedido (repartidor) */}
+        <Dialog open={deliverOrderId !== null} onOpenChange={(open) => !open && setDeliverOrderId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Entregar Pedido</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Selecciona el método de pago con el que el cliente canceló el pedido para registrar la entrega y actualizar el inventario.
+              </p>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeliverPaymentMethod("cash")}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    deliverPaymentMethod === "cash"
+                      ? "border-emerald-500 bg-emerald-100 shadow-md"
+                      : "border-slate-200 bg-white hover:border-emerald-300"
+                  }`}
+                >
+                  <DollarSign className={`h-6 w-6 ${deliverPaymentMethod === "cash" ? "text-emerald-600" : "text-slate-400"}`} />
+                  <span className={`text-sm font-bold ${deliverPaymentMethod === "cash" ? "text-emerald-700" : "text-slate-600"}`}>Efectivo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliverPaymentMethod("qr")}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    deliverPaymentMethod === "qr"
+                      ? "border-blue-500 bg-blue-100 shadow-md"
+                      : "border-slate-200 bg-white hover:border-blue-300"
+                  }`}
+                >
+                  <span className={`font-bold ${deliverPaymentMethod === "qr" ? "text-blue-600" : "text-slate-400"}`}>QR</span>
+                  <span className={`text-sm font-bold ${deliverPaymentMethod === "qr" ? "text-blue-700" : "text-slate-600"}`}>QR</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeliverPaymentMethod("transfer")}
+                  className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                    deliverPaymentMethod === "transfer"
+                      ? "border-purple-500 bg-purple-100 shadow-md"
+                      : "border-slate-200 bg-white hover:border-purple-300"
+                  }`}
+                >
+                  <Building2 className={`h-6 w-6 ${deliverPaymentMethod === "transfer" ? "text-purple-600" : "text-slate-400"}`} />
+                  <span className={`text-sm font-bold ${deliverPaymentMethod === "transfer" ? "text-purple-700" : "text-slate-600"}`}>Transferencia</span>
+                </button>
+              </div>
+
+              {!openingStatus?.hasActive && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold mt-2">
+                  TU CAJA DE {deliverPaymentMethod === 'cash' ? 'EFECTIVO' : deliverPaymentMethod.toUpperCase()} ESTÁ CERRADA. ABRE TU CAJA ANTES DE COBRAR.
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeliverOrderId(null)}>Cancelar</Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => {
+                  const order = orders?.find((o: any) => o.id === deliverOrderId);
+                  if (!order || !openingStatus?.hasActive) return;
+                  recordPaymentMutation.mutate({
+                    orderId: order.id,
+                    amount: order.totalPrice,
+                    method: deliverPaymentMethod,
+                  });
+                }}
+                disabled={recordPaymentMutation.isPending || !openingStatus?.hasActive}
+              >
+                {recordPaymentMutation.isPending ? "Procesando..." : "Confirmar Entrega"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

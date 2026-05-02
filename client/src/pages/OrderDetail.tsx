@@ -349,18 +349,9 @@ export default function OrderDetail() {
         {user?.role === "user" && order.status === "in_transit" && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Acciones de Entrega</CardTitle>
+              <CardTitle>Acciones Adicionales</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <Button
-                onClick={handleMarkAsDelivered}
-                className="gap-2"
-                disabled={updateStatusMutation.isPending}
-              >
-                <MapPin className="h-4 w-4" />
-                Marcar como Entregado
-              </Button>
-
               <a
                 href={`https://wa.me/${customer?.whatsapp || customer?.phone || ''}?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}`}
                 target="_blank"
@@ -437,17 +428,17 @@ export default function OrderDetail() {
           </Alert>
         )}
 
-        {/* Formulario de pago */}
+        {/* Formulario de pago y entrega */}
         {order.paymentStatus === "pending" && (
           <Card className="mb-6 border-2 border-emerald-200 bg-emerald-50/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-emerald-800">
-                <DollarSign className="h-5 w-5" />
-                Registrar Pago — {formatCurrency(order.totalPrice)}
+                <MapPin className="h-5 w-5" />
+                Entregar y Registrar Pago — {formatCurrency(order.totalPrice)}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground font-medium">Selecciona el método con el que cobró el cliente:</p>
+              <p className="text-sm text-muted-foreground font-medium">Selecciona el método con el que el cliente pagó para entregar el pedido y actualizar el inventario:</p>
               <div className="grid grid-cols-3 gap-3">
                 {/* Efectivo */}
                 <button
@@ -505,7 +496,7 @@ export default function OrderDetail() {
                 disabled={recordPaymentMutation.isPending || !openingStatus?.hasActive}
               >
                 <DollarSign className="h-5 w-5" />
-                {recordPaymentMutation.isPending ? "Registrando..." : `Confirmar Pago con ${paymentMethod === "cash" ? "Efectivo" : paymentMethod === "qr" ? "QR" : "Transferencia"}`}
+                {recordPaymentMutation.isPending ? "Registrando..." : `Entregar y Cobrar con ${paymentMethod === "cash" ? "Efectivo" : paymentMethod === "qr" ? "QR" : "Transferencia"}`}
               </Button>
             </CardContent>
           </Card>
