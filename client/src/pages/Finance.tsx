@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Receipt, WalletCards, Wallet, Printer, Eye, FileText, CheckCircle2, XCircle, AlertTriangle, History, Download, X, ArrowRightLeft } from "lucide-react";
+import { DollarSign, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, Receipt, WalletCards, Wallet, Printer, Eye, FileText, CheckCircle2, XCircle, AlertTriangle, History, Download, X, ArrowRightLeft, QrCode, Landmark, User, BadgeCheck } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, parseInputAmount } from "@/lib/currency";
 import { useEffect, useMemo, useState } from "react";
@@ -176,99 +176,135 @@ export default function Finance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Caja Efectivo */}
-        <Card className="bg-emerald-50/60 border-emerald-200">
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500" />
           <CardHeader className="flex flex-col pb-2">
             <div className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-emerald-800">Caja Efectivo</CardTitle>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-emerald-600" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 gap-2 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50 hover:text-emerald-700 shadow-sm font-bold text-xs"
-                  onClick={() => setCashHistoryOpen(true)}
-                >
-                  <History className="h-3.5 w-3.5" />
-                  Historial
-                </Button>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-50 rounded-2xl text-emerald-600">
+                  <Wallet className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black tracking-tight text-slate-800">Caja Efectivo</CardTitle>
+                  <BoxStatusIndicator method="cash" openings={activeOpenings} />
+                </div>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-2xl hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+                onClick={() => setCashHistoryOpen(true)}
+              >
+                <History className="h-5 w-5" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saldo Disponible</span>
+              <div className="text-3xl font-black text-emerald-600 tracking-tighter">
+                {formatCurrency(cashBalance)}
               </div>
             </div>
-            <BoxStatusIndicator method="cash" openings={activeOpenings} />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600/70 mb-1">Saldo Disponible</span>
-              <div className="text-2xl font-black text-emerald-700">{formatCurrency(cashBalance)}</div>
-            </div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-emerald-600/70 mt-4 pt-2 border-t border-emerald-100">
-              <span>Ingresos: {formatCurrency(cashIncome)}</span>
-              <span>Egresos: {formatCurrency(cashExpense)}</span>
+            <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-50">
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ingresos</p>
+                <p className="text-sm font-bold text-emerald-600">{formatCurrency(cashIncome)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Egresos</p>
+                <p className="text-sm font-bold text-red-500">{formatCurrency(cashExpense)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Caja QR */}
-        <Card className="bg-blue-50/60 border-blue-200">
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
           <CardHeader className="flex flex-col pb-2">
             <div className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-blue-800">Caja QR</CardTitle>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 gap-2 text-blue-600 border-blue-200 bg-white hover:bg-blue-50 hover:text-blue-700 shadow-sm font-bold text-xs"
-                  onClick={() => setQrHistoryOpen(true)}
-                >
-                  <History className="h-3.5 w-3.5" />
-                  Historial
-                </Button>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 rounded-2xl text-blue-600">
+                  <QrCode className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black tracking-tight text-slate-800">Caja QR</CardTitle>
+                  <BoxStatusIndicator method="qr" openings={activeOpenings} />
+                </div>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition-all"
+                onClick={() => setQrHistoryOpen(true)}
+              >
+                <History className="h-5 w-5" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saldo Disponible</span>
+              <div className="text-3xl font-black text-blue-600 tracking-tighter">
+                {formatCurrency(qrBalance)}
               </div>
             </div>
-            <BoxStatusIndicator method="qr" openings={activeOpenings} />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/70 mb-1">Saldo Disponible</span>
-              <div className="text-2xl font-black text-blue-700">{formatCurrency(qrBalance)}</div>
-            </div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-blue-600/70 mt-4 pt-2 border-t border-blue-100">
-              <span>Ingresos: {formatCurrency(qrIncome)}</span>
-              <span>Egresos: {formatCurrency(qrExpense)}</span>
+            <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-50">
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ingresos</p>
+                <p className="text-sm font-bold text-emerald-600">{formatCurrency(qrIncome)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Egresos</p>
+                <p className="text-sm font-bold text-red-500">{formatCurrency(qrExpense)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Cuenta Bancaria */}
-        <Card className="bg-purple-50/60 border-purple-200">
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-500" />
           <CardHeader className="flex flex-col pb-2">
             <div className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-purple-800">Cuenta Bancaria</CardTitle>
-              <div className="flex items-center gap-2">
-                <Receipt className="h-4 w-4 text-purple-600" />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 gap-2 text-purple-600 border-purple-200 bg-white hover:bg-purple-50 hover:text-purple-700 shadow-sm font-bold text-xs"
-                  onClick={() => setTransferHistoryOpen(true)}
-                >
-                  <History className="h-3.5 w-3.5" />
-                  Historial
-                </Button>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-50 rounded-2xl text-purple-600">
+                  <Landmark className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black tracking-tight text-slate-800">Cta. Bancaria</CardTitle>
+                  <BoxStatusIndicator method="transfer" openings={activeOpenings} />
+                </div>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 rounded-2xl hover:bg-purple-50 hover:text-purple-600 transition-all"
+                onClick={() => setTransferHistoryOpen(true)}
+              >
+                <History className="h-5 w-5" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saldo Disponible</span>
+              <div className="text-3xl font-black text-purple-600 tracking-tighter">
+                {formatCurrency(transferBalance)}
               </div>
             </div>
-            <BoxStatusIndicator method="transfer" openings={activeOpenings} />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-wider text-purple-600/70 mb-1">Saldo Disponible</span>
-              <div className="text-2xl font-black text-purple-700">{formatCurrency(transferBalance)}</div>
-            </div>
-            <div className="flex justify-between text-[10px] uppercase font-bold text-purple-600/70 mt-4 pt-2 border-t border-purple-100">
-              <span>Ingresos: {formatCurrency(transferIncome)}</span>
-              <span>Egresos: {formatCurrency(transferExpense)}</span>
+            <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-50">
+              <div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ingresos</p>
+                <p className="text-sm font-bold text-emerald-600">{formatCurrency(transferIncome)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Egresos</p>
+                <p className="text-sm font-bold text-red-500">{formatCurrency(transferExpense)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -279,59 +315,63 @@ export default function Finance() {
       <BoxHistoryModal paymentMethod="qr" title="Caja QR" colorClass="blue" open={qrHistoryOpen} onOpenChange={setQrHistoryOpen} />
       <BoxHistoryModal paymentMethod="transfer" title="Cuenta Bancaria" colorClass="purple" open={transferHistoryOpen} onOpenChange={setTransferHistoryOpen} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-4">
-        <Card className="bg-slate-50/70 border-slate-200/80">
+      <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-6">
+        <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <WalletCards className="h-5 w-5" />
-              Apertura de Caja
+            <CardTitle className="flex items-center gap-3 text-slate-800 font-black">
+              <div className="p-2 bg-slate-100 rounded-xl">
+                <WalletCards className="h-5 w-5" />
+              </div>
+              Resumen de Aperturas
             </CardTitle>
-            <CardDescription>Control de fondo inicial y responsable por fecha.</CardDescription>
+            <CardDescription>Control de fondo inicial y responsable hoy.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 p-5 rounded-[1.5rem] bg-slate-50/80 border border-slate-100/50">
               <div>
-                <p className="text-sm text-muted-foreground">Aperturas de hoy</p>
-                <p className="text-2xl font-bold text-slate-900">{todaysOpenings.length}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Aperturas de hoy</p>
+                <p className="text-3xl font-black text-slate-900">{todaysOpenings.length}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Fondo inicial</p>
-                <p className="text-xl font-bold text-slate-900">{formatCurrency(todaysOpenedAmount)}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fondo inicial</p>
+                <p className="text-xl font-black text-slate-900">{formatCurrency(todaysOpenedAmount)}</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Usa la opcion "Apertura de caja" para registrar fondo inicial, fecha de apertura y usuario responsable.
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white">
           <CardHeader>
-            <CardTitle>Aperturas Recientes</CardTitle>
+            <CardTitle className="font-black text-slate-800">Aperturas Recientes</CardTitle>
             <CardDescription>Ultimas aperturas registradas en caja.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingOpenings ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-muted animate-pulse rounded" />)}
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-slate-50 animate-pulse rounded-2xl" />)}
               </div>
             ) : ((cashOpenings as any[]) || []).length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
+              <div className="py-12 text-center text-sm text-muted-foreground bg-slate-50/50 rounded-[2rem] border-dashed border-2">
                 Todavia no hay aperturas de caja registradas.
               </div>
             ) : (
               <div className="space-y-3">
-                {((cashOpenings as any[]) || []).slice(0, 5).map((opening: any) => (
-                  <div key={opening.id} className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-900">{opening.responsibleUserName || `Usuario #${opening.responsibleUserId}`}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Fecha: {opening.openingDate} · Aperturo: {opening.openedByUserName || `Usuario #${opening.openedByUserId}`}
-                      </p>
+                {((cashOpenings as any[]) || []).slice(0, 3).map((opening: any) => (
+                  <div key={opening.id} className="flex flex-col gap-4 rounded-[1.5rem] bg-slate-50/80 border border-slate-100/50 p-4 sm:flex-row sm:items-center sm:justify-between transition-all hover:bg-slate-100/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
+                        <User className="h-5 w-5 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-800 text-sm">{opening.responsibleUserName || `Usuario #${opening.responsibleUserId}`}</p>
+                        <p className="text-[10px] text-slate-500 font-medium">
+                          Fecha: {opening.openingDate} · {opening.status === "open" ? "Abierta ahora" : "Ya cerrada"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900">{formatCurrency(opening.openingAmount)}</p>
-                      <Badge variant={opening.status === "open" ? "outline" : "secondary"}>
+                    <div className="text-right flex items-center sm:flex-col gap-2 sm:gap-0">
+                      <p className="font-black text-slate-900 text-base">{formatCurrency(opening.openingAmount)}</p>
+                      <Badge variant={opening.status === "open" ? "outline" : "secondary"} className={`text-[9px] uppercase tracking-widest font-black px-2 py-0 ${opening.status === 'open' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : ''}`}>
                         {opening.status === "open" ? "Abierta" : "Cerrada"}
                       </Badge>
                     </div>
@@ -344,55 +384,89 @@ export default function Finance() {
       </div>
 
       <Tabs defaultValue="transactions" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="transactions">Libro de Transacciones</TabsTrigger>
-          <TabsTrigger value="closures">Cierres de Caja Repartidores</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100/50 p-1.5 rounded-[1.5rem] h-14">
+          <TabsTrigger value="transactions" className="rounded-xl font-bold text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all h-full">
+            <Receipt className="h-4 w-4 mr-2" />
+            Libro de Transacciones
+          </TabsTrigger>
+          <TabsTrigger value="closures" className="rounded-xl font-bold text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all h-full">
+            <BadgeCheck className="h-4 w-4 mr-2" />
+            Cierres de Repartidores
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50/30 pb-6 border-b border-slate-50">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5" /> Libro de Transacciones
+                  <CardTitle className="flex items-center gap-2 font-black text-slate-800 text-xl">
+                    Libro de Movimientos
                   </CardTitle>
-                  <CardDescription>Historial detallado de todas las operaciones economicas.</CardDescription>
+                  <CardDescription className="font-medium text-slate-500">Historial de todas las operaciones económicas.</CardDescription>
                 </div>
-                <Button variant="outline" className="gap-2 no-print" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4" /> Imprimir Libro
-                </Button>
-              </div>
-
-              {/* Resumen Combinado */}
-              <div className="grid grid-cols-3 gap-4 mt-4 no-print">
-                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                  <p className="text-[9px] uppercase font-black text-emerald-600">Total Ingresos</p>
-                  <p className="text-lg font-black text-emerald-800">{formatCurrency(cashIncome + qrIncome + transferIncome)}</p>
-                </div>
-                <div className="bg-slate-900 p-3 rounded-lg border border-slate-800">
-                  <p className="text-[9px] uppercase font-black text-slate-400">Saldo Disponible Total</p>
-                  <p className="text-lg font-black text-white">{formatCurrency(cashBalance + qrBalance + transferBalance)}</p>
-                </div>
-                <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-                  <p className="text-[9px] uppercase font-black text-red-600">Total Egresos</p>
-                  <p className="text-lg font-black text-red-800">{formatCurrency(cashExpense + qrExpense + transferExpense)}</p>
+                <div className="flex items-center gap-2">
+                   <div className="hidden sm:flex bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm items-center gap-4 px-6 h-12">
+                      <div>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Saldo Total</p>
+                        <p className="text-sm font-black text-slate-900">{formatCurrency(cashBalance + qrBalance + transferBalance)}</p>
+                      </div>
+                      <div className="w-px h-6 bg-slate-100" />
+                      <div className="text-right">
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Movimientos</p>
+                        <p className="text-sm font-black text-slate-900">{transactions?.length || 0}</p>
+                      </div>
+                   </div>
+                   <Button variant="outline" className="h-12 rounded-xl bg-white border-slate-200 shadow-sm gap-2 font-bold no-print" onClick={() => window.print()}>
+                    <Printer className="h-4 w-4" /> Imprimir
+                  </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {isLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map(i => <div key={i} className="h-12 bg-muted animate-pulse rounded" />)}
+                <div className="p-12 space-y-4">
+                  {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-16 bg-slate-50 animate-pulse rounded-[1.5rem]" />)}
                 </div>
               ) : (
-                <div className="space-y-4" id="transactions-book">
-                  {(transactions as any[])?.map((t: any) => (
-                    <TransactionRow key={t.id} transaction={t} />
-                  ))}
+                <div className="p-4 sm:p-6" id="transactions-book">
+                   <div className="space-y-4">
+                      {(transactions as any[])?.map((t: any) => (
+                        <div key={t.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-[1.5rem] bg-white border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all group">
+                           <div className="flex items-center gap-4 flex-1">
+                              <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${t.type === 'income' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                 {t.type === 'income' ? <ArrowUpRight className="h-6 w-6" /> : <ArrowDownRight className="h-6 w-6" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                 <div className="flex items-center gap-2 mb-0.5">
+                                    <p className="font-black text-slate-800 text-sm">{categoryLabel(t.category)}</p>
+                                    <Badge variant="outline" className={`text-[8px] font-black uppercase tracking-widest border-none px-1.5 h-4 flex items-center ${t.paymentMethod === 'cash' ? 'bg-emerald-100 text-emerald-700' : t.paymentMethod === 'qr' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                       {paymentMethodLabel(t.paymentMethod)}
+                                    </Badge>
+                                 </div>
+                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                    {new Date(t.createdAt).toLocaleDateString()} · {new Date(t.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                 </p>
+                              </div>
+                           </div>
+                           <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-none pt-3 sm:pt-0">
+                              <div className="text-left sm:text-right">
+                                 <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Saldo Posterior</p>
+                                 <p className="text-xs font-bold text-slate-400 font-mono">{formatCurrency(t.runningBalance)}</p>
+                              </div>
+                              <div className="text-right">
+                                 <p className={`text-lg font-black font-mono tracking-tighter ${t.type === 'income' ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                                 </p>
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                   </div>
                   {transactions?.length === 0 && (
-                    <div className="py-10 text-center text-muted-foreground italic text-sm">
-                      No hay transacciones registradas todavia.
+                    <div className="py-20 text-center bg-slate-50/50 rounded-[2.5rem] border-dashed border-2">
+                       <Receipt className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                       <p className="text-sm font-bold text-slate-400 italic">No hay transacciones registradas todavia.</p>
                     </div>
                   )}
                 </div>

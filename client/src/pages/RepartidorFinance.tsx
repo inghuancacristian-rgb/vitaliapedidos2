@@ -193,7 +193,6 @@ export default function RepartidorFinance() {
     );
   }
 
-  // Totales en Bs. para comparativa visual
   const totalReported = (parseFloat(formData.reportedCash) || 0) + 
                        (parseFloat(formData.reportedQr) || 0) + 
                        (parseFloat(formData.reportedTransfer) || 0);
@@ -204,167 +203,192 @@ export default function RepartidorFinance() {
   const diffCents = (totalReported * 100) - (Math.abs(expected?.cash || 0) + Math.abs(expected?.qr || 0) + Math.abs(expected?.transfer || 0));
 
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 mb-20 md:mb-10 min-h-screen">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Cierre de Caja Diario</h1>
-          <p className="text-sm text-muted-foreground">{today}</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Cierre de Caja</h1>
+          <p className="text-slate-500 font-medium">{today}</p>
         </div>
         <Badge
-          variant="outline"
           className={
             status?.status === "approved"
-              ? "text-emerald-700 border-emerald-200 bg-emerald-50"
+              ? "bg-emerald-100 text-emerald-700 border-emerald-200"
               : status?.status === "rejected"
-                ? "text-red-700 border-red-200 bg-red-50"
-                : "text-blue-600 border-blue-200 bg-blue-50"
+                ? "bg-red-100 text-red-700 border-red-200"
+                : "bg-blue-100 text-blue-700 border-blue-200"
           }
+          variant="outline"
         >
-          {status?.status === "approved" ? "Último cierre aprobado" : status?.status === "rejected" ? "Último cierre rechazado" : "En Turno"}
+          {status?.status === "approved" ? "Último cierre aprobado" : status?.status === "rejected" ? "Último cierre rechazado" : "Turno Activo"}
         </Badge>
       </div>
 
       {status && status.status !== "pending" ? (
-        <Card className="border border-slate-100 bg-slate-50/40">
-          <CardContent className="p-4 space-y-2">
-            <p className="text-xs font-bold text-slate-600">
-              Último cierre: #{status.id} · {status.date} · {status.status === "approved" ? "Aprobado" : "Rechazado"}
-            </p>
-            {status.adminNotes ? (
-              <p className="text-xs text-slate-600">Nota admin: {status.adminNotes}</p>
-            ) : null}
-            <p className="text-[10px] text-slate-500">
-              El “Sugerido (Sistema)” de hoy ya descuenta lo que fue aprobado en ese cierre.
-            </p>
+        <Card className="border-none shadow-sm bg-slate-50/80 rounded-[1.5rem]">
+          <CardContent className="p-4 flex items-center gap-3">
+             <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center text-slate-400">
+                <History className="h-4 w-4" />
+             </div>
+             <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumen Anterior</p>
+                <p className="text-xs font-bold text-slate-600">
+                  Cierre #{status.id} · {status.status === "approved" ? "Aprobado" : "Rechazado"}
+                  {status.adminNotes ? ` · Nota: ${status.adminNotes}` : ""}
+                </p>
+             </div>
           </CardContent>
         </Card>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Pedidos Pendientes */}
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-full">
-                <Truck className="w-6 h-6 text-white" />
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="grid grid-cols-1 gap-4">
+          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none shadow-xl shadow-orange-100 rounded-[2rem] overflow-hidden group">
+            <CardContent className="p-6 relative">
+              <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Truck className="w-32 h-32" />
               </div>
-              <div>
-                <Label className="text-orange-100 text-xs font-bold uppercase tracking-wider">Monto Pendiente de Entregas</Label>
-                <p className="text-2xl font-black mt-1">
-                  {pendingOrders ? formatCurrency(pendingOrders.total) : "..."}
-                </p>
-                <p className="text-[10px] text-orange-200 italic">
-                  {pendingOrders ? `${pendingOrders.count} pedido${pendingOrders.count !== 1 ? "s" : ""} sin entregar` : "Cargando..."}
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-md">
+                  <Truck className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-orange-100 text-[10px] font-black uppercase tracking-widest">Pendiente de Entrega</p>
+                  <p className="text-3xl font-black mt-1 tracking-tighter">
+                    {pendingOrders ? formatCurrency(pendingOrders.total) : "..."}
+                  </p>
+                  <p className="text-xs text-orange-200 font-medium">
+                    {pendingOrders ? `${pendingOrders.count} pedidos activos en ruta` : "Cargando..."}
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Monto Asignado */}
-        <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white border-none shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/10 rounded-full">
-                <Wallet className="w-6 h-6 text-blue-300" />
+          <Card className="bg-slate-900 text-white border-none shadow-xl shadow-slate-100 rounded-[2rem] overflow-hidden group">
+            <CardContent className="p-6 relative">
+              <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                <Wallet className="w-32 h-32" />
               </div>
-              <div>
-                <Label className="text-slate-300 text-xs font-bold uppercase tracking-wider">Monto Inicial Asignado</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl font-black">Bs.</span>
-                  <Input
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md">
+                  <Wallet className="w-8 h-8 text-blue-300" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fondo Inicial Asignado</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-3xl font-black tracking-tighter">Bs.</span>
+                    <Input
+                      type="number"
+                      step="any"
+                      onFocus={(e) => e.target.select()}
+                      className="bg-transparent border-none text-3xl font-black p-0 h-auto focus-visible:ring-0 w-full tracking-tighter placeholder:text-slate-700"
+                      placeholder="0.00"
+                      value={formData.initialCash}
+                      onChange={(e) => setFormData({...formData, initialCash: e.target.value})}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">Dinero recibido para cambio</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+           <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] px-2">Arqueo de Recaudación</h3>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="border-none shadow-sm bg-white rounded-[1.5rem] p-4 transition-all hover:shadow-md border border-slate-50">
+                <Label className="flex items-center gap-2 text-emerald-600 font-black uppercase text-[10px] tracking-widest mb-3">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" /> Efectivo
+                </Label>
+                <div className="relative">
+                   <span className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-300 font-black">Bs.</span>
+                   <Input
                     type="number"
                     step="any"
                     onFocus={(e) => e.target.select()}
-                    className="bg-transparent border-none text-2xl font-black p-0 h-auto focus-visible:ring-0 w-32"
-                    value={formData.initialCash}
-                    onChange={(e) => setFormData({...formData, initialCash: e.target.value})}
+                    placeholder="0.00"
+                    className="border-none shadow-none text-2xl font-black pl-8 h-10 focus-visible:ring-0 tracking-tighter"
+                    value={formData.reportedCash}
+                    onChange={(e) => setFormData({...formData, reportedCash: e.target.value})}
                   />
-                  <p className="text-[10px] text-slate-400 italic">(Dinero recibido para cambio)</p>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </Card>
 
-        {/* Ingresos del Día */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-green-700 font-bold uppercase text-[10px]">
-              <Wallet className="w-3 h-3" /> Efectivo Recaudado
-            </Label>
-            <Input
-              type="number"
-              step="any"
-              onFocus={(e) => e.target.select()}
-              placeholder="0.00"
-              className="font-bold text-lg"
-              value={formData.reportedCash}
-              onChange={(e) => setFormData({...formData, reportedCash: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-blue-700 font-bold uppercase text-[10px]">
-              <QrCode className="w-3 h-3" /> Cobros por QR
-            </Label>
-            <Input
-              type="number"
-              step="any"
-              onFocus={(e) => e.target.select()}
-              placeholder="0.00"
-              className="font-bold text-lg"
-              value={formData.reportedQr}
-              onChange={(e) => setFormData({...formData, reportedQr: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-purple-700 font-bold uppercase text-[10px]">
-              <Landmark className="w-3 h-3" /> Transf. Directas
-            </Label>
-            <Input
-              type="number"
-              step="any"
-              onFocus={(e) => e.target.select()}
-              placeholder="0.00"
-              className="font-bold text-lg"
-              value={formData.reportedTransfer}
-              onChange={(e) => setFormData({...formData, reportedTransfer: e.target.value})}
-            />
-          </div>
+              <Card className="border-none shadow-sm bg-white rounded-[1.5rem] p-4 transition-all hover:shadow-md border border-slate-50">
+                <Label className="flex items-center gap-2 text-blue-600 font-black uppercase text-[10px] tracking-widest mb-3">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" /> Cobros QR
+                </Label>
+                <div className="relative">
+                   <span className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-300 font-black">Bs.</span>
+                   <Input
+                    type="number"
+                    step="any"
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0.00"
+                    className="border-none shadow-none text-2xl font-black pl-8 h-10 focus-visible:ring-0 tracking-tighter"
+                    value={formData.reportedQr}
+                    onChange={(e) => setFormData({...formData, reportedQr: e.target.value})}
+                  />
+                </div>
+              </Card>
+
+              <Card className="border-none shadow-sm bg-white rounded-[1.5rem] p-4 transition-all hover:shadow-md border border-slate-50">
+                <Label className="flex items-center gap-2 text-purple-600 font-black uppercase text-[10px] tracking-widest mb-3">
+                  <div className="h-2 w-2 rounded-full bg-purple-500" /> Transf.
+                </Label>
+                <div className="relative">
+                   <span className="absolute left-0 top-1/2 -translate-y-1/2 text-slate-300 font-black">Bs.</span>
+                   <Input
+                    type="number"
+                    step="any"
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0.00"
+                    className="border-none shadow-none text-2xl font-black pl-8 h-10 focus-visible:ring-0 tracking-tighter"
+                    value={formData.reportedTransfer}
+                    onChange={(e) => setFormData({...formData, reportedTransfer: e.target.value})}
+                  />
+                </div>
+              </Card>
+           </div>
         </div>
 
-        {/* Gastos */}
-        <Card>
-          <CardContent className="p-4 flex gap-4 items-center">
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <Receipt className="w-5 h-5 text-orange-600" />
-            </div>
-            <div className="flex-1">
-              <Label className="text-[10px] font-bold text-orange-600 uppercase">Gastos del día (Gasolina, etc.)</Label>
-              <Input
-                type="number"
-                step="any"
-                onFocus={(e) => e.target.select()}
-                placeholder="0.00"
-                className="mt-1 h-8 text-sm"
-                value={formData.expenses}
-                onChange={(e) => setFormData({...formData, expenses: e.target.value})}
-              />
-            </div>
-          </CardContent>
+        <Card className="border-none shadow-sm bg-orange-50/50 rounded-[1.5rem] p-4 border border-orange-100">
+           <div className="flex items-center gap-4">
+              <div className="p-3 bg-white rounded-xl shadow-sm text-orange-600 shrink-0">
+                 <Receipt className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                 <Label className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Gastos realizados (Gasolina, Viáticos, etc.)</Label>
+                 <div className="flex items-center gap-2 mt-1">
+                    <span className="text-lg font-black text-orange-300">Bs.</span>
+                    <Input
+                      type="number"
+                      step="any"
+                      onFocus={(e) => e.target.select()}
+                      placeholder="0.00"
+                      className="border-none bg-transparent shadow-none p-0 h-auto text-xl font-black focus-visible:ring-0 text-orange-900 placeholder:text-orange-200"
+                      value={formData.expenses}
+                      onChange={(e) => setFormData({...formData, expenses: e.target.value})}
+                    />
+                 </div>
+              </div>
+           </div>
         </Card>
 
-        {/* Resumen Comparativo */}
-        <Card className="overflow-hidden border-2 border-slate-100">
-          <CardHeader className="bg-slate-50 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-slate-500" /> Comparativa vs Sistema
-              </CardTitle>
+        <Card className="overflow-hidden border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white">
+          <CardHeader className="bg-slate-50/50 py-6 px-8 border-b border-slate-50">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+                   Resultados vs Sistema
+                </CardTitle>
+                <CardDescription className="text-xs font-medium">Comparación entre tu arqueo y los registros de la App.</CardDescription>
+              </div>
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                className="rounded-xl font-bold text-xs h-10 px-4 bg-white shadow-sm border-slate-200 hover:bg-slate-50"
                 disabled={!expected}
                 onClick={() =>
                   setFormData((prev: any) => ({
@@ -375,79 +399,86 @@ export default function RepartidorFinance() {
                   }))
                 }
               >
-                Usar sugerido
+                Auto-completar
               </Button>
             </div>
-            <CardDescription className="text-xs">
-              “Reportado” empieza en Bs. 0.00 hasta que ingreses tu arqueo (o uses el sugerido).
-            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50/50 border-b">
-                <tr>
-                  <th className="text-left px-4 py-2 font-medium text-slate-500 uppercase text-[9px]">Concepto</th>
-                  <th className="text-right px-4 py-2 font-medium text-slate-500 uppercase text-[9px]">Sugerido (Sistema)</th>
-                  <th className="text-right px-4 py-2 font-medium text-slate-500 uppercase text-[9px]">Reportado</th>
-                </tr>
-              </thead>
-               <tbody className="divide-y">
-                 <tr>
-                   <td className="px-4 py-2 font-medium">Efectivo</td>
-                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedCashBs.toFixed(2)}</td>
-                   <td className="px-4 py-2 text-right font-bold text-slate-900 font-mono">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
-                 </tr>
-                 <tr>
-                   <td className="px-4 py-2 font-medium text-blue-700">Cobros por QR</td>
-                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedQrBs.toFixed(2)}</td>
-                   <td className="px-4 py-2 text-right font-bold text-blue-700 font-mono">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
-                 </tr>
-                 <tr>
-                   <td className="px-4 py-2 font-medium text-purple-700">Transferencias Directas</td>
-                   <td className="px-4 py-2 text-right font-mono text-slate-500">Bs. {expectedTransferBs.toFixed(2)}</td>
-                   <td className="px-4 py-2 text-right font-bold text-purple-700 font-mono">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
-                 </tr>
-                 <tr className="bg-slate-100/50">
-                   <td className="px-4 py-2 font-black">TOTAL RECAUDADO</td>
-                   <td className="px-4 py-2 text-right font-black text-slate-900 font-mono underline decoration-double">Bs. {totalExpectedBs.toFixed(2)}</td>
-                   <td className="px-4 py-2 text-right font-black text-blue-900 font-mono underline decoration-double">Bs. {totalReported.toFixed(2)}</td>
-                 </tr>
-               </tbody>
-            </table>
+            <div className="overflow-x-auto">
+               <table className="w-full">
+                 <thead>
+                   <tr className="border-b border-slate-50">
+                     <th className="text-left px-8 py-4 font-black text-slate-400 uppercase text-[9px] tracking-widest">Concepto</th>
+                     <th className="text-right px-8 py-4 font-black text-slate-400 uppercase text-[9px] tracking-widest">Sugerido</th>
+                     <th className="text-right px-8 py-4 font-black text-slate-400 uppercase text-[9px] tracking-widest">Tu Reporte</th>
+                   </tr>
+                 </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    <tr className="hover:bg-slate-50/30 transition-colors">
+                      <td className="px-8 py-4 font-bold text-slate-700 text-sm">Efectivo</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedCashBs.toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-black text-slate-900 font-mono">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/30 transition-colors">
+                      <td className="px-8 py-4 font-bold text-blue-700 text-sm">Cobros por QR</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedQrBs.toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-black text-blue-700 font-mono">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/30 transition-colors">
+                      <td className="px-8 py-4 font-bold text-purple-700 text-sm">Transferencias</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedTransferBs.toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-black text-purple-700 font-mono">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr className="bg-slate-900 text-white">
+                      <td className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">TOTAL RECAUDADO</td>
+                      <td className="px-8 py-5 text-right font-black font-mono text-slate-400">Bs. {totalExpectedBs.toFixed(2)}</td>
+                      <td className="px-8 py-5 text-right font-black font-mono text-emerald-400 text-xl tracking-tighter">Bs. {totalReported.toFixed(2)}</td>
+                    </tr>
+                  </tbody>
+               </table>
+            </div>
           </CardContent>
-          <div className={`p-3 text-center text-xs font-bold ${diffCents === 0 ? 'bg-green-100 text-green-800' : diffCents > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-            {diffCents === 0 && totalExpectedBs > 0 ? "CUADRE PERFECTO" :
+          <div className={`p-4 text-center text-xs font-black tracking-widest uppercase transition-colors duration-500 ${diffCents === 0 && totalExpectedBs > 0 ? 'bg-emerald-500 text-white' : diffCents > 0 ? 'bg-blue-500 text-white' : 'bg-red-500 text-white'}`}>
+            {diffCents === 0 && totalExpectedBs > 0 ? (
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-4 w-4" /> CUADRE PERFECTO
+              </div>
+            ) :
              diffCents > 0 ? `SOBRANTE DE Bs. ${(diffCents / 100).toFixed(2)}` :
              diffCents < 0 ? `FALTANTE DE Bs. ${(Math.abs(diffCents) / 100).toFixed(2)}` :
              totalExpectedBs > 0 ? "Completá los montos reportados" : "Sin entregas pendientes de cuadre"}
           </div>
         </Card>
 
-        {/* Entregas Realizadas Hoy */}
-        <Card>
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <PackageCheck className="w-4 h-4 text-emerald-600" /> Entregas Realizadas Hoy
+        <Card className="border-none shadow-xl shadow-slate-100 rounded-[2.5rem] bg-white overflow-hidden">
+          <CardHeader className="py-6 px-8 border-b border-slate-50">
+            <CardTitle className="text-lg font-black text-slate-800 flex items-center gap-3">
+              <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+                <PackageCheck className="w-5 h-5" />
+              </div>
+              Tus Entregas de Hoy
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 max-h-80 overflow-y-auto">
             {!deliveryHistory || deliveryHistory.length === 0 ? (
-              <div className="p-6 text-center">
-                <Truck className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs text-slate-400 italic">No hay entregas entregadas hoy</p>
+              <div className="p-10 text-center bg-slate-50/30">
+                <Truck className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No hay entregas registradas hoy</p>
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-slate-50">
                 {deliveryHistory.map(({ order }: any) => (
-                  <div key={order.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-                    <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                      <BadgeCheck className="h-4 w-4 text-emerald-600" />
+                  <div key={order.id} className="flex items-center gap-4 px-8 py-4 hover:bg-slate-50 transition-colors group">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0 text-emerald-600 group-hover:scale-110 transition-transform">
+                      <BadgeCheck className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{order.orderNumber}</p>
-                      <p className="text-[10px] text-muted-foreground">{paymentMethodLabel(order.paymentMethod)} · {new Date(order.deliveredAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                      <p className="font-black text-slate-800 text-sm truncate uppercase tracking-tight">{order.orderNumber}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                         {paymentMethodLabel(order.paymentMethod)} · {new Date(order.deliveredAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
                     </div>
-                    <p className="font-bold text-sm text-emerald-700">{formatCurrency(order.totalPrice)}</p>
+                    <p className="font-black text-base text-emerald-600 tracking-tighter">{formatCurrency(order.totalPrice)}</p>
                   </div>
                 ))}
               </div>
@@ -457,15 +488,18 @@ export default function RepartidorFinance() {
 
         <Button
           type="submit"
-          className="w-full h-12 text-lg font-bold shadow-green-200 shadow-lg bg-green-600 hover:bg-green-700"
+          className="w-full h-16 text-xl font-black uppercase tracking-widest shadow-2xl shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700 rounded-[2rem] transition-all hover:scale-[1.02] active:scale-[0.98]"
           disabled={isSubmitting || isLoadingExpected}
         >
-          {isSubmitting ? "Enviando Cierre..." : "Finalizar y Cerrar Caja"}
+          {isSubmitting ? "Procesando..." : "Enviar Cierre de Caja"}
         </Button>
 
-        <p className="text-[10px] text-center text-slate-400 italic">
-          Al hacer clic en finalizar, tu reporte será enviado al administrador para su validación oficial.
-        </p>
+        <div className="flex items-center justify-center gap-2 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+           <AlertCircle className="h-4 w-4 text-blue-500" />
+           <p className="text-[10px] text-center text-blue-700 font-bold uppercase tracking-wider">
+              Tu reporte será enviado al administrador para su validación oficial.
+           </p>
+        </div>
       </form>
 
       <ClosuresList myClosures={myClosures} isLoading={isLoadingClosures} />

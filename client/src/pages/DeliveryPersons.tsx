@@ -28,11 +28,39 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash, WalletCards, Printer } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash, WalletCards, Printer, User } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+
+function BoxStatusIndicatorSmall({ personId, openings }: { personId: number, openings: any[] }) {
+  const activeOpening = openings?.find(o => o.responsibleUserId === personId && o.status === "open");
+
+  if (activeOpening) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Abierta</span>
+      </div>
+    );
+  } else {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="relative flex h-2 w-2">
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-300"></span>
+        </span>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Cerrada</span>
+      </div>
+    );
+  }
+}
 
 export default function DeliveryPersons() {
   const { data: deliveryPersons, refetch } = trpc.users.listDeliveryPersons.useQuery();
+  const { data: cashOpenings } = trpc.finance.getCashOpenings.useQuery();
+  
+  const activeOpenings = (cashOpenings as any[]) || [];
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -332,104 +360,122 @@ export default function DeliveryPersons() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {!deliveryPersons || deliveryPersons.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              No hay repartidores registrados
+          <Card className="col-span-full border-dashed border-2 bg-slate-50/50">
+            <CardContent className="pt-10 pb-10 text-center text-muted-foreground">
+              <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <Plus className="h-8 w-8 text-slate-300" />
+              </div>
+              <p className="font-medium">No hay repartidores registrados</p>
+              <p className="text-xs">Comienza agregando uno nuevo arriba.</p>
             </CardContent>
           </Card>
         ) : (
           deliveryPersons.map((person) => (
-            <Card key={person.id}>
-              <CardHeader className="pb-3">
+            <Card key={person.id} className="group overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-300 rounded-[2rem] bg-white/80 backdrop-blur-sm">
+              <div className={`h-2 w-full ${person.role === 'admin' ? 'bg-indigo-500' : 'bg-emerald-500'}`} />
+              <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {person.name}
-                      <Badge variant={person.role === "admin" ? "default" : "secondary"}>
-                        {person.role === "admin" ? "Admin" : "Repartidor"}
-                      </Badge>
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      @{person.username}
+                  <div className="flex items-center gap-4">
+                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center shadow-inner ${person.role === 'admin' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <User className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-black tracking-tight text-slate-800">
+                        {person.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md">
+                          {person.role === "admin" ? "Administrador" : "Repartidor"}
+                        </Badge>
+                        <span className="text-xs text-slate-400 font-medium italic">@{person.username}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100/50">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Caja</p>
+                    <BoxStatusIndicatorSmall personId={person.id} openings={activeOpenings} />
+                  </div>
+                  <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100/50">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Acceso</p>
+                    <p className="text-xs font-bold text-slate-600 truncate">
+                      {person.lastSignedIn ? new Date(person.lastSignedIn).toLocaleDateString('es-ES') : 'Nunca'}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 gap-2 rounded-xl border-emerald-100 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 font-bold transition-all"
+                    onClick={() => {
+                      setSelectedPerson(person);
+                      setSheetDialogOpen(true);
+                    }}
+                  >
+                    <Package className="h-4 w-4" />
+                    Carga
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 gap-2 rounded-xl border-slate-100 text-slate-600 hover:bg-slate-50 font-bold transition-all"
+                    onClick={() => {
+                      setSelectedPerson(person);
+                      setLoadDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Extra
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="flex-1 gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200 font-bold transition-all"
+                    onClick={() => {
+                      const today = new Date().toISOString().split("T")[0];
+                      openCashMutation.mutate({
+                        openingAmount: 0,
+                        paymentMethod: "cash",
+                        openingDate: today,
+                        responsibleUserId: person.id,
+                        notes: "Apertura rápida desde lista de repartidores",
+                      });
+                    }}
+                    disabled={openCashMutation.isPending}
+                  >
+                    <WalletCards className="h-4 w-4 text-blue-400" />
+                    Abrir Caja
+                  </Button>
+                  
+                  <div className="flex gap-1">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                      onClick={() => {
-                        setSelectedPerson(person);
-                        setSheetDialogOpen(true);
-                      }}
-                    >
-                      <Package className="h-4 w-4" />
-                      Ver Carga
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
-                      onClick={() => {
-                        setSelectedPerson(person);
-                        setLoadDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Carga Extra
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
-                      onClick={() => {
-                        const today = new Date().toISOString().split("T")[0];
-                        openCashMutation.mutate({
-                          openingAmount: 0,
-                          paymentMethod: "cash",
-                          openingDate: today,
-                          responsibleUserId: person.id,
-                          notes: "Apertura rápida desde lista de repartidores",
-                        });
-                      }}
-                      disabled={openCashMutation.isPending}
-                    >
-                      <WalletCards className="h-4 w-4" />
-                      Aperturar Caja
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all"
                       onClick={() => handleEdit(person)}
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
-                      size="sm"
-                      variant="destructive"
+                      size="icon"
+                      variant="ghost"
+                      className="h-9 w-9 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all"
                       onClick={() => handleDelete(person.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {person.email && (
-                  <p>
-                    <strong>Email:</strong> {person.email}
-                  </p>
-                )}
-                <p>
-                  <strong>Creado:</strong>{" "}
-                  {new Date(person.createdAt).toLocaleDateString("es-ES")}
-                </p>
-                <p>
-                  <strong>Último acceso:</strong>{" "}
-                  {new Date(person.lastSignedIn).toLocaleDateString("es-ES")}
-                </p>
               </CardContent>
             </Card>
           ))

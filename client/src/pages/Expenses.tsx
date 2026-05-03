@@ -108,54 +108,69 @@ export default function Expenses() {
       </div>
 
       {/* Tarjetas de Resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-red-50/60 border-red-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-red-800">Pendientes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-red-700">{formatCurrency((totals?.totalPending || 0) * 100)}</div>
-            <p className="text-xs text-red-600/70">{totals?.countPending || 0} gastos pendientes</p>
+      {/* Tarjetas de Resumen Premium */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-red-50 rounded-2xl text-red-600">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <Badge variant="outline" className="border-red-100 text-red-600 bg-red-50 text-[10px] font-black uppercase tracking-widest px-2">Pendientes</Badge>
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Monto por Pagar</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tighter">{formatCurrency((totals?.totalPending || 0) * 100)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">{totals?.countPending || 0} gastos sin pagar</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-green-50/60 border-green-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-green-800">Pagados</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-green-700">{formatCurrency((totals?.totalPaid || 0) * 100)}</div>
-            <p className="text-xs text-green-600/70">{totals?.countPaid || 0} gastos pagados</p>
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <Badge variant="outline" className="border-emerald-100 text-emerald-600 bg-emerald-50 text-[10px] font-black uppercase tracking-widest px-2">Pagados</Badge>
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Pagado</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tighter">{formatCurrency((totals?.totalPaid || 0) * 100)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">{totals?.countPaid || 0} gastos registrados</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-50/60 border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-slate-800">Total General</CardTitle>
-            <Receipt className="h-4 w-4 text-slate-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-slate-700">{formatCurrency((totals?.total || 0) * 100)}</div>
-            <p className="text-xs text-slate-600/70">{totals?.count || 0} gastos registrados</p>
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-slate-900 group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-white/10 rounded-2xl text-white">
+                <Receipt className="h-6 w-6" />
+              </div>
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Histórico</p>
+            <p className="text-2xl font-black text-white tracking-tighter">{formatCurrency((totals?.total || 0) * 100)}</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">Acumulado total de gastos</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-50/60 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-bold text-blue-800">Este Mes</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black text-blue-700">
-              {formatCurrency(((expenses as any[])?.filter((e: any) => {
+        <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+                <Clock className="h-6 w-6" />
+              </div>
+              <Badge variant="outline" className="border-blue-100 text-blue-600 bg-blue-50 text-[10px] font-black uppercase tracking-widest px-2">Este Mes</Badge>
+            </div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Gasto Mensual</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tighter">
+               {formatCurrency(((expenses as any[])?.filter((e: any) => {
                 const expenseDate = new Date(e.createdAt);
                 const now = new Date();
                 return expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
               }).reduce((sum: number, e: any) => sum + e.amount, 0) || 0))}
-            </div>
-            <p className="text-xs text-blue-600/70">Gastos del mes en curso</p>
+            </p>
+            <p className="text-xs text-slate-500 font-medium mt-1">Periodo actual</p>
           </CardContent>
         </Card>
       </div>
