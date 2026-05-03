@@ -599,99 +599,105 @@ export default function Orders() {
                     )}
                   </div>
 
-                  <div className="p-4 md:p-6 bg-slate-50/50 border-t border-slate-50 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-12 w-12 rounded-2xl bg-white text-emerald-500 hover:bg-emerald-50 shadow-sm border border-slate-100"
-                        onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
-                      >
-                        <MessageCircle className="h-6 w-6" />
-                      </Button>
-                      {user?.role === "admin" && (
-                        <Link href={`/order/${order.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-12 w-12 rounded-2xl bg-white text-blue-500 hover:bg-blue-50 shadow-sm border border-slate-100"
-                          >
-                            <Eye className="h-6 w-6" />
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {user?.role === "admin" && (
-                        <Link href={`/edit-order/${order.id}`}>
-                          <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 text-slate-700 font-bold hover:bg-white hover:shadow-md transition-all gap-2">
-                            <Edit className="h-4 w-4" />
-                            <span className="hidden sm:inline">Editar</span>
-                          </Button>
-                        </Link>
-                      )}
-
-                      {user?.role === "admin" && order.status !== "cancelled" && (
-                        <Button 
-                          variant={order.rescheduleRequested === 1 ? "default" : "outline"}
-                          className={`h-12 px-6 rounded-2xl font-bold transition-all gap-2 ${
-                            order.rescheduleRequested === 1 
-                              ? 'bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700' 
-                              : 'border-orange-100 text-orange-600 hover:bg-orange-50'
-                          }`}
-                          onClick={() => {
-                            setRescheduleOrderId(order.id);
-                            if (order.rescheduleRequested === 1) {
-                              setRescheduleData({
-                                date: order.requestedDate || "",
-                                time: order.requestedTime || "",
-                                reason: order.rescheduleReason || ""
-                              });
-                            } else {
-                              setRescheduleData({
-                                date: order.deliveryDate || "",
-                                time: order.deliveryTime || "",
-                                reason: order.rescheduleReason || ""
-                              });
-                            }
-                          }}
-                        >
-                          <Calendar className="h-4 w-4" />
-                          <span className="hidden sm:inline">{order.rescheduleRequested === 1 ? "Revisar" : "Agenda"}</span>
-                        </Button>
-                      )}
-
-                      {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
-                        <Button 
-                          className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2"
-                          onClick={() => setDeliverOrderId(order.id)}
-                        >
-                          <DollarSign className="h-5 w-5" />
-                          Entregar
-                        </Button>
-                      )}
-
-                      {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
+                  <div className="p-4 md:p-5 bg-slate-50/50 border-t border-slate-100">
+                    {/* Fila de acciones: layout responsivo */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      {/* Botones izquierda */}
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Button
                           variant="outline"
-                          className="h-12 px-4 rounded-2xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2"
-                          onClick={() => setCancellationRequestOrderId(order.id)}
+                          className="h-10 px-4 rounded-xl bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200 shadow-sm font-bold gap-2 text-sm"
+                          onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
                         >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">Dar de Baja</span>
+                          <MessageCircle className="h-4 w-4" />
+                          WhatsApp
                         </Button>
-                      )}
-                      
-                      {user?.role === "admin" && order.status !== "cancelled" && (
-                        <Button 
-                          variant="ghost"
-                          className="h-12 w-12 rounded-2xl text-red-400 hover:text-red-600 hover:bg-red-50"
-                          onClick={() => setDismissOrderId(order.id)}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      )}
+                        {user?.role === "admin" && (
+                          <Link href={`/order/${order.id}`}>
+                            <Button
+                              variant="outline"
+                              className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Ver detalle
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Botones derecha */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {user?.role === "admin" && (
+                          <Link href={`/edit-order/${order.id}`}>
+                            <Button variant="outline" className="h-10 px-4 rounded-xl border-slate-200 text-slate-700 font-bold hover:bg-white hover:shadow-md transition-all gap-2 text-sm">
+                              <Edit className="h-4 w-4" />
+                              Editar
+                            </Button>
+                          </Link>
+                        )}
+
+                        {user?.role === "admin" && order.status !== "cancelled" && (
+                          <Button 
+                            variant={order.rescheduleRequested === 1 ? "default" : "outline"}
+                            className={`h-10 px-4 rounded-xl font-bold transition-all gap-2 text-sm ${
+                              order.rescheduleRequested === 1 
+                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700' 
+                                : 'border-orange-200 text-orange-600 hover:bg-orange-50'
+                            }`}
+                            onClick={() => {
+                              setRescheduleOrderId(order.id);
+                              if (order.rescheduleRequested === 1) {
+                                setRescheduleData({
+                                  date: order.requestedDate || "",
+                                  time: order.requestedTime || "",
+                                  reason: order.rescheduleReason || ""
+                                });
+                              } else {
+                                setRescheduleData({
+                                  date: order.deliveryDate || "",
+                                  time: order.deliveryTime || "",
+                                  reason: order.rescheduleReason || ""
+                                });
+                              }
+                            }}
+                          >
+                            <Calendar className="h-4 w-4" />
+                            {order.rescheduleRequested === 1 ? "Revisar" : "Reprogramar"}
+                          </Button>
+                        )}
+
+                        {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
+                          <Button 
+                            className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2 text-sm"
+                            onClick={() => setDeliverOrderId(order.id)}
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            Entregar
+                          </Button>
+                        )}
+
+                        {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
+                          <Button
+                            variant="outline"
+                            className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
+                            onClick={() => setCancellationRequestOrderId(order.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Dar de Baja
+                          </Button>
+                        )}
+                        
+                        {user?.role === "admin" && order.status !== "cancelled" && (
+                          <Button 
+                            variant="outline"
+                            className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
+                            onClick={() => setDismissOrderId(order.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Cancelar
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>

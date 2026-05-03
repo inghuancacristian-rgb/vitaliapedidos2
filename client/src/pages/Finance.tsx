@@ -186,12 +186,12 @@ export default function Finance() {
                 <DollarSign className="h-4 w-4 text-emerald-600" />
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100"
-                  title="Ver Historial"
+                  variant="outline"
+                  className="h-8 px-3 gap-2 text-emerald-600 border-emerald-200 bg-white hover:bg-emerald-50 hover:text-emerald-700 shadow-sm font-bold text-xs"
                   onClick={() => setCashHistoryOpen(true)}
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3.5 w-3.5" />
+                  Historial
                 </Button>
               </div>
             </div>
@@ -218,12 +218,12 @@ export default function Finance() {
                 <TrendingUp className="h-4 w-4 text-blue-600" />
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-100"
-                  title="Ver Historial"
+                  variant="outline"
+                  className="h-8 px-3 gap-2 text-blue-600 border-blue-200 bg-white hover:bg-blue-50 hover:text-blue-700 shadow-sm font-bold text-xs"
                   onClick={() => setQrHistoryOpen(true)}
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3.5 w-3.5" />
+                  Historial
                 </Button>
               </div>
             </div>
@@ -250,12 +250,12 @@ export default function Finance() {
                 <Receipt className="h-4 w-4 text-purple-600" />
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                  title="Ver Historial"
+                  variant="outline"
+                  className="h-8 px-3 gap-2 text-purple-600 border-purple-200 bg-white hover:bg-purple-50 hover:text-purple-700 shadow-sm font-bold text-xs"
                   onClick={() => setTransferHistoryOpen(true)}
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3.5 w-3.5" />
+                  Historial
                 </Button>
               </div>
             </div>
@@ -1356,8 +1356,14 @@ function TransactionRow({ transaction }: { transaction: any }) {
             </Badge>
           </div>
           <div className="flex gap-1 no-print">
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setShowDetail(true)}>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="h-8 px-3 gap-2 text-xs font-bold border-slate-200 hover:bg-slate-50" 
+              onClick={() => setShowDetail(true)}
+            >
               <Eye className="h-3.5 w-3.5" />
+              Ver detalle
             </Button>
           </div>
         </div>

@@ -694,9 +694,14 @@ export default function Sales() {
                       <TableCell className="text-right font-semibold">{formatCurrency(sale.total)}</TableCell>
                       <TableCell>{new Date(sale.createdAt).toLocaleString("es-BO")}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => openDetail(sale.id)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-9 px-4 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all text-xs" 
+                          onClick={() => openDetail(sale.id)}
+                        >
                           <Eye className="h-4 w-4" />
-                          Ver
+                          Ver detalle
                         </Button>
                       </TableCell>
                     </TableRow>

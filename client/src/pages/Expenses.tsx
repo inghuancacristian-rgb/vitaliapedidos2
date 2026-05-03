@@ -198,11 +198,11 @@ export default function Expenses() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {isLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 p-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 bg-muted animate-pulse rounded" />
+                <div key={i} className="h-16 bg-muted animate-pulse rounded-xl" />
               ))}
             </div>
           ) : filteredExpenses?.length === 0 ? (
@@ -212,31 +212,45 @@ export default function Expenses() {
               <p className="text-sm">Haz clic en "Nuevo Gasto" para comenzar</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead className="text-center">Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses?.map((expense: any) => (
-                    <ExpenseRow
-                      key={expense.id}
-                      expense={expense}
-                      onEdit={expense.status === "pending" ? () => setEditingExpense(expense) : undefined}
-                      onRefresh={refetch}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              {/* Vista tabla — solo en escritorio */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Método</TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                      <TableHead className="text-center">Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExpenses?.map((expense: any) => (
+                      <ExpenseRow
+                        key={expense.id}
+                        expense={expense}
+                        onEdit={expense.status === "pending" ? () => setEditingExpense(expense) : undefined}
+                        onRefresh={refetch}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Vista cards — solo en móvil */}
+              <div className="sm:hidden flex flex-col divide-y divide-slate-100">
+                {filteredExpenses?.map((expense: any) => (
+                  <ExpenseCard
+                    key={expense.id}
+                    expense={expense}
+                    onEdit={expense.status === "pending" ? () => setEditingExpense(expense) : undefined}
+                    onRefresh={refetch}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -338,38 +352,148 @@ function ExpenseRow({ expense, onEdit, onRefresh }: { expense: any; onEdit: (() 
           )}
         </TableCell>
         <TableCell className="text-right">
-          <div className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setShowDetail(true)}>
-              <Receipt className="h-4 w-4" />
+          <div className="flex justify-end gap-1.5 flex-wrap">
+            <Button size="sm" variant="outline" className="h-8 px-3 gap-1.5 text-xs" onClick={() => setShowDetail(true)}>
+              <Receipt className="h-3.5 w-3.5" />
+              Ver
             </Button>
             {expense.status === "pending" && (
               <Button
                 size="sm"
-                variant="ghost"
-                className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                variant="outline"
+                className="h-8 px-3 gap-1.5 text-xs text-green-700 border-green-200 hover:bg-green-50"
                 onClick={handleMarkAsPaid}
                 disabled={markPaidMutation.isPending}
               >
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Pagar
               </Button>
             )}
             {expense.status === "pending" && onEdit && (
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit}>
-                <Edit className="h-4 w-4" />
+              <Button size="sm" variant="outline" className="h-8 px-3 gap-1.5 text-xs" onClick={onEdit}>
+                <Edit className="h-3.5 w-3.5" />
+                Editar
               </Button>
             )}
             <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 gap-1.5 text-xs text-red-600 border-red-200 hover:bg-red-50"
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
+              Eliminar
             </Button>
           </div>
         </TableCell>
       </TableRow>
+      {showDetail && (
+        <ExpenseDetailDialog expense={expense} onClose={() => setShowDetail(false)} />
+      )}
+    </>
+  );
+}
+
+function ExpenseCard({ expense, onEdit, onRefresh }: { expense: any; onEdit: (() => void) | undefined; onRefresh: () => void }) {
+  const [showDetail, setShowDetail] = useState(false);
+  const utils = trpc.useUtils();
+  const markPaidMutation = trpc.expenses.markAsPaid.useMutation({
+    onSuccess: () => {
+      toast.success("Gasto marcado como pagado");
+      onRefresh();
+      void utils.expenses.list.invalidate();
+      void utils.expenses.totals.invalidate();
+    },
+    onError: (err) => toast.error(`Error: ${err.message}`),
+  });
+
+  const deleteMutation = trpc.expenses.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Gasto eliminado");
+      onRefresh();
+      void utils.expenses.list.invalidate();
+      void utils.expenses.totals.invalidate();
+    },
+    onError: (err) => toast.error(`Error: ${err.message}`),
+  });
+
+  return (
+    <>
+      <div className={`p-4 flex flex-col gap-3 ${expense.status === "pending" ? "bg-amber-50/40" : ""}`}>
+        {/* Header: descripción + monto */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-slate-900 text-sm leading-snug truncate">{expense.description}</p>
+            {expense.supplierName && (
+              <p className="text-xs text-slate-500 truncate">{expense.supplierName}</p>
+            )}
+            <p className="text-xs text-slate-400 mt-0.5">{new Date(expense.createdAt).toLocaleDateString("es-BO")}</p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="font-black text-slate-900 text-base">{formatCurrency(expense.amount)}</p>
+            {expense.status === "pending" ? (
+              <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50 text-[10px] mt-0.5">
+                <Clock className="h-2.5 w-2.5 mr-1" /> Pendiente
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50 text-[10px] mt-0.5">
+                <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Pagado
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Badges: categoría y método */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge className={`${getCategoryColor(expense.category)} text-[10px]`}>
+            {getCategoryLabel(expense.category)}
+          </Badge>
+          <Badge variant="outline" className="text-[10px] capitalize">
+            {expense.paymentMethod === "cash" ? "Efectivo" : expense.paymentMethod === "qr" ? "QR" : "Transferencia"}
+          </Badge>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" className="h-9 px-3 gap-1.5 text-xs flex-1" onClick={() => setShowDetail(true)}>
+            <Receipt className="h-3.5 w-3.5" />
+            Ver detalle
+          </Button>
+          {expense.status === "pending" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 px-3 gap-1.5 text-xs flex-1 text-green-700 border-green-200 hover:bg-green-50"
+              onClick={() => markPaidMutation.mutate({ id: expense.id })}
+              disabled={markPaidMutation.isPending}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Marcar Pagado
+            </Button>
+          )}
+          {expense.status === "pending" && onEdit && (
+            <Button size="sm" variant="outline" className="h-9 px-3 gap-1.5 text-xs flex-1" onClick={onEdit}>
+              <Edit className="h-3.5 w-3.5" />
+              Editar
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 px-3 gap-1.5 text-xs flex-1 text-red-600 border-red-200 hover:bg-red-50"
+            onClick={() => {
+              if (confirm("¿Estás seguro de eliminar este gasto?")) {
+                deleteMutation.mutate({ id: expense.id });
+              }
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Eliminar
+          </Button>
+        </div>
+      </div>
       {showDetail && (
         <ExpenseDetailDialog expense={expense} onClose={() => setShowDetail(false)} />
       )}
