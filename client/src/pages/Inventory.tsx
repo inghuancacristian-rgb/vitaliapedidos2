@@ -701,14 +701,6 @@ export default function Inventory() {
             </Card>
           )
         )}
-
-            {displayItems.length === 0 ? (
-              <div className="py-10 text-center text-muted-foreground">
-                No hay {activeTab === "finished" ? "productos" : "insumos"} registrados.
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
       </div>
 
       <PrintInventoryContent inventory={inventory || []} />
