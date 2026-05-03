@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash, WalletCards } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Package, Trash, WalletCards, Printer } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 
 export default function DeliveryPersons() {
