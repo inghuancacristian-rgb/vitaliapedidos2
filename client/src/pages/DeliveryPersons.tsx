@@ -13,6 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -47,10 +55,17 @@ export default function DeliveryPersons() {
     notes: "",
   });
 
+  const [sheetDialogOpen, setSheetDialogOpen] = useState(false);
+
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
   const { data: currentExtraLoad, refetch: refetchExtraLoad } = trpc.orders.getExtraLoad.useQuery(
     { deliveryPersonId: selectedPerson?.id, date: selectedDate },
     { enabled: !!selectedPerson }
+  );
+
+  const { data: deliverySheet, isLoading: isLoadingSheet } = trpc.orders.getDeliverySheet.useQuery(
+    { deliveryPersonId: selectedPerson?.id, date: selectedDate },
+    { enabled: sheetDialogOpen && !!selectedPerson }
   );
 
   const assignLoadMutation = trpc.orders.assignExtraLoad.useMutation({
@@ -347,10 +362,22 @@ export default function DeliveryPersons() {
                       className="gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                       onClick={() => {
                         setSelectedPerson(person);
-                        setLoadDialogOpen(true);
+                        setSheetDialogOpen(true);
                       }}
                     >
                       <Package className="h-4 w-4" />
+                      Ver Carga
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+                      onClick={() => {
+                        setSelectedPerson(person);
+                        setLoadDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
                       Carga Extra
                     </Button>
                     <Button
@@ -544,6 +571,148 @@ export default function DeliveryPersons() {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo de Hoja de Reparto / Carga Completa */}
+      <Dialog open={sheetDialogOpen} onOpenChange={setSheetDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex flex-row items-center justify-between pr-8">
+            <div>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-emerald-600" />
+                Carga de Reparto: {selectedPerson?.name}
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-1">Consolidado de pedidos y carga extra asignada.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input 
+                type="date" 
+                value={selectedDate} 
+                onChange={(e) => setSelectedDate(e.target.value)} 
+                className="w-36 h-9"
+              />
+              <Button size="sm" variant="outline" onClick={() => window.print()} className="gap-2">
+                <Printer className="h-4 w-4" />
+                Imprimir
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {isLoadingSheet ? (
+            <div className="py-12 text-center text-muted-foreground">Cargando hoja de reparto...</div>
+          ) : !deliverySheet || deliverySheet.entries.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground italic">
+              No hay pedidos ni carga extra para esta fecha.
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {/* Resumen Consolidado de Productos */}
+              <div>
+                <h3 className="font-bold text-sm mb-3 px-1 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Productos a Cargar (Resumen)
+                </h3>
+                <div className="border rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-center">Cant. Pedidos</TableHead>
+                        <TableHead className="text-center">Cant. Extra</TableHead>
+                        <TableHead className="text-right">Total a Llevar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const productMap = new Map<number, { name: string, orderQty: number, extraQty: number }>();
+                        
+                        // Sumar productos de pedidos
+                        deliverySheet.entries.forEach((entry: any) => {
+                          entry.items.forEach((item: any) => {
+                            const prev = productMap.get(item.productId) || { name: item.productName, orderQty: 0, extraQty: 0 };
+                            prev.orderQty += item.quantity;
+                            productMap.set(item.productId, prev);
+                          });
+                        });
+                        
+                        // Sumar productos de carga extra
+                        currentExtraLoad?.forEach((item: any) => {
+                          const prev = productMap.get(item.productId) || { name: item.productName, orderQty: 0, extraQty: 0 };
+                          prev.extraQty += item.quantity;
+                          productMap.set(item.productId, prev);
+                        });
+
+                        return Array.from(productMap.entries()).map(([id, data]) => (
+                          <TableRow key={id}>
+                            <TableCell className="font-medium">{data.name}</TableCell>
+                            <TableCell className="text-center">{data.orderQty}</TableCell>
+                            <TableCell className="text-center">{data.extraQty}</TableCell>
+                            <TableCell className="text-right font-black text-emerald-700 text-lg">
+                              {data.orderQty + data.extraQty}
+                            </TableCell>
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Detalle de Pedidos */}
+              <div>
+                <h3 className="font-bold text-sm mb-3 px-1 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                  Detalle de Entregas ({deliverySheet.entries.length})
+                </h3>
+                <div className="space-y-3">
+                  {deliverySheet.entries.map((entry: any) => (
+                    <div key={entry.order.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-bold text-slate-900">Pedido #{entry.order.orderNumber}</p>
+                          <p className="text-xs text-muted-foreground">{entry.customer?.name} • {entry.order.zone}</p>
+                        </div>
+                        <Badge variant="outline" className="bg-white">{entry.order.status}</Badge>
+                      </div>
+                      <div className="text-xs text-slate-600">
+                        {entry.items.map((item: any) => (
+                          <span key={item.id} className="mr-3 bg-white px-2 py-1 rounded border border-slate-100 inline-block mb-1">
+                            {item.productName} x{item.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Carga Extra */}
+              {currentExtraLoad && currentExtraLoad.length > 0 && (
+                <div>
+                  <h3 className="font-bold text-sm mb-3 px-1 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-amber-500" />
+                    Carga Extra / Muestras
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {currentExtraLoad.map((item: any) => (
+                      <div key={item.id} className="p-3 rounded-xl border border-amber-100 bg-amber-50/30 flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-xs">{item.productName}</p>
+                          <p className="text-[10px] text-amber-700 uppercase font-bold">
+                            {item.type === 'sale' ? 'Venta' : 'Muestra'} • Cant: {item.quantity}
+                          </p>
+                        </div>
+                        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-none">
+                          {item.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
