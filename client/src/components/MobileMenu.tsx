@@ -16,9 +16,11 @@ import {
   LogOut,
   Menu,
   Package,
+  Receipt,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
+  Tag,
   Users,
 } from "lucide-react";
 
@@ -35,6 +37,8 @@ export default function MobileMenu() {
     { href: "/orders", label: "Pedidos", icon: ShoppingCart },
     { href: "/sales", label: "Ventas", icon: ShoppingBag },
     { href: "/inventory", label: "Inventario", icon: Package },
+    { href: "/products", label: "Catálogo", icon: Tag },
+    { href: "/expenses", label: "Gastos", icon: Receipt },
     { href: "/customers", label: "Clientes", icon: Users },
     { href: "/suppliers", label: "Proveedores", icon: Users },
     { href: "/purchases", label: "Compras", icon: ShoppingCart },
