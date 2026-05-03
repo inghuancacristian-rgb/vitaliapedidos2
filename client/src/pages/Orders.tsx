@@ -12,6 +12,8 @@ import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Clock as ClockIcon, Calendar as CalendarIcon, CheckCircle, XCircle, MoreHorizontal } from "lucide-react";
 
 export default function Orders() {
   const { user } = useAuth();
@@ -414,305 +416,222 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 p-0 md:p-8 pb-24">
+      <div className="max-w-7xl mx-auto p-4 md:p-0">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Gestión de Pedidos</h1>
             <p className="text-slate-500 font-medium mt-1">Administra y monitorea todas las entregas de Vitalia</p>
           </div>
-          {user?.role === "admin" && (
-            <Link href="/create-order">
-              <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-200 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
-                <Plus className="h-6 w-6" />
-                Nuevo Pedido
-              </Button>
-            </Link>
-          )}
-          {user?.role === "user" && (
-            <Link href="/delivery-load">
-              <Button className="h-14 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-100 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
-                <Package className="h-6 w-6" />
-                Ver mi carga
-              </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {user?.role === "admin" && (
+              <Link href="/create-order">
+                <Button className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-slate-800 shadow-xl shadow-slate-200 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <Plus className="h-6 w-6" />
+                  Nuevo Pedido
+                </Button>
+              </Link>
+            )}
+            {user?.role === "user" && (
+              <Link href="/delivery-load">
+                <Button className="h-14 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-100 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  <Package className="h-6 w-6" />
+                  Ver mi carga
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
-        <Card className="mb-10 border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/80 backdrop-blur-md">
-          <CardContent className="p-6">
-            <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4`}>
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
-                <Input 
-                  placeholder="Número de pedido..." 
-                  className="h-12 pl-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Input 
-                type="date"
-                className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-              />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="pending">Pendientes</SelectItem>
-                  <SelectItem value="assigned">Asignados</SelectItem>
-                  <SelectItem value="in_transit">En tránsito</SelectItem>
-                  <SelectItem value="delivered">Entregados</SelectItem>
-                  <SelectItem value="cancelled">Cancelados</SelectItem>
-                  <SelectItem value="rescheduled">Reprogramados</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
-                <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
-                  <SelectValue placeholder="Ordenar por hora" />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
-                  <SelectItem value="time_asc">Hora (↑)</SelectItem>
-                  <SelectItem value="time_desc">Hora (↓)</SelectItem>
-                </SelectContent>
-              </Select>
-              {user?.role === "admin" && (
-                <Select value={deliveryPersonFilter} onValueChange={setDeliveryPersonFilter}>
-                  <SelectTrigger className="h-12 rounded-2xl border-slate-100 bg-white shadow-sm">
-                    <SelectValue placeholder="Repartidor" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
-                    <SelectItem value="all">Todos los repartidores</SelectItem>
-                    <SelectItem value="none">Sin repartidor</SelectItem>
-                    {((deliveryPersons as any[]) || [])
-                      .filter((u: any) => u?.role === "user")
-                      .map((u: any) => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          {u.name || u.username || `Usuario #${u.id}`}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Button 
-                variant="ghost" 
-                className="h-12 rounded-2xl text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 font-bold"
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                  setDateFilter("");
-                  setSortOrder("time_asc");
-                  setDeliveryPersonFilter("all");
-                }}
-              >
-                Limpiar
-              </Button>
-            </div>
-
-            {user?.role === "admin" && (
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-50">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Hoja del día: <span className="text-slate-600">{sheetDate}</span>
-                  </p>
+        {/* Barra de Filtros Sticky */}
+        <div className="sticky top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 mb-8 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
+          <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/90">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col gap-6">
+                {/* Primera Fila: Búsqueda y Fecha */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="md:col-span-4 relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <Input 
+                      placeholder="Buscar pedido o cliente..." 
+                      className="h-12 pl-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-8 flex flex-col sm:flex-row gap-4 items-center">
+                    <div className="relative w-full sm:w-auto">
+                      <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+                      <Input 
+                        type="date"
+                        className="h-12 pl-12 rounded-2xl border-slate-100 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 transition-all w-full sm:w-56"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+                      <Button
+                        variant={dateFilter === today ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-xl font-bold h-10 px-4 whitespace-nowrap"
+                        onClick={() => setDateFilter(today)}
+                      >
+                        Hoy
+                      </Button>
+                      <Button
+                        variant={dateFilter === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-xl font-bold h-10 px-4 whitespace-nowrap"
+                        onClick={() => {
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          setDateFilter(tomorrow.toISOString().split('T')[0]);
+                        }}
+                      >
+                        Mañana
+                      </Button>
+                      <Button
+                        variant={dateFilter === "" ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-xl font-bold h-10 px-4 whitespace-nowrap"
+                        onClick={() => setDateFilter("")}
+                      >
+                        Ver Todo
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 px-6 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm"
-                  disabled={sheetDeliveryPersonId === null}
-                  onClick={() => setIsSheetOpen(true)}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Ver Hoja de Reparto
-                </Button>
+
+                {/* Segunda Fila: Otros Filtros */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-12 min-w-[180px] rounded-2xl border-slate-100 bg-white shadow-sm">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="pending">Pendientes</SelectItem>
+                      <SelectItem value="assigned">Asignados</SelectItem>
+                      <SelectItem value="in_transit">En tránsito</SelectItem>
+                      <SelectItem value="delivered">Entregados</SelectItem>
+                      <SelectItem value="cancelled">Cancelados</SelectItem>
+                      <SelectItem value="rescheduled">Reprogramados</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                    <SelectTrigger className="h-12 min-w-[150px] rounded-2xl border-slate-100 bg-white shadow-sm">
+                      <SelectValue placeholder="Ordenar" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                      <SelectItem value="time_asc">Hora (Más temprano)</SelectItem>
+                      <SelectItem value="time_desc">Hora (Más tarde)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {user?.role === "admin" && (
+                    <Select value={deliveryPersonFilter} onValueChange={setDeliveryPersonFilter}>
+                      <SelectTrigger className="h-12 min-w-[200px] rounded-2xl border-slate-100 bg-white shadow-sm">
+                        <SelectValue placeholder="Repartidor" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                        <SelectItem value="all">Todos los repartidores</SelectItem>
+                        <SelectItem value="none">Sin repartidor</SelectItem>
+                        {((deliveryPersons as any[]) || [])
+                          .filter((u: any) => u?.role === "user")
+                          .map((u: any) => (
+                            <SelectItem key={u.id} value={String(u.id)}>
+                              {u.name || u.username || `Usuario #${u.id}`}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  <Button 
+                    variant="ghost" 
+                    className="h-12 rounded-2xl text-slate-400 hover:text-slate-600 hover:bg-slate-100/50 font-bold ml-auto"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                      setDateFilter("");
+                      setSortOrder("time_asc");
+                      setDeliveryPersonFilter("all");
+                    }}
+                  >
+                    Restablecer
+                  </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {sortedOrders.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-slate-200">
-            <p className="text-slate-500">No se encontraron pedidos</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sortedOrders.map((order: any) => (
-              <Card key={order.id} className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-300 rounded-[2.5rem] overflow-hidden bg-white group">
-                <CardContent className="p-0">
-                  <div className="p-6 md:p-8 flex flex-col gap-6">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-2xl font-black text-slate-900 tracking-tight">#{order.orderNumber}</h3>
-                          <Badge className={`${getStatusColor(order.status)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-sm`}>
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{order.zone}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total</p>
-                        <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(order.totalPrice)}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Entrega</p>
-                        <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-                           <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                           {order.deliveryDate}
-                        </div>
-                        {order.deliveryTime && (
-                           <p className="text-xs text-slate-500 font-medium mt-0.5 ml-5">{order.deliveryTime}</p>
-                        )}
-                      </div>
-                      <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Repartidor</p>
-                        <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-                           <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                           <span className="truncate">{order.deliveryPersonName || "Sin asignar"}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {(order.rescheduleRequested === 1 || order.cancellationRequested === 1) && (
-                      <div className="flex flex-col gap-2">
-                        {order.rescheduleRequested === 1 && (
-                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100">
-                            <Calendar className="h-4 w-4 animate-pulse" />
-                            <span className="text-xs font-black uppercase">Reprogramación Solicitada</span>
-                          </div>
-                        )}
-                        {order.cancellationRequested === 1 && (
-                          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100">
-                            <Trash2 className="h-4 w-4 animate-pulse" />
-                            <span className="text-xs font-black uppercase">Baja Solicitada</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {order.notes && (
-                      <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50">
-                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
-                        <p className="text-sm text-amber-800 font-medium leading-relaxed italic">"{order.notes}"</p>
-                      </div>
-                    )}
+              {user?.role === "admin" && (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      Hoja de repartidor: <span className="text-slate-600">{sheetDate}</span>
+                    </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 px-6 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50 shadow-sm"
+                    disabled={sheetDeliveryPersonId === null}
+                    onClick={() => setIsSheetOpen(true)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Hoja de Reparto
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-                  <div className="p-4 md:p-5 bg-slate-50/50 border-t border-slate-100">
-                    {/* Fila de acciones: layout responsivo */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      {/* Botones izquierda */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Button
-                          variant="outline"
-                          className="h-10 px-4 rounded-xl bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200 shadow-sm font-bold gap-2 text-sm"
-                          onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </Button>
-                        {user?.role === "admin" && (
-                          <Link href={`/order/${order.id}`}>
-                            <Button
-                              variant="outline"
-                              className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
-                            >
-                              <Eye className="h-4 w-4" />
-                              Ver detalle
-                            </Button>
-                          </Link>
-                        )}
-                      </div>
-
-                      {/* Botones derecha */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {user?.role === "admin" && (
-                          <Link href={`/edit-order/${order.id}`}>
-                            <Button variant="outline" className="h-10 px-4 rounded-xl border-slate-200 text-slate-700 font-bold hover:bg-white hover:shadow-md transition-all gap-2 text-sm">
-                              <Edit className="h-4 w-4" />
-                              Editar
-                            </Button>
-                          </Link>
-                        )}
-
-                        {user?.role === "admin" && order.status !== "cancelled" && (
-                          <Button 
-                            variant={order.rescheduleRequested === 1 ? "default" : "outline"}
-                            className={`h-10 px-4 rounded-xl font-bold transition-all gap-2 text-sm ${
-                              order.rescheduleRequested === 1 
-                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700' 
-                                : 'border-orange-200 text-orange-600 hover:bg-orange-50'
-                            }`}
-                            onClick={() => {
-                              setRescheduleOrderId(order.id);
-                              if (order.rescheduleRequested === 1) {
-                                setRescheduleData({
-                                  date: order.requestedDate || "",
-                                  time: order.requestedTime || "",
-                                  reason: order.rescheduleReason || ""
-                                });
-                              } else {
-                                setRescheduleData({
-                                  date: order.deliveryDate || "",
-                                  time: order.deliveryTime || "",
-                                  reason: order.rescheduleReason || ""
-                                });
-                              }
-                            }}
-                          >
-                            <Calendar className="h-4 w-4" />
-                            {order.rescheduleRequested === 1 ? "Revisar" : "Reprogramar"}
-                          </Button>
-                        )}
-
-                        {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
-                          <Button 
-                            className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2 text-sm"
-                            onClick={() => setDeliverOrderId(order.id)}
-                          >
-                            <DollarSign className="h-4 w-4" />
-                            Entregar
-                          </Button>
-                        )}
-
-                        {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
-                          <Button
-                            variant="outline"
-                            className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
-                            onClick={() => setCancellationRequestOrderId(order.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Dar de Baja
-                          </Button>
-                        )}
-                        
-                        {user?.role === "admin" && order.status !== "cancelled" && (
-                          <Button 
-                            variant="outline"
-                            className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
-                            onClick={() => setDismissOrderId(order.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Cancelar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Tabs de Segmentación */}
+        <Tabs defaultValue="route" className="space-y-8">
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-slate-100 p-1 rounded-[1.5rem] h-14 w-full sm:w-auto">
+              <TabsTrigger value="route" className="rounded-[1.2rem] h-12 px-6 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                En Ruta
+                <Badge className="ml-2 bg-slate-900 text-white border-none text-[10px]">
+                  {sortedOrders.filter(o => ["pending", "assigned", "in_transit", "rescheduled"].includes(o.status)).length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="delivered" className="rounded-[1.2rem] h-12 px-6 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                Entregados
+                <Badge className="ml-2 bg-emerald-500 text-white border-none text-[10px]">
+                  {sortedOrders.filter(o => o.status === "delivered").length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="cancelled" className="rounded-[1.2rem] h-12 px-6 font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                Bajas
+                <Badge className="ml-2 bg-red-500 text-white border-none text-[10px]">
+                  {sortedOrders.filter(o => o.status === "cancelled").length}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+            <div className="hidden sm:block">
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                Total: {sortedOrders.length} pedidos
+              </p>
+            </div>
           </div>
-        )}
+
+          <TabsContent value="route" className="space-y-6">
+            <OrderGrid orders={sortedOrders.filter(o => ["pending", "assigned", "in_transit", "rescheduled"].includes(o.status))} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+          </TabsContent>
+
+          <TabsContent value="delivered" className="space-y-6">
+            <OrderGrid orders={sortedOrders.filter(o => o.status === "delivered")} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+          </TabsContent>
+
+          <TabsContent value="cancelled" className="space-y-6">
+            <OrderGrid orders={sortedOrders.filter(o => o.status === "cancelled")} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+          </TabsContent>
+        </Tabs>
 
         {/* Diálogo: solicitar baja (repartidor) */}
         <Dialog open={cancellationRequestOrderId !== null} onOpenChange={(open) => !open && setCancellationRequestOrderId(null)}>
@@ -1152,5 +1071,212 @@ export default function Orders() {
         </Dialog>
       </div>
     </div>
+  );
+}
+function OrderGrid({ orders, user, openWhatsApp, setRescheduleOrderId, setRescheduleData, setDeliverOrderId, setCancellationRequestOrderId, setDismissOrderId }: any) {
+  if (orders.length === 0) {
+    return (
+      <div className="bg-white/40 rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">
+        <Package className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No hay pedidos en esta categoría</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {orders.map((order: any) => (
+        <Card key={order.id} className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-300 rounded-[2.5rem] overflow-hidden bg-white group">
+          <CardContent className="p-0">
+            <div className="p-6 md:p-8 flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">#{order.orderNumber}</h3>
+                    <StatusBadge status={order.status} />
+                  </div>
+                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">{order.zone}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total</p>
+                  <p className="text-2xl font-black text-emerald-600 tracking-tighter">{formatCurrency(order.totalPrice)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Entrega</p>
+                  <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                     <CalendarIcon className="h-3.5 w-3.5 text-slate-400" />
+                     {order.deliveryDate}
+                  </div>
+                  {order.deliveryTime && (
+                     <p className="text-xs text-slate-500 font-medium mt-0.5 ml-5">{order.deliveryTime}</p>
+                  )}
+                </div>
+                <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Repartidor</p>
+                  <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                     <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                     <span className="truncate">{order.deliveryPersonName || "Sin asignar"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {(order.rescheduleRequested === 1 || order.cancellationRequested === 1) && (
+                <div className="flex flex-col gap-2">
+                  {order.rescheduleRequested === 1 && (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-50 text-orange-700 border border-orange-100">
+                      <CalendarIcon className="h-4 w-4 animate-pulse" />
+                      <span className="text-xs font-black uppercase">Reprogramación Solicitada</span>
+                    </div>
+                  )}
+                  {order.cancellationRequested === 1 && (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-100">
+                      <Trash2 className="h-4 w-4 animate-pulse" />
+                      <span className="text-xs font-black uppercase">Baja Solicitada</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {order.notes && (
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-100/50">
+                  <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Observaciones</p>
+                  <p className="text-sm text-amber-800 font-medium leading-relaxed italic">"{order.notes}"</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 md:p-5 bg-slate-50/50 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    className="h-10 px-4 rounded-xl bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200 shadow-sm font-bold gap-2 text-sm"
+                    onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </Button>
+                  {user?.role === "admin" && (
+                    <Link href={`/order/${order.id}`}>
+                      <Button
+                        variant="outline"
+                        className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Ver detalle
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {user?.role === "admin" && (
+                    <Link href={`/edit-order/${order.id}`}>
+                      <Button variant="outline" className="h-10 px-4 rounded-xl border-slate-200 text-slate-700 font-bold hover:bg-white hover:shadow-md transition-all gap-2 text-sm">
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </Button>
+                    </Link>
+                  )}
+
+                  {user?.role === "admin" && order.status !== "cancelled" && (
+                    <Button 
+                      variant={order.rescheduleRequested === 1 ? "default" : "outline"}
+                      className={`h-10 px-4 rounded-xl font-bold transition-all gap-2 text-sm ${
+                        order.rescheduleRequested === 1 
+                          ? 'bg-orange-600 text-white shadow-lg shadow-orange-200 hover:bg-orange-700' 
+                          : 'border-orange-200 text-orange-600 hover:bg-orange-50'
+                      }`}
+                      onClick={() => {
+                        setRescheduleOrderId(order.id);
+                        if (order.rescheduleRequested === 1) {
+                          setRescheduleData({
+                            date: order.requestedDate || "",
+                            time: order.requestedTime || "",
+                            reason: order.rescheduleReason || ""
+                          });
+                        } else {
+                          setRescheduleData({
+                            date: order.deliveryDate || "",
+                            time: order.deliveryTime || "",
+                            reason: order.rescheduleReason || ""
+                          });
+                        }
+                      }}
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                      {order.rescheduleRequested === 1 ? "Revisar" : "Reprogramar"}
+                    </Button>
+                  )}
+
+                  {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
+                    <Button 
+                      className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2 text-sm"
+                      onClick={() => setDeliverOrderId(order.id)}
+                    >
+                      <DollarSign className="h-4 w-4" />
+                      Entregar
+                    </Button>
+                  )}
+
+                  {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
+                    <Button
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
+                      onClick={() => setCancellationRequestOrderId(order.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Dar de Baja
+                    </Button>
+                  )}
+                  
+                  {user?.role === "admin" && order.status !== "cancelled" && (
+                    <Button 
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold gap-2 text-sm"
+                      onClick={() => setDismissOrderId(order.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "assigned": return "bg-blue-100 text-blue-800";
+      case "in_transit": return "bg-purple-100 text-purple-800";
+      case "delivered": return "bg-green-100 text-green-800";
+      case "cancelled": return "bg-red-100 text-red-800";
+      case "rescheduled": return "bg-orange-100 text-orange-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: "Pendiente", assigned: "Asignado", in_transit: "En tránsito",
+      delivered: "Entregado", cancelled: "Cancelado", rescheduled: "Reprogramado",
+    };
+    return labels[status] || status;
+  };
+
+  return (
+    <Badge className={`${getStatusColor(status)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-sm`}>
+      {getStatusLabel(status)}
+    </Badge>
   );
 }
