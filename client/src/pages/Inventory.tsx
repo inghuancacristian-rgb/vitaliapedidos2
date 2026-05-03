@@ -26,6 +26,8 @@ import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { ProductHistoryDialog } from "@/components/ProductHistoryDialog";
 import { formatCurrency } from "@/lib/currency";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Package, AlertTriangle, Info, History as HistoryIcon, LayoutGrid, List, Calendar, TriangleAlert } from "lucide-react";
 
 type InventoryTab = "finished" | "raw";
 
@@ -275,6 +277,8 @@ export default function Inventory() {
   const [batchNumber, setBatchNumber] = useState("");
   const [registerPurchase, setRegisterPurchase] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
     if (selectedItem) {
@@ -339,7 +343,17 @@ export default function Inventory() {
   );
   const lowStockRaw = useMemo(() => allRawItems.filter((item: any) => item.isLowStock) || [], [allRawItems]);
 
-  const displayItems = activeTab === "finished" ? finishedProducts : allRawItems;
+  const displayItems = useMemo(() => {
+    const baseItems = activeTab === "finished" ? finishedProducts : allRawItems;
+    if (!searchTerm) return baseItems;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return baseItems.filter((item: any) => 
+      item.product?.name?.toLowerCase().includes(lowerSearch) ||
+      item.product?.code?.toLowerCase().includes(lowerSearch)
+    );
+  }, [activeTab, finishedProducts, allRawItems, searchTerm]);
+
   const lowStockItems = activeTab === "finished" ? lowStockFinished : lowStockRaw;
 
   const inventorySummary = useMemo(() => {
@@ -476,261 +490,217 @@ export default function Inventory() {
           </div>
         </section>
 
-        <section className="soft-grid sm:grid-cols-2 xl:grid-cols-4">
-          <div className="metric-card">
-            <p className="text-sm font-semibold text-muted-foreground">Items visibles</p>
-            <p className="kpi-value mt-3">{inventorySummary.totalItems}</p>
-          </div>
-          <div className="metric-card">
-            <p className="text-sm font-semibold text-muted-foreground">Unidades en stock</p>
-            <p className="kpi-value mt-3">{inventorySummary.units}</p>
-          </div>
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-900" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-slate-50 rounded-2xl text-slate-900">
+                  <Package className="h-6 w-6" />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Visibles</p>
+              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.totalItems}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Registros en vista actual</p>
+            </CardContent>
+          </Card>
 
-          <div className="metric-card">
-            <p className="text-sm font-semibold text-muted-foreground">Con vencimiento</p>
-            <p className="kpi-value mt-3">{inventorySummary.expiring}</p>
-          </div>
+          <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+                  <Box className="h-6 w-6" />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidades Totales</p>
+              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.units}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Suma de stock actual</p>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500" />
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-red-50 rounded-2xl text-red-600">
+                  <AlertTriangle className="h-6 w-6" />
+                </div>
+                {inventorySummary.lowStock > 0 && <Badge variant="destructive" className="animate-pulse">Crítico</Badge>}
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Bajo</p>
+              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.lowStock}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Items por reponer</p>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-slate-900 group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/10 rounded-2xl text-white">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Estimado</p>
+              <p className="text-2xl font-black text-white tracking-tighter">
+                {formatCurrency(
+                  (activeTab === "finished" ? finishedProducts : allRawItems).reduce(
+                    (sum: number, item: any) => sum + (item.quantity * (item.product?.price || 0)), 0
+                  )
+                )}
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Costo total en stock</p>
+            </CardContent>
+          </Card>
         </section>
 
-        <section className="glass-panel p-2">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              onClick={() => setActiveTab("finished")}
-              className={`rounded-[1.2rem] px-4 py-4 text-left transition-all ${
-                activeTab === "finished"
-                  ? "bg-primary text-primary-foreground shadow-[0_18px_28px_-22px_var(--primary)]"
-                  : "bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-              }`}
-            >
-              <p className="text-sm font-semibold">Productos terminados</p>
-              <p className={`mt-1 text-sm ${activeTab === "finished" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                Venta directa y seguimiento comercial.
-              </p>
-            </button>
+        {/* Barra de Búsqueda y Tabs Sticky */}
+        <div className="sticky top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
+          <div className="flex flex-col gap-4">
+            <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/90 p-2">
+              <div className="flex flex-col md:flex-row items-center gap-4">
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full md:w-auto">
+                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12">
+                    <TabsTrigger value="finished" className="rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+                      Terminados
+                    </TabsTrigger>
+                    <TabsTrigger value="raw" className="rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+                      Insumos
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                
+                <div className="relative flex-1 group w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                  <Input 
+                    placeholder="Buscar por nombre o código de producto..." 
+                    className="h-12 pl-12 rounded-2xl border-slate-100 bg-slate-50/50 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
 
-            <button
-              onClick={() => setActiveTab("raw")}
-              className={`rounded-[1.2rem] px-4 py-4 text-left transition-all ${
-                activeTab === "raw"
-                  ? "bg-primary text-primary-foreground shadow-[0_18px_28px_-22px_var(--primary)]"
-                  : "bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-              }`}
-            >
-              <p className="text-sm font-semibold">Insumos y materias primas</p>
-              <p className={`mt-1 text-sm ${activeTab === "raw" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                Control de abastecimiento y reposicion.
-              </p>
-            </button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`rounded-xl h-11 w-11 ${viewMode === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-400"}`}
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <LayoutGrid className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`rounded-xl h-11 w-11 ${viewMode === "list" ? "bg-slate-100 text-slate-900" : "text-slate-400"}`}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-5 w-5" />
+                  </Button>
+                  {user?.role === "admin" && (
+                    <AddProductDialog onProductAdded={() => refetch()} />
+                  )}
+                </div>
+              </div>
+            </Card>
           </div>
-        </section>
+        </div>
 
         <SmartAlerts />
 
-
-
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>
-                {activeTab === "finished" ? "Productos terminados" : "Insumos y materias primas"}
-              </CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {displayItems.length} registros visibles en la vista actual.
-              </p>
+        {displayItems.length === 0 ? (
+          <div className="bg-white rounded-[2.5rem] p-12 text-center border-2 border-dashed border-slate-200">
+             <Package className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+             <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">No se encontraron productos</p>
+             <Button variant="link" className="mt-2 text-primary" onClick={() => setSearchTerm("")}>Limpiar búsqueda</Button>
+          </div>
+        ) : (
+          viewMode === "grid" || isMobile ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {displayItems.map((item: any) => (
+                <InventoryCard 
+                  key={item.id} 
+                  item={item} 
+                  user={user} 
+                  refetch={refetch}
+                  isDialogOpen={isDialogOpen}
+                  selectedItem={selectedItem}
+                  setSelectedItem={setSelectedItem}
+                  setIsDialogOpen={setIsDialogOpen}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  reason={reason}
+                  setReason={setReason}
+                  type={type}
+                  setType={setType}
+                  price={price}
+                  setPrice={setPrice}
+                  expiryDate={expiryDate}
+                  setExpiryDate={setExpiryDate}
+                  registerPurchase={registerPurchase}
+                  setRegisterPurchase={setRegisterPurchase}
+                  paymentMethod={paymentMethod}
+                  setPaymentMethod={setPaymentMethod}
+                  handleUpdateInventory={handleUpdateInventory}
+                  updateInventoryMutation={updateInventoryMutation}
+                />
+              ))}
             </div>
-            {!isMobile && user?.role === "admin" ? (
-              <div className="flex gap-2">
-                <Button onClick={() => window.print()} variant="outline" className="gap-2 bg-white/80 no-print">
-                  <Printer className="h-4 w-4" /> Imprimir
-                </Button>
-                <AddProductDialog onProductAdded={() => refetch()} />
-              </div>
-            ) : null}
-          </CardHeader>
-
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            {isMobile ? (
-              <div className="grid gap-4">
-                {displayItems.map((item: any) => {
-                  const margin =
-                    item.product?.price != null && item.product?.salePrice != null
-                      ? item.product.salePrice - item.product.price
-                      : null;
-
-                  return (
-                    <div key={item.id} className="rounded-[1.45rem] border border-white/70 bg-white/85 p-4 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <ProductThumb item={item} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate text-base font-bold text-slate-900">{item.product?.name}</p>
-                              <p className="text-sm text-muted-foreground">{item.product?.code}</p>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                            <InfoBlock label="Compra" value={item.product?.price != null ? formatCurrency(item.product.price) : "-"} accent="text-sky-700" />
-                            <InfoBlock label="Venta" value={item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"} accent="text-emerald-700" />
-                            <InfoBlock label="Stock" value={`${item.quantity} uds.`} />
-                            <InfoBlock label="Pedidos" value={`${item.onOrder || 0} uds.`} accent="text-orange-600" />
-
-                            <InfoBlock
-                              label="Margen"
-                              value={margin != null ? formatCurrency(margin) : "-"}
-                              accent={margin != null && margin < 0 ? "text-red-600" : "text-emerald-700"}
-                            />
-                            <InfoBlock
-                              label="Vencimiento"
-                              value={formatExpiryDate(item.expiryDate)}
-                              accent={getExpiryTone(item.expiryDate)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <ProductHistoryDialog productId={item.productId} productName={item.product?.name || "Producto"} />
-                        {user?.role === "admin" ? (
-                          <>
-                            <EditProductDialog product={item.product} onProductUpdated={() => refetch()} />
-                            <AdjustInventoryDialog
-                              item={item}
-                              isOpen={isDialogOpen && selectedItem?.id === item.id}
-                              onOpenChange={(value) => {
-                                setIsDialogOpen(value);
-                                if (value) setSelectedItem(item);
-                              }}
-                              quantity={quantity}
-                              setQuantity={setQuantity}
-                              reason={reason}
-                              setReason={setReason}
-                              type={type}
-                              setType={setType}
-                              price={price}
-                              setPrice={setPrice}
-                              expiryDate={expiryDate}
-                              setExpiryDate={setExpiryDate}
-                              registerPurchase={registerPurchase}
-                              setRegisterPurchase={setRegisterPurchase}
-                              paymentMethod={paymentMethod}
-                              setPaymentMethod={setPaymentMethod}
-                              onSubmit={handleUpdateInventory}
-                              isPending={updateInventoryMutation.isPending}
-                            />
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="table-shell">
-                <div className="table-scroll">
-                  <table className="min-w-[980px] w-full text-sm">
-                    <thead className="bg-slate-50/80 text-slate-700">
-                      <tr className="border-b border-border/70">
-                        <th className="w-16 px-4 py-4 text-left font-semibold">Imagen</th>
-                        <th className="px-4 py-4 text-left font-semibold">Producto</th>
-                        <th className="px-4 py-4 text-left font-semibold">Codigo</th>
-                        <th className="px-4 py-4 text-right text-xs font-semibold uppercase">Precio compra</th>
-                        <th className="px-4 py-4 text-right text-xs font-semibold uppercase">Precio venta</th>
-                        <th className="px-4 py-4 text-right text-xs font-semibold uppercase">Dif / margen</th>
-                        <th className="px-4 py-4 text-center font-semibold">Stock actual</th>
-                        <th className="px-4 py-4 text-center font-semibold">Pedidos</th>
-
-                        <th className="px-4 py-4 text-center font-semibold">Vencimiento</th>
-
-                        <th className="px-4 py-4 text-center font-semibold">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayItems.map((item: any) => {
-                        const margin =
-                          item.product?.price != null && item.product?.salePrice != null
-                            ? item.product.salePrice - item.product.price
-                            : null;
-
-                        return (
-                          <tr key={item.id} className="border-b border-border/60 transition-colors hover:bg-accent/30">
-                            <td className="px-4 py-4">
-                              <ProductThumb item={item} />
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-2">
-                                <Box className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-semibold text-slate-900">{item.product?.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-muted-foreground">{item.product?.code}</td>
-                            <td className="px-4 py-4 text-right font-semibold text-sky-700">
-                              {item.product?.price != null ? formatCurrency(item.product.price) : "-"}
-                            </td>
-                            <td className="px-4 py-4 text-right font-semibold text-emerald-700">
-                              {item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}
-                            </td>
-                            <td className="px-4 py-4 text-right font-bold">
-                              {margin != null ? (
-                                <span className={margin < 0 ? "text-red-600" : "text-emerald-700"}>
-                                  {formatCurrency(margin)}
-                                </span>
-                              ) : (
-                                "-"
-                              )}
-                            </td>
-                            <td className="px-4 py-4 text-center font-semibold text-slate-900">{item.quantity}</td>
-                            <td className="px-4 py-4 text-center font-semibold text-orange-600">{item.onOrder || 0}</td>
-
-                            <td className={`px-4 py-4 text-center text-sm ${getExpiryTone(item.expiryDate)}`}>
-                              {item.expiryDate ? formatExpiryDate(item.expiryDate) : "-"}
-                            </td>
-
-                            <td className="px-4 py-4">
-                              <div className="flex flex-wrap items-center justify-center gap-2">
-                                <ProductHistoryDialog
-                                  productId={item.productId}
-                                  productName={item.product?.name || "Producto"}
-                                />
-                                {user?.role === "admin" ? (
-                                  <>
-                                    <EditProductDialog product={item.product} onProductUpdated={() => refetch()} />
-                                    <AdjustInventoryDialog
-                                      item={item}
-                                      isOpen={isDialogOpen && selectedItem?.id === item.id}
-                                      onOpenChange={(value) => {
-                                        setIsDialogOpen(value);
-                                        if (value) setSelectedItem(item);
-                                      }}
-                                      quantity={quantity}
-                                      setQuantity={setQuantity}
-                                      reason={reason}
-                                      setReason={setReason}
-                                      type={type}
-                                      setType={setType}
-                                      price={price}
-                                      setPrice={setPrice}
-                                      expiryDate={expiryDate}
-                                      setExpiryDate={setExpiryDate}
-                                      registerPurchase={registerPurchase}
-                                      setRegisterPurchase={setRegisterPurchase}
-                                      paymentMethod={paymentMethod}
-                                      setPaymentMethod={setPaymentMethod}
-                                      onSubmit={handleUpdateInventory}
-                                      isPending={updateInventoryMutation.isPending}
-                                    />
-                                  </>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+          ) : (
+            <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white">
+              <CardContent className="p-0">
+                <div className="table-shell">
+                  <div className="table-scroll">
+                    <table className="min-w-[980px] w-full text-sm">
+                      <thead className="bg-slate-50/80 text-slate-700">
+                        <tr className="border-b border-border/70">
+                          <th className="w-16 px-6 py-5 text-left font-semibold uppercase text-[10px] tracking-widest">Imagen</th>
+                          <th className="px-6 py-5 text-left font-semibold uppercase text-[10px] tracking-widest">Producto</th>
+                          <th className="px-6 py-5 text-left font-semibold uppercase text-[10px] tracking-widest">Código</th>
+                          <th className="px-6 py-5 text-right font-semibold uppercase text-[10px] tracking-widest">P. Compra</th>
+                          <th className="px-6 py-5 text-right font-semibold uppercase text-[10px] tracking-widest">P. Venta</th>
+                          <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Stock</th>
+                          <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Vencimiento</th>
+                          <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayItems.map((item: any) => (
+                          <InventoryRow 
+                            key={item.id} 
+                            item={item} 
+                            user={user} 
+                            refetch={refetch}
+                            isDialogOpen={isDialogOpen}
+                            selectedItem={selectedItem}
+                            setSelectedItem={setSelectedItem}
+                            setIsDialogOpen={setIsDialogOpen}
+                            quantity={quantity}
+                            setQuantity={setQuantity}
+                            reason={reason}
+                            setReason={setReason}
+                            type={type}
+                            setType={setType}
+                            price={price}
+                            setPrice={setPrice}
+                            expiryDate={expiryDate}
+                            setExpiryDate={setExpiryDate}
+                            registerPurchase={registerPurchase}
+                            setRegisterPurchase={setRegisterPurchase}
+                            paymentMethod={paymentMethod}
+                            setPaymentMethod={setPaymentMethod}
+                            handleUpdateInventory={handleUpdateInventory}
+                            updateInventoryMutation={updateInventoryMutation}
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
+          )
+        )}
 
             {displayItems.length === 0 ? (
               <div className="py-10 text-center text-muted-foreground">
@@ -871,19 +841,196 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
   );
 }
 
-function InfoBlock({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: string;
-}) {
+function InventoryCard({ 
+  item, user, refetch, isDialogOpen, selectedItem, setSelectedItem, setIsDialogOpen, 
+  quantity, setQuantity, reason, setReason, type, setType, price, setPrice, 
+  expiryDate, setExpiryDate, registerPurchase, setRegisterPurchase, paymentMethod, setPaymentMethod, 
+  handleUpdateInventory, updateInventoryMutation 
+}: any) {
+  const margin = item.product?.price != null && item.product?.salePrice != null
+    ? item.product.salePrice - item.product.price
+    : null;
+
   return (
-    <div className="rounded-xl border border-white/70 bg-slate-50/70 px-3 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-sm font-bold ${accent || "text-slate-900"}`}>{value}</p>
+    <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] transition-all duration-300 rounded-[2.5rem] overflow-hidden bg-white group">
+      <CardContent className="p-0">
+        <div className="p-6 md:p-8 flex flex-col gap-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <ProductThumb item={item} />
+              <div className="space-y-1">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{item.product?.name}</h3>
+                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{item.product?.code}</p>
+              </div>
+            </div>
+            {item.isLowStock && (
+              <Badge variant="destructive" className="animate-pulse px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                Stock Bajo
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Actual</p>
+              <div className="flex items-end gap-2">
+                <p className="text-2xl font-black text-slate-900 tracking-tighter">{item.quantity}</p>
+                <p className="text-xs text-slate-500 font-bold mb-1 uppercase">Uds.</p>
+              </div>
+            </div>
+            <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Pedidos</p>
+              <div className="flex items-end gap-2">
+                <p className="text-2xl font-black text-orange-600 tracking-tighter">{item.onOrder || 0}</p>
+                <p className="text-xs text-orange-400 font-bold mb-1 uppercase">Uds.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-3xl border border-sky-100 bg-sky-50/30">
+              <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-1">P. Compra</p>
+              <p className="text-lg font-black text-sky-900">{item.product?.price != null ? formatCurrency(item.product.price) : "-"}</p>
+            </div>
+            <div className="p-4 rounded-3xl border border-emerald-100 bg-emerald-50/30">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">P. Venta</p>
+              <p className="text-lg font-black text-emerald-900">{item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}</p>
+            </div>
+          </div>
+
+          {margin != null && (
+             <div className={`p-4 rounded-3xl flex items-center justify-between ${margin < 0 ? 'bg-red-50 border border-red-100' : 'bg-slate-900 border border-slate-800'}`}>
+                <p className={`text-[10px] font-black uppercase tracking-widest ${margin < 0 ? 'text-red-600' : 'text-slate-400'}`}>Margen por unidad</p>
+                <p className={`text-xl font-black tracking-tighter ${margin < 0 ? 'text-red-700' : 'text-emerald-400'}`}>{formatCurrency(margin)}</p>
+             </div>
+          )}
+
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100">
+            <Calendar className={`h-4 w-4 ${getExpiryTone(item.expiryDate)}`} />
+            <div className="flex flex-col">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vencimiento</p>
+               <p className={`text-xs font-bold ${getExpiryTone(item.expiryDate)}`}>{formatExpiryDate(item.expiryDate)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex flex-wrap items-center justify-center gap-2">
+          <ProductHistoryDialog productId={item.productId} productName={item.product?.name || "Producto"} />
+          {user?.role === "admin" && (
+            <>
+              <EditProductDialog product={item.product} onProductUpdated={() => refetch()} />
+              <AdjustInventoryDialog
+                item={item}
+                isOpen={isDialogOpen && selectedItem?.id === item.id}
+                onOpenChange={(value) => {
+                  setIsDialogOpen(value);
+                  if (value) setSelectedItem(item);
+                }}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                reason={reason}
+                setReason={setReason}
+                type={type}
+                setType={setType}
+                price={price}
+                setPrice={setPrice}
+                expiryDate={expiryDate}
+                setExpiryDate={setExpiryDate}
+                registerPurchase={registerPurchase}
+                setRegisterPurchase={setRegisterPurchase}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                onSubmit={handleUpdateInventory}
+                isPending={updateInventoryMutation.isPending}
+              />
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InventoryRow({ 
+  item, user, refetch, isDialogOpen, selectedItem, setSelectedItem, setIsDialogOpen, 
+  quantity, setQuantity, reason, setReason, type, setType, price, setPrice, 
+  expiryDate, setExpiryDate, registerPurchase, setRegisterPurchase, paymentMethod, setPaymentMethod, 
+  handleUpdateInventory, updateInventoryMutation 
+}: any) {
+  const margin = item.product?.price != null && item.product?.salePrice != null
+    ? item.product.salePrice - item.product.price
+    : null;
+
+  return (
+    <tr className="border-b border-border/60 transition-colors hover:bg-slate-50/50 group">
+      <td className="px-6 py-4">
+        <ProductThumb item={item} />
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-slate-900">{item.product?.name}</span>
+          {item.isLowStock && <Badge variant="destructive" className="h-4 w-4 rounded-full p-0 flex items-center justify-center" title="Stock Bajo" />}
+        </div>
+      </td>
+      <td className="px-6 py-4 text-slate-400 font-medium">{item.product?.code}</td>
+      <td className="px-6 py-4 text-right font-black text-sky-700">
+        {item.product?.price != null ? formatCurrency(item.product.price) : "-"}
+      </td>
+      <td className="px-6 py-4 text-right font-black text-emerald-700">
+        {item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}
+      </td>
+      <td className="px-6 py-4 text-center">
+        <div className="flex flex-col items-center">
+          <span className="text-base font-black text-slate-900">{item.quantity}</span>
+          {item.onOrder > 0 && <span className="text-[10px] text-orange-500 font-bold">+{item.onOrder} ped.</span>}
+        </div>
+      </td>
+      <td className={`px-6 py-4 text-center font-bold text-xs ${getExpiryTone(item.expiryDate)}`}>
+        {item.expiryDate ? formatExpiryDate(item.expiryDate) : "-"}
+      </td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ProductHistoryDialog productId={item.productId} productName={item.product?.name || "Producto"} />
+          {user?.role === "admin" && (
+            <>
+              <EditProductDialog product={item.product} onProductUpdated={() => refetch()} />
+              <AdjustInventoryDialog
+                item={item}
+                isOpen={isDialogOpen && selectedItem?.id === item.id}
+                onOpenChange={(value) => {
+                  setIsDialogOpen(value);
+                  if (value) setSelectedItem(item);
+                }}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                reason={reason}
+                setReason={setReason}
+                type={type}
+                setType={setType}
+                price={price}
+                setPrice={setPrice}
+                expiryDate={expiryDate}
+                setExpiryDate={setExpiryDate}
+                registerPurchase={registerPurchase}
+                setRegisterPurchase={setRegisterPurchase}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                onSubmit={handleUpdateInventory}
+                isPending={updateInventoryMutation.isPending}
+              />
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function InfoBlock({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+      <p className={`text-sm font-bold ${accent || "text-slate-900"}`}>{value}</p>
     </div>
   );
 }
@@ -894,32 +1041,36 @@ function SmartAlerts() {
   if (isLoading || !alerts || alerts.length === 0) return null;
 
   return (
-    <Card className="border-amber-200 bg-amber-50/30 overflow-hidden shadow-sm no-print">
-      <CardHeader className="py-4">
-        <div className="flex items-center gap-2 text-amber-700">
-          <Sparkles className="h-5 w-5" />
-          <CardTitle className="text-base font-bold">Asistente de Inventario Inteligente</CardTitle>
+    <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-amber-50/50 overflow-hidden no-print mb-8">
+      <CardHeader className="py-6 px-8">
+        <div className="flex items-center gap-3 text-amber-700">
+          <div className="p-2 bg-amber-100 rounded-xl">
+             <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-black uppercase tracking-tight">Asistente de Inventario</CardTitle>
+            <CardDescription className="text-amber-600 font-medium">Análisis basado en la velocidad de ventas (30 días)</CardDescription>
+          </div>
         </div>
-        <CardDescription className="text-amber-600/80">Análisis basado en la velocidad de ventas de los últimos 30 días.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y divide-amber-100">
+        <div className="divide-y divide-amber-100/50">
           {alerts.map((alert: any) => (
-            <div key={alert.productId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
-              <div className="flex items-center gap-3">
-                <div className={`h-2 w-2 rounded-full ${alert.status === 'critical' ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
+            <div key={alert.productId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 px-8 hover:bg-amber-100/20 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className={`h-3 w-3 rounded-full ${alert.status === 'critical' ? 'bg-red-500 animate-pulse' : 'bg-amber-500'}`} />
                 <div>
-                  <p className="font-bold text-slate-900">{alert.productName}</p>
-                  <p className="text-xs text-slate-500">Stock: {alert.totalStock} uds. | Venta: {alert.dailyVelocity} uds/día</p>
+                  <p className="font-black text-slate-900 text-base">{alert.productName}</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Stock: {alert.totalStock} uds. | Venta: {alert.dailyVelocity} uds/día</p>
                 </div>
               </div>
               
-              <div className="flex flex-col sm:items-end gap-1">
-                <Badge variant={alert.status === 'critical' ? 'destructive' : 'outline'} className="w-fit">
-                  {alert.daysRemaining <= 0 ? '¡Sin Stock!' : `Quedan ~${alert.daysRemaining} días`}
+              <div className="flex flex-col sm:items-end gap-2">
+                <Badge variant={alert.status === 'critical' ? 'destructive' : 'outline'} className="rounded-full px-4 py-1 font-black uppercase text-[10px] tracking-widest border-none shadow-sm">
+                  {alert.daysRemaining <= 0 ? '¡SIN STOCK!' : `QUEDAN ~${alert.daysRemaining} DÍAS`}
                 </Badge>
                 {alert.urgentExpiry && (
-                  <p className="text-[10px] text-red-600 font-bold flex items-center gap-1">
+                  <p className="text-[10px] text-red-600 font-black uppercase tracking-widest flex items-center gap-1">
                     <TriangleAlert className="h-3 w-3" /> Vence: {new Date(alert.urgentExpiry).toLocaleDateString()}
                   </p>
                 )}
