@@ -429,6 +429,14 @@ export default function Orders() {
               </Button>
             </Link>
           )}
+          {user?.role === "user" && (
+            <Link href="/delivery-load">
+              <Button className="h-14 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-100 gap-3 font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Package className="h-6 w-6" />
+                Ver mi carga
+              </Button>
+            </Link>
+          )}
         </div>
 
         <Card className="mb-10 border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/80 backdrop-blur-md">

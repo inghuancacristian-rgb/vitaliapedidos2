@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import MobileMenu from "./MobileMenu";
 import { Link, useLocation } from "wouter";
-import { ChevronRight, LayoutDashboard, ShoppingBag } from "lucide-react";
+import { ChevronRight, LayoutDashboard, ShoppingBag, Package } from "lucide-react";
 
 export default function AppHeader() {
   const { user } = useAuth();
@@ -21,6 +21,7 @@ export default function AppHeader() {
     : [
         { href: "/", label: "Inicio" },
         { href: "/orders", label: "Mis Pedidos" },
+        { href: "/delivery-load", label: "Mi Carga", icon: Package },
         { href: "/sales", label: "Ventas", icon: ShoppingBag },
         { href: "/repartidor/finance", label: "Caja" },
       ];
