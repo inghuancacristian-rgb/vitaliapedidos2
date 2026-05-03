@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2 } from "lucide-react";
+import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2, Package } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
