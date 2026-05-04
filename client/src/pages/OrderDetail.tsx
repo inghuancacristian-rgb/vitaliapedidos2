@@ -3,8 +3,8 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useRoute, useLocation } from "wouter";
-import { MessageCircle, MapPin, DollarSign, Receipt, Banknote, QrCode, Building2, AlertCircle, Calendar, Trash2 } from "lucide-react";
+import { useRoute, useLocation, Link } from "wouter";
+import { MessageCircle, MapPin, DollarSign, Receipt, Banknote, QrCode, Building2, AlertCircle, Calendar, Trash2, Edit } from "lucide-react";
 import { useState } from "react";
 import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
@@ -136,6 +136,14 @@ export default function OrderDetail() {
             <Receipt className="h-4 w-4" />
             Generar Recibo / PDF
           </Button>
+          {user?.role === "admin" && (
+            <Link href={`/edit-order/${orderId}`}>
+              <Button variant="default" className="gap-2 bg-slate-900 shadow-lg">
+                <Edit className="h-4 w-4" />
+                Editar Pedido
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Estilos para impresión */}

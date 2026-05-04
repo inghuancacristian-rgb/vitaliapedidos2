@@ -951,13 +951,21 @@ export default function Sales() {
                     </div>
                   ) : (
                   <div className="space-y-2">
-                    {computedCart.items.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Package className="mb-3 h-12 w-12 text-muted-foreground/40" />
-                        <p className="text-muted-foreground">Agrega productos para comenzar la venta.</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Usa el buscador de arriba o presiona Ctrl+B</p>
-                      </div>
-                    ) : (
+                      {computedCart.items.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <Package className="mb-3 h-12 w-12 text-muted-foreground/40" />
+                          <p className="text-muted-foreground">Agrega productos para comenzar la venta.</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Usa el buscador de arriba o presiona Ctrl+B</p>
+                          <Button 
+                            variant="outline" 
+                            className="mt-6 rounded-2xl border-dashed border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold gap-2 px-8 h-12"
+                            onClick={() => productSearchRef.current?.focus()}
+                          >
+                            <Plus className="h-5 w-5" />
+                            Añadir Productos
+                          </Button>
+                        </div>
+                      ) : (
                       computedCart.items.map((item) => (
                         <div key={item.productId} className="flex items-center gap-3 rounded-xl border bg-white px-4 py-3 transition-colors hover:bg-slate-50/60">
                           <div className="min-w-0 flex-1">

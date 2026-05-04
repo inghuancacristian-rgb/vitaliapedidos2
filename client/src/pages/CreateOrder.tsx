@@ -403,8 +403,8 @@ export default function CreateOrder() {
                 <Button type="button" variant="secondary" size="sm" onClick={() => setIsGalleryOpen(true)} className="rounded-full font-bold shadow-lg gap-2">
                   <Grid className="h-4 w-4" /> Catálogo
                 </Button>
-                <Button type="button" variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg">
-                  + Rápido
+                <Button type="button" variant="secondary" size="sm" onClick={handleAddItem} className="rounded-full font-bold shadow-lg gap-2">
+                  <Plus className="h-4 w-4" /> Añadir Item
                 </Button>
               </div>
             </CardHeader>
@@ -502,7 +502,19 @@ export default function CreateOrder() {
                     </Button>
                   )}
                 </div>
-              ))}
+              {formData.items.length > 0 && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-14 rounded-2xl border-dashed border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold gap-2"
+                    onClick={handleAddItem}
+                  >
+                    <Plus className="h-5 w-5" />
+                    Añadir otro producto a la lista
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

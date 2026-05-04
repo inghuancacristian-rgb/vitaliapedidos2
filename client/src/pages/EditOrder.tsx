@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, Clipboard, ArrowLeft } from "lucide-react";
+import { Check, Clipboard, ArrowLeft, Plus } from "lucide-react";
 
 export default function EditOrder() {
   const { user } = useAuth();
@@ -422,7 +422,19 @@ export default function EditOrder() {
                     Quitar Producto
                   </Button>
                 </div>
-              ))}
+              {formData.items.length > 0 && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-14 rounded-2xl border-dashed border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold gap-2"
+                    onClick={handleAddItem}
+                  >
+                    <Plus className="h-5 w-5" />
+                    Añadir otro producto a la lista
+                  </Button>
+                </div>
+              )}
 
               <div className="pt-6 flex justify-between items-center border-t border-slate-100">
                 <div className="flex flex-col">
