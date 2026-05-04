@@ -2245,40 +2245,10 @@ export async function processFinancialLiquidation(closureId: number, force = fal
 
   // 1. Registrar ingresos de ventas (órdenes entregadas)
   await createFinancialTransactionsForDeliveries(closureId, closure.userId, closure.date);
-
-  // 2. Registrar el ingreso del monto reportado en efectivo
-  if (closure.reportedCash > 0) {
-    await createFinancialTransaction({
-      type: "income",
-      category: "closure_report",
-      amount: closure.reportedCash,
-      paymentMethod: "cash",
-      userId: closure.userId,
-      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
-    });
-  }
-
-  if (closure.reportedQr > 0) {
-    await createFinancialTransaction({
-      type: "income",
-      category: "closure_report",
-      amount: closure.reportedQr,
-      paymentMethod: "qr",
-      userId: closure.userId,
-      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
-    });
-  }
-
-  if (closure.reportedTransfer > 0) {
-    await createFinancialTransaction({
-      type: "income",
-      category: "closure_report",
-      amount: closure.reportedTransfer,
-      paymentMethod: "transfer",
-      userId: closure.userId,
-      notes: `Ingreso por Cierre #${closureId} (Reportado)`,
-    });
-  }
+  
+  // Nota: Ya no se registra el monto "reportado" como un ingreso nuevo (closure_report)
+  // porque el dinero ya fue sumado correctamente en cada entrega y traspaso.
+  // Hacerlo causaría que el saldo se duplique erróneamente.
 }
 
 export async function cleanupDuplicateClosureReports() {

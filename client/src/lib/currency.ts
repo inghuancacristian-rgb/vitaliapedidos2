@@ -21,7 +21,13 @@ export function formatCurrency(amount: number): string {
  * @returns Cantidad en centavos (ej: 5050)
  */
 export function parsePrice(input: string): number {
-  const cleaned = input.replace(/,/g, ".").replace(/[^\d.]/g, "");
+  // Remover todo excepto números, puntos y comas
+  const sanitized = input.replace(/[^\d.,]/g, "");
+  // Encontrar el primer patrón que parezca un número (ej: "50", "50.5", "50,50")
+  const match = sanitized.match(/\d+([.,]\d+)?/);
+  if (!match) return 0;
+  
+  const cleaned = match[0].replace(/,/g, ".");
   const parts = cleaned.split(".");
 
   if (parts.length === 1) {
