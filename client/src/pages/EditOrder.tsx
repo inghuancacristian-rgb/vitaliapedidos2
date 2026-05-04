@@ -377,7 +377,7 @@ export default function EditOrder() {
                           setFormData({ ...formData, items: newItems });
                         }}
                       >
-                        <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
+                        <SelectTrigger className="w-full h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
