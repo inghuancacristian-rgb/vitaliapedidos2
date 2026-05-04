@@ -502,6 +502,7 @@ export default function CreateOrder() {
                     </Button>
                   )}
                 </div>
+              ))}
               {formData.items.length > 0 && (
                 <div className="pt-2">
                   <Button

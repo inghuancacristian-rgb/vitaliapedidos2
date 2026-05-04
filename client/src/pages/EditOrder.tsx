@@ -422,6 +422,7 @@ export default function EditOrder() {
                     Quitar Producto
                   </Button>
                 </div>
+              ))}
               {formData.items.length > 0 && (
                 <div className="pt-2">
                   <Button
