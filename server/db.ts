@@ -1216,7 +1216,8 @@ export async function getOrderItems(orderId: number) {
       const product = MOCK_PRODUCTS.find(p => p.id === item.productId);
       return {
         ...item,
-        productName: product ? product.name : "Producto #" + item.productId
+        productName: product ? product.name : "Producto #" + item.productId,
+        productCode: product ? product.code : ""
       };
     });
   }
@@ -1227,13 +1228,14 @@ export async function getOrderItems(orderId: number) {
   const itemsWithProductNames = await Promise.all(
     items.map(async (item: any) => {
       const productResult = await db
-        .select({ name: products.name })
+        .select({ name: products.name, code: products.code })
         .from(products)
         .where(eq(products.id, item.productId))
         .limit(1);
       return {
         ...item,
         productName: productResult.length > 0 ? productResult[0].name : "Producto #" + item.productId,
+        productCode: productResult.length > 0 ? productResult[0].code : "",
       };
     })
   );

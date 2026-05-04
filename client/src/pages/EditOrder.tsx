@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Check, Clipboard, ArrowLeft, Plus } from "lucide-react";
+import { Check, Clipboard, ArrowLeft, Plus, Search } from "lucide-react";
 
 export default function EditOrder() {
   const { user } = useAuth();
@@ -35,6 +35,7 @@ export default function EditOrder() {
   const orderId = parseInt(id || "0");
 
   const [showSummary, setShowSummary] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const [formData, setFormData] = useState({
     orderNumber: "",
     clientNumber: "",
@@ -379,9 +380,32 @@ export default function EditOrder() {
                         <SelectTrigger className="h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          {products?.map(p => (
-                            <SelectItem key={p.id} value={p.code}>{p.name}</SelectItem>
+                        <SelectContent className="max-h-[300px]">
+                          <div className="p-2 sticky top-0 bg-white z-10 border-b">
+                             <div className="relative">
+                               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                               <Input
+                                 placeholder="Buscar producto..."
+                                 className="pl-8 h-9 text-xs"
+                                 value={productSearch}
+                                 onChange={(e) => setProductSearch(e.target.value)}
+                                 onClick={(e) => e.stopPropagation()}
+                                 onKeyDown={(e) => e.stopPropagation()}
+                               />
+                             </div>
+                          </div>
+                          {products?.filter((p: any) => 
+                            p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                            p.code.toLowerCase().includes(productSearch.toLowerCase())
+                          ).map((p: any) => (
+                            <SelectItem key={p.id} value={p.code}>
+                              <div className="flex flex-col">
+                                <span className="font-bold">{p.name}</span>
+                                <span className={`text-[10px] ${p.stock <= p.minStock ? 'text-red-500 font-black' : 'text-slate-400'}`}>
+                                  Stock: {p.stock} uds.
+                                </span>
+                              </div>
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
