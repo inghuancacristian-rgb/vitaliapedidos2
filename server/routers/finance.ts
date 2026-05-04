@@ -75,7 +75,7 @@ export const financeRouter = router({
 
         if (!existing) {
           // Si es el método solicitado, usamos el monto enviado, sino 0
-          const amount = method === input.paymentMethod ? Math.round(input.openingAmount * 100) : 0;
+          const amount = method === input.paymentMethod ? Math.round(input.openingAmount) : 0;
           
           const result = await createCashOpening({
             openingAmount: amount,
@@ -111,7 +111,7 @@ export const financeRouter = router({
       if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       if (input.fromMethod === input.toMethod) throw new TRPCError({ code: "BAD_REQUEST", message: "Las cajas de origen y destino deben ser distintas." });
 
-      const amountInCents = Math.round(input.amount * 100);
+      const amountInCents = Math.round(input.amount);
       const { createFinancialTransaction } = await import("../db");
       
       await createFinancialTransaction({
@@ -172,7 +172,7 @@ export const financeRouter = router({
 
       return await createDeliveryExpense({
         deliveryPersonId: input.deliveryPersonId,
-        amount: Math.round(input.amount * 100),
+        amount: Math.round(input.amount),
         type: input.type,
         notes: input.notes,
         orderId: input.orderId,

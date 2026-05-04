@@ -503,19 +503,17 @@ export default function CreateOrder() {
                   )}
                 </div>
               ))}
-              {formData.items.length > 0 && (
-                <div className="pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-14 rounded-2xl border-dashed border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold gap-2"
-                    onClick={handleAddItem}
-                  >
-                    <Plus className="h-5 w-5" />
-                    Añadir otro producto a la lista
-                  </Button>
-                </div>
-              )}
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-14 rounded-2xl border-dashed border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50 font-bold gap-2"
+                  onClick={handleAddItem}
+                >
+                  <Plus className="h-5 w-5" />
+                  {formData.items.length === 0 ? "Añadir producto" : "Añadir otro producto"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

@@ -9,7 +9,7 @@
  */
 export function formatCurrency(amount: number): string {
   const bolivianos = amount / 100;
-  return `Bs. ${new Intl.NumberFormat("en-US", {
+  return `Bs. ${new Intl.NumberFormat("es-BO", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(bolivianos)}`;
@@ -21,7 +21,7 @@ export function formatCurrency(amount: number): string {
  * @returns Cantidad en centavos (ej: 5050)
  */
 export function parsePrice(input: string): number {
-  const cleaned = input.replace(/[^\d.]/g, "");
+  const cleaned = input.replace(/,/g, ".").replace(/[^\d.]/g, "");
   const parts = cleaned.split(".");
 
   if (parts.length === 1) {

@@ -416,23 +416,23 @@ export default function RepartidorFinance() {
                   <tbody className="divide-y divide-slate-50">
                     <tr className="hover:bg-slate-50/30 transition-colors">
                       <td className="px-8 py-4 font-bold text-slate-700 text-sm">Efectivo</td>
-                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedCashBs.toFixed(2)}</td>
-                      <td className="px-8 py-4 text-right font-black text-slate-900 font-mono">Bs. {(parseFloat(formData.reportedCash) || 0).toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">{formatCurrency(expected?.cash || 0)}</td>
+                      <td className="px-8 py-4 text-right font-black text-slate-900 font-mono">{formatCurrency((parseFloat(formData.reportedCash) || 0) * 100)}</td>
                     </tr>
                     <tr className="hover:bg-slate-50/30 transition-colors">
                       <td className="px-8 py-4 font-bold text-blue-700 text-sm">Cobros por QR</td>
-                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedQrBs.toFixed(2)}</td>
-                      <td className="px-8 py-4 text-right font-black text-blue-700 font-mono">Bs. {(parseFloat(formData.reportedQr) || 0).toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">{formatCurrency(expected?.qr || 0)}</td>
+                      <td className="px-8 py-4 text-right font-black text-blue-700 font-mono">{formatCurrency((parseFloat(formData.reportedQr) || 0) * 100)}</td>
                     </tr>
                     <tr className="hover:bg-slate-50/30 transition-colors">
                       <td className="px-8 py-4 font-bold text-purple-700 text-sm">Transferencias</td>
-                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">Bs. {expectedTransferBs.toFixed(2)}</td>
-                      <td className="px-8 py-4 text-right font-black text-purple-700 font-mono">Bs. {(parseFloat(formData.reportedTransfer) || 0).toFixed(2)}</td>
+                      <td className="px-8 py-4 text-right font-mono text-slate-400 text-xs">{formatCurrency(expected?.transfer || 0)}</td>
+                      <td className="px-8 py-4 text-right font-black text-purple-700 font-mono">{formatCurrency((parseFloat(formData.reportedTransfer) || 0) * 100)}</td>
                     </tr>
                     <tr className="bg-slate-900 text-white">
                       <td className="px-8 py-5 font-black uppercase text-[10px] tracking-widest">TOTAL RECAUDADO</td>
-                      <td className="px-8 py-5 text-right font-black font-mono text-slate-400">Bs. {totalExpectedBs.toFixed(2)}</td>
-                      <td className="px-8 py-5 text-right font-black font-mono text-emerald-400 text-xl tracking-tighter">Bs. {totalReported.toFixed(2)}</td>
+                      <td className="px-8 py-5 text-right font-black font-mono text-slate-400">{formatCurrency(Math.abs(expected?.cash || 0) + Math.abs(expected?.qr || 0) + Math.abs(expected?.transfer || 0))}</td>
+                      <td className="px-8 py-5 text-right font-black font-mono text-emerald-400 text-xl tracking-tighter">{formatCurrency(totalReported * 100)}</td>
                     </tr>
                   </tbody>
                </table>
@@ -444,8 +444,8 @@ export default function RepartidorFinance() {
                 <CheckCircle2 className="h-4 w-4" /> CUADRE PERFECTO
               </div>
             ) :
-             diffCents > 0 ? `SOBRANTE DE Bs. ${(diffCents / 100).toFixed(2)}` :
-             diffCents < 0 ? `FALTANTE DE Bs. ${(Math.abs(diffCents) / 100).toFixed(2)}` :
+             diffCents > 0 ? `SOBRANTE DE ${formatCurrency(diffCents)}` :
+             diffCents < 0 ? `FALTANTE DE ${formatCurrency(Math.abs(diffCents))}` :
              totalExpectedBs > 0 ? "Completá los montos reportados" : "Sin entregas pendientes de cuadre"}
           </div>
         </Card>

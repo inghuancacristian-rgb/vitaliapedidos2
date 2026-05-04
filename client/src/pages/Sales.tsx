@@ -40,6 +40,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   FileText,
+  Grid,
+  LayoutGrid,
 } from "lucide-react";
 
 type DiscountType = "none" | "percentage" | "fixed";
@@ -866,21 +868,35 @@ export default function Sales() {
                 <CardContent className="space-y-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      ref={productSearchRef}
-                      value={productSearch}
-                      onChange={(event) => setProductSearch(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && filteredProducts.length === 1) {
-                          addProductToCart(filteredProducts[0]);
-                        }
-                      }}
-                      placeholder="Buscar por nombre o código..."
-                      className="pl-9 pr-16"
-                    />
-                    <kbd className="absolute right-2 top-2 hidden rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:block">
-                      Ctrl+B
-                    </kbd>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                        <Input
+                          ref={productSearchRef}
+                          value={productSearch}
+                          onChange={(event) => setProductSearch(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && filteredProducts.length === 1) {
+                              addProductToCart(filteredProducts[0]);
+                            }
+                          }}
+                          placeholder="Buscar producto (Ctrl+B)..."
+                          className="pl-9 pr-16 h-12 rounded-2xl border-white/70 bg-white/75"
+                        />
+                        <kbd className="absolute right-2 top-3 hidden rounded border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground sm:block">
+                          Ctrl+B
+                        </kbd>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-12 w-12 rounded-2xl bg-white/75 border-white/70 shadow-sm"
+                        onClick={() => setProductSearch("")}
+                        title="Ver Catálogo"
+                      >
+                        <Grid className="h-5 w-5 text-slate-600" />
+                      </Button>
+                    </div>
                   </div>
 
                   {filteredProducts.length > 0 ? (
