@@ -461,6 +461,7 @@ export default function Sales() {
     setIsDetailOpen(true);
   };
 
+  const submitSale = () => {
     const isAdmin = user?.role === "admin";
     if (!openingStatus?.hasActive && !isAdmin) {
       toast.error(`Caja cerrada: Para registrar ventas en ${paymentMethodLabel(paymentMethod)}, primero debes realizar la apertura de caja.`);
