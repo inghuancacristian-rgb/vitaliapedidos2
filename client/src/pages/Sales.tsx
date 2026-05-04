@@ -720,7 +720,7 @@ export default function Sales() {
           className={
             isMobile
               ? "max-h-[94vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[1.6rem] border-white/70 bg-white/95 p-4 sm:max-w-[calc(100vw-1.5rem)] sm:p-6"
-              : "h-[88vh] w-[min(1200px,96vw)] sm:max-w-[min(1200px,96vw)] overflow-hidden rounded-[1.8rem] border-white/70 bg-white/95 p-0"
+              : "h-[88vh] w-[min(1200px,96vw)] sm:max-w-[min(1200px,96vw)] overflow-visible rounded-[1.8rem] border-white/70 bg-white/95 p-0"
           }
         >
           {/* Success overlay */}
@@ -1019,7 +1019,7 @@ export default function Sales() {
               </Card>
             </div>
 
-            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-6 overflow-y-auto border-t border-border/70 pt-6 lg:border-t-0 lg:border-l lg:bg-slate-50/60 lg:px-6 lg:py-6"}>
+            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-6 overflow-visible border-t border-border/70 pt-6 lg:border-t-0 lg:border-l lg:bg-slate-50/60 lg:px-6 lg:py-6"}>
               <div className="sticky top-0 space-y-4">
                 {/* Resumen tipo ticket */}
                 <div className="rounded-2xl border-2 border-slate-900 bg-white shadow-sm overflow-hidden">
