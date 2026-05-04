@@ -63,23 +63,41 @@ export const financeRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      const existing = await getCashOpeningByUserIdAndDateMethod(input.responsibleUserId, input.openingDate, input.paymentMethod);
-      if (existing) {
+      const methods: ("cash" | "qr" | "transfer")[] = ["cash", "qr", "transfer"];
+      const results = [];
+
+      for (const method of methods) {
+        const existing = await getCashOpeningByUserIdAndDateMethod(
+          input.responsibleUserId,
+          input.openingDate,
+          method
+        );
+
+        if (!existing) {
+          // Si es el método solicitado, usamos el monto enviado, sino 0
+          const amount = method === input.paymentMethod ? Math.round(input.openingAmount * 100) : 0;
+          
+          const result = await createCashOpening({
+            openingAmount: amount,
+            paymentMethod: method,
+            openingDate: input.openingDate,
+            responsibleUserId: input.responsibleUserId,
+            openedByUserId: ctx.user.id,
+            notes: method === input.paymentMethod ? input.notes : `Apertura automática (${input.paymentMethod.toUpperCase()})`,
+            status: "open",
+          });
+          results.push(result);
+        }
+      }
+
+      if (results.length === 0) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Este usuario ya tiene una caja abierta (${input.paymentMethod.toUpperCase()}). Debe cerrarla antes de abrir una nueva.`,
+          message: `Este usuario ya tiene todas las cajas abiertas para esta fecha.`,
         });
       }
 
-      return await createCashOpening({
-        openingAmount: Math.round(input.openingAmount * 100),
-        paymentMethod: input.paymentMethod,
-        openingDate: input.openingDate,
-        responsibleUserId: input.responsibleUserId,
-        openedByUserId: ctx.user.id,
-        notes: input.notes,
-        status: "open",
-      });
+      return results[0]; // Retornamos el primero para mantener compatibilidad
     }),
 
   transferFunds: protectedProcedure
