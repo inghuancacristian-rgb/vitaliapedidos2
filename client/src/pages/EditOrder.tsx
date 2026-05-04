@@ -360,8 +360,8 @@ export default function EditOrder() {
               )}
               {formData.items.map((item, index) => (
                 <div key={index} className="p-5 rounded-3xl bg-slate-50/50 border border-slate-100 flex flex-col gap-4 relative group">
-                   <div className="flex flex-col gap-4">
-                    <div className="space-y-1">
+                   <div className="flex flex-col gap-4 w-full">
+                    <div className="space-y-1 w-full">
                       <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Producto Seleccionado</Label>
                       <Select
                         value={item.productCode}
@@ -378,9 +378,9 @@ export default function EditOrder() {
                         }}
                       >
                         <SelectTrigger className="w-full h-12 rounded-2xl border-slate-200 bg-white shadow-sm">
-                          <SelectValue />
+                          <SelectValue placeholder="Seleccionar producto..." />
                         </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
+                        <SelectContent className="max-h-[300px] w-[--radix-select-trigger-width]">
                           <div className="p-2 sticky top-0 bg-white z-10 border-b">
                              <div className="relative">
                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
