@@ -461,8 +461,8 @@ export default function Sales() {
     setIsDetailOpen(true);
   };
 
-  const submitSale = () => {
-    if (!openingStatus?.hasActive) {
+    const isAdmin = user?.role === "admin";
+    if (!openingStatus?.hasActive && !isAdmin) {
       toast.error(`Caja cerrada: Para registrar ventas en ${paymentMethodLabel(paymentMethod)}, primero debes realizar la apertura de caja.`);
       return;
     }
@@ -1138,10 +1138,16 @@ export default function Sales() {
                         Pago en efectivo al momento de la venta
                       </p>
                     )}
-                    {!openingStatus?.hasActive && (
+                    {(!openingStatus?.hasActive && user?.role !== "admin") && (
                       <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold flex items-center gap-2">
                         <XCircle className="h-4 w-4 shrink-0" />
                         LA CAJA DE {paymentMethodLabel(paymentMethod).toUpperCase()} ESTÁ CERRADA. ABRA LA CAJA EN FINANZAS.
+                      </div>
+                    )}
+                    {(!openingStatus?.hasActive && user?.role === "admin") && (
+                      <div className="mt-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold flex items-center gap-2">
+                        <BadgeDollarSign className="h-4 w-4 shrink-0" />
+                        MODO ADMIN: REGISTRANDO VENTA SIN APERTURA DE CAJA PROPIA.
                       </div>
                     )}
                   </CardContent>
@@ -1177,7 +1183,7 @@ export default function Sales() {
             </Button>
             <Button
               onClick={submitSale}
-              disabled={createSaleMutation.isPending || computedCart.items.length === 0 || !openingStatus?.hasActive}
+              disabled={createSaleMutation.isPending || computedCart.items.length === 0 || (!openingStatus?.hasActive && user?.role !== "admin")}
               className={`${isMobile ? "gap-2 flex-1" : "min-w-64 gap-2"} bg-emerald-600 hover:bg-emerald-700 text-white font-bold`}
             >
               {createSaleMutation.isPending ? (

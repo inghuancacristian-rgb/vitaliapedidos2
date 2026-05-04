@@ -1914,6 +1914,10 @@ export async function deleteOperationalExpense(id: number) {
  * Si es QR o Transferencia y no está abierta, la abre automáticamente con fondo 0.
  */
 export async function checkCashRegisterOpening(dbOrTx: any, userId: number, paymentMethod: string, dateKey: string) {
+  // Validar rol del usuario: los admins pueden saltarse esta validación
+  const userRows = await dbOrTx.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+  if (userRows[0]?.role === "admin") return;
+
   const existing = await dbOrTx
     .select()
     .from(cashOpenings)
