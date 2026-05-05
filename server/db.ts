@@ -2804,16 +2804,31 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         subtotal: item.subtotal,
       });
 
-      await tx.insert(inventoryMovements).values({
-        productId: item.productId,
-        type: "exit",
-        quantity: item.quantity,
-        reason: `Venta ${payload.saleNumber}`,
-        notes: `Salida por venta ${payload.saleNumber}`,
-        saleId,
-        orderId: payload.orderId,
-        userId: payload.soldBy,
-      });
+      if (remaining > 0) {
+        const defaultInvRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
+        if (defaultInvRows.length > 0) {
+           await tx.update(inventory)
+             .set({ quantity: defaultInvRows[0].quantity - remaining, lastUpdated: new Date() })
+             .where(eq(inventory.id, defaultInvRows[0].id));
+        } else {
+           await tx.insert(inventory).values({
+              productId: item.productId,
+              quantity: -remaining,
+              minStock: 10,
+              lastUpdated: new Date()
+           });
+        }
+        await tx.insert(inventoryMovements).values({
+          productId: item.productId,
+          type: "exit",
+          quantity: remaining,
+          reason: `Venta ${payload.saleNumber}`,
+          notes: `Salida por venta ${payload.saleNumber} (Sin stock previo)`,
+          saleId,
+          orderId: payload.orderId,
+          userId: payload.soldBy,
+        });
+      }
     }
 
     if (payload.paymentStatus === "completed") {
