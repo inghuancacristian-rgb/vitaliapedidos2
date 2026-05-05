@@ -44,7 +44,8 @@ async function runFix() {
       // 3. Productos: Precios y Descuentos
       `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`salePrice\` int NOT NULL DEFAULT 0 AFTER \`price\``,
       `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`wholesalePrice\` int NOT NULL DEFAULT 0 AFTER \`salePrice\``,
-      `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`wholesaleDiscountType\` enum('percentage','fixed') DEFAULT 'percentage' AFTER \`wholesalePrice\``,
+      `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`discountPrice\` int NOT NULL DEFAULT 0 AFTER \`wholesalePrice\``,
+      `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`wholesaleDiscountType\` enum('percentage','fixed') DEFAULT 'percentage' AFTER \`discountPrice\``,
       `ALTER TABLE \`products\` ADD COLUMN IF NOT EXISTS \`wholesaleDiscountValue\` int NOT NULL DEFAULT 0 AFTER \`wholesaleDiscountType\``,
 
       // 4. Inventario
@@ -54,6 +55,11 @@ async function runFix() {
       `ALTER TABLE \`inventoryMovements\` ADD COLUMN IF NOT EXISTS \`userId\` int AFTER \`notes\``,
       `ALTER TABLE \`inventoryMovements\` ADD COLUMN IF NOT EXISTS \`orderId\` int AFTER \`userId\``,
       `ALTER TABLE \`inventoryMovements\` ADD COLUMN IF NOT EXISTS \`saleId\` int AFTER \`orderId\``,
+
+      // 6. Items con Triple Precio
+      `ALTER TABLE \`orderItems\` ADD COLUMN IF NOT EXISTS \`pricingType\` enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit' AFTER \`productId\``,
+      `ALTER TABLE \`saleItems\` MODIFY COLUMN \`pricingType\` enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit'`,
+      `ALTER TABLE \`quotationItems\` MODIFY COLUMN \`pricingType\` enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit'`,
     ];
 
     for (const query of queries) {
