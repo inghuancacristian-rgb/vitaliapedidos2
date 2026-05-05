@@ -1512,6 +1512,107 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
   });
 }
 
+export async function updatePurchase(purchaseId: number, purchaseData: any, items: any[], userId?: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Update not supported in mock mode");
+  }
+
+  return await db.transaction(async (tx: any) => {
+    // 0. Fetch existing purchase and items
+    const existingPurchases = await tx.select().from(purchases).where(eq(purchases.id, purchaseId));
+    if (existingPurchases.length === 0) throw new Error("Purchase not found");
+    const existingPurchase = existingPurchases[0];
+
+    const oldItems = await tx.select().from(purchaseItems).where(eq(purchaseItems.purchaseId, purchaseId));
+
+    // 1. Revert Inventory for old items (if it was received)
+    if (existingPurchase.status === "received") {
+      for (const item of oldItems) {
+        const inv = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
+        if (inv.length > 0) {
+          await tx.update(inventory).set({
+            quantity: Math.max(0, inv[0].quantity - Number(item.quantity)),
+            lastUpdated: new Date()
+          }).where(eq(inventory.productId, item.productId));
+        }
+      }
+    }
+
+    // 2. Revert Financial Transaction
+    await tx.delete(financialTransactions).where(
+      and(
+        eq(financialTransactions.referenceId, purchaseId),
+        eq(financialTransactions.category, "purchase")
+      )
+    );
+
+    // 3. Delete old items
+    await tx.delete(purchaseItems).where(eq(purchaseItems.purchaseId, purchaseId));
+
+    // 4. Validate or Create Supplier
+    let finalSupplierId = purchaseData.supplierId;
+    if (!finalSupplierId) {
+      const supplierName = "Compra Rapida (Sistema)";
+      const supplierRows = await tx.select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.name, supplierName)).limit(1);
+      finalSupplierId = supplierRows[0]?.id;
+      if (!finalSupplierId) {
+        const created = await tx.insert(suppliers).values({ name: supplierName });
+        finalSupplierId = getInsertId(created);
+      }
+    }
+
+    // 5. Update the purchase
+    await tx.update(purchases).set({
+      ...purchaseData,
+      supplierId: finalSupplierId,
+      orderDate: purchaseData.orderDate ? new Date(purchaseData.orderDate) : new Date(),
+    }).where(eq(purchases.id, purchaseId));
+
+    // 6. Insert new items and apply to inventory
+    for (const item of items) {
+      const { productName, id, purchaseId: pid, createdAt, ...cleanItem } = item;
+      await tx.insert(purchaseItems).values({ ...cleanItem, purchaseId: purchaseId });
+
+      if (purchaseData.status === "received") {
+        const existing = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
+        if (existing.length > 0) {
+          await tx.update(inventory).set({
+            quantity: existing[0].quantity + Number(item.quantity),
+            expiryDate: item.expiryDate ? new Date(item.expiryDate) : existing[0].expiryDate,
+            lastUpdated: new Date()
+          }).where(eq(inventory.productId, item.productId));
+        } else {
+          await tx.insert(inventory).values({
+            productId: item.productId,
+            quantity: Number(item.quantity),
+            minStock: 10,
+            expiryDate: item.expiryDate ? new Date(item.expiryDate) : null,
+            lastUpdated: new Date()
+          });
+        }
+      }
+    }
+
+    // 7. Apply new Financial Transaction
+    const shouldRegisterTransaction = purchaseData.isCredit === 0 && purchaseData.paymentMethod;
+    if (shouldRegisterTransaction) {
+      await tx.insert(financialTransactions).values({
+        type: "expense",
+        category: "purchase",
+        amount: purchaseData.totalAmount,
+        paymentMethod: purchaseData.paymentMethod || "cash",
+        referenceId: purchaseId,
+        userId: userId,
+        notes: `Compra ${purchaseData.purchaseNumber} (Editada)`,
+        createdAt: new Date()
+      });
+    }
+
+    return { success: true };
+  });
+}
+
 // Función interna para procesar impacto de compra (Inventario + Finanzas)
 async function processPurchaseImpact(purchaseId: number, items: any[], purchase: any) {
   // 1. Actualizar Stock

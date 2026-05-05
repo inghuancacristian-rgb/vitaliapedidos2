@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getAllPurchases, createPurchase, getPurchaseItems, getPurchaseById } from "../db";
+import { getAllPurchases, createPurchase, getPurchaseItems, getPurchaseById, updatePurchase } from "../db";
 import { TRPCError } from "@trpc/server";
 
 export const purchasesRouter = router({
@@ -46,5 +46,31 @@ export const purchasesRouter = router({
       }
       const { items, ...purchaseData } = input;
       return await createPurchase(purchaseData, items, ctx.user!.id);
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      supplierId: z.number().optional().nullable(),
+      purchaseNumber: z.string().min(1),
+      orderDate: z.string().optional(),
+      totalAmount: z.number(),
+      status: z.enum(["pending", "received", "cancelled"]).default("pending"),
+      paymentStatus: z.enum(["pending", "paid"]).default("pending"),
+      paymentMethod: z.enum(["cash", "qr", "transfer"]).optional(),
+      isCredit: z.number().default(0),
+      items: z.array(z.object({
+        productId: z.number(),
+        quantity: z.number(),
+        price: z.number(),
+        expiryDate: z.string().optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { id, items, ...purchaseData } = input;
+      return await updatePurchase(id, purchaseData, items, ctx.user!.id);
     }),
 });

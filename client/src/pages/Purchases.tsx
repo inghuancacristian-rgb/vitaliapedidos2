@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, Plus, Package, Calendar, User, Trash2, Eye, Printer, FileText, XCircle } from "lucide-react";
+import { ShoppingCart, Plus, Package, Calendar, User, Trash2, Eye, Printer, FileText, XCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -35,6 +35,7 @@ export default function Purchases() {
   const [supplierId, setSupplierId] = useState<number>(0);
   const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [purchaseData, setPurchaseData] = useState({
     purchaseNumber: "COM-" + Math.floor(Math.random() * 10000),
     status: "received" as const,
@@ -123,12 +124,11 @@ export default function Purchases() {
       return income - expense;
     };
 
-    // Aperturas de hoy
-    const today = getLocalDateInputValue();
+    // Todas las aperturas históricas
     const getOpening = (method: string) => {
       const openings = (cashOpenings as any[]) || [];
       return openings
-        .filter(o => o.openingDate === today && (o.paymentMethod === method || (!o.paymentMethod && method === 'cash')))
+        .filter(o => o.paymentMethod === method || (!o.paymentMethod && method === 'cash'))
         .reduce((sum, o) => sum + (Number(o.openingAmount) || 0), 0);
     };
 
@@ -510,6 +510,18 @@ export default function Purchases() {
                       <Button 
                         size="icon" 
                         variant="outline" 
+                        className="h-8 w-8 rounded-full border-amber-200 hover:bg-amber-50 text-amber-600"
+                        title="Editar Compra"
+                        onClick={() => {
+                          setSelectedPurchase(purchase);
+                          setShowEdit(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
                         className="h-8 w-8 rounded-full border-slate-200 hover:bg-slate-50 text-slate-600"
                         title="Imprimir"
                         onClick={() => handlePrint(purchase)}
@@ -556,6 +568,12 @@ export default function Purchases() {
         purchase={selectedPurchase}
         open={showDetails}
         onOpenChange={setShowDetails}
+      />
+
+      <EditPurchaseDialog
+        purchase={selectedPurchase}
+        open={showEdit}
+        onOpenChange={setShowEdit}
       />
     </div>
   );
@@ -651,6 +669,213 @@ function PurchaseDetailDialog({ purchase, open, onOpenChange }: any) {
               </div>
             )}
           </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditPurchaseDialog({ purchase, open, onOpenChange }: any) {
+  const utils = trpc.useContext();
+  const [supplierId, setSupplierId] = useState<number>(0);
+  const [purchaseData, setPurchaseData] = useState<any>({});
+  const [items, setItems] = useState<any[]>([]);
+  
+  const [currentItem, setCurrentItem] = useState({
+    productId: 0,
+    quantity: 1,
+    price: 0,
+    expiryDate: "",
+  });
+
+  const { data: suppliers } = (trpc.suppliers as any).list.useQuery();
+  const { data: products } = (trpc.inventory as any).listProducts.useQuery();
+  const { data: originalItems, isLoading } = (trpc.purchases as any).getItems.useQuery(
+    { purchaseId: purchase?.id },
+    { enabled: !!purchase?.id }
+  );
+
+  const selectedProduct = (products as any[])?.find((p: any) => p.id === currentItem.productId);
+
+  const updateMutation = (trpc.purchases as any).update.useMutation({
+    onSuccess: () => {
+      toast.success("Compra actualizada correctamente");
+      onOpenChange(false);
+      utils.purchases.list.invalidate();
+      (utils as any).inventory.listInventory.invalidate();
+      utils.finance.getTransactions.invalidate();
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Error al actualizar la compra");
+    }
+  });
+
+  // Load initial data when dialog opens
+  if (open && purchase && items.length === 0 && originalItems && !isLoading && purchaseData.id !== purchase.id) {
+    setSupplierId(purchase.supplierId || 0);
+    setPurchaseData({
+      id: purchase.id,
+      purchaseNumber: purchase.purchaseNumber,
+      status: purchase.status,
+      isCredit: purchase.isCredit,
+      paymentMethod: purchase.paymentMethod,
+      totalAmount: purchase.totalAmount,
+    });
+    setItems(originalItems.map((item: any) => ({
+      ...item,
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.price,
+      productName: item.productName,
+      expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().split('T')[0] : "",
+    })));
+  }
+
+  // Handle closing and resetting state
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setPurchaseData({});
+      setItems([]);
+    }
+    onOpenChange(newOpen);
+  };
+
+  const addItem = () => {
+    if (currentItem.productId === 0 || currentItem.quantity <= 0) return;
+    const product = (products as any[])?.find((p: any) => p.id === currentItem.productId);
+    const priceInCents = Math.round(currentItem.price * 100);
+    
+    setItems([...items, { ...currentItem, price: priceInCents, productName: product?.name }]);
+    setPurchaseData((prev: any) => ({
+      ...prev,
+      totalAmount: prev.totalAmount + (currentItem.quantity * priceInCents)
+    }));
+    setCurrentItem({ productId: 0, quantity: 1, price: 0, expiryDate: "" });
+  };
+
+  const removeItem = (index: number) => {
+    const item = items[index];
+    setPurchaseData((prev: any) => ({
+      ...prev,
+      totalAmount: prev.totalAmount - (item.quantity * item.price)
+    }));
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (items.length === 0) {
+      toast.error("Añade al menos un producto a la compra");
+      return;
+    }
+    updateMutation.mutate({
+      ...purchaseData,
+      supplierId: supplierId === 0 ? undefined : supplierId,
+      items: items.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        expiryDate: item.expiryDate || undefined
+      }))
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Edit className="h-5 w-5 text-amber-600" /> Editar Compra: {purchase?.purchaseNumber}
+          </DialogTitle>
+        </DialogHeader>
+        
+        {purchase && !isLoading && (
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">Proveedor</Label>
+                <Select value={supplierId === 0 ? "" : supplierId.toString()} onValueChange={(val) => setSupplierId(parseInt(val))}>
+                  <SelectTrigger><SelectValue placeholder="Sin proveedor" /></SelectTrigger>
+                  <SelectContent>
+                    {(suppliers as any[])?.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-bold">Método de Pago</Label>
+                <Select value={purchaseData.paymentMethod} onValueChange={(val: any) => setPurchaseData({...purchaseData, paymentMethod: val})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Efectivo</SelectItem>
+                    <SelectItem value="qr">Transferencia QR</SelectItem>
+                    <SelectItem value="transfer">Cuenta Bancaria</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 bg-slate-50 p-2 rounded border">
+                <Label className="text-xs font-bold text-slate-500 uppercase">Total Actualizado</Label>
+                <p className="text-xl font-black text-slate-900">{formatCurrency(purchaseData.totalAmount || 0)}</p>
+              </div>
+            </div>
+
+            <div className="border p-4 rounded-lg bg-muted/30 space-y-4">
+              <h3 className="font-semibold flex items-center gap-2 border-b pb-2">
+                <Package className="h-4 w-4" /> Modificar Productos
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs font-bold text-blue-800">Producto</Label>
+                  <Select 
+                    value={currentItem.productId === 0 ? "" : currentItem.productId.toString()} 
+                    onValueChange={(val) => setCurrentItem({...currentItem, productId: parseInt(val), price: 0})}
+                  >
+                    <SelectTrigger className="bg-white truncate">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(products as any[])?.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Cant.</Label>
+                  <Input type="number" value={currentItem.quantity} onChange={(e) => setCurrentItem({...currentItem, quantity: parseInt(e.target.value) || 1})} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-green-700 uppercase">P. Unit.</Label>
+                  <Input type="number" step="any" value={currentItem.price} onChange={(e) => setCurrentItem({...currentItem, price: parseFloat(e.target.value) || 0})} />
+                </div>
+                <Button type="button" variant="secondary" className="w-full font-bold h-10 border-2 md:col-span-4" onClick={addItem}>
+                  Añadir Item
+                </Button>
+              </div>
+
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                {items.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center text-sm bg-background p-2 rounded border border-amber-100">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-800">{item.productName}</span>
+                      <span className="text-[10px] text-muted-foreground">{formatCurrency(item.price)} x {item.quantity} unidades</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="font-mono font-bold text-blue-700">{formatCurrency(item.quantity * item.price)}</span>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50" onClick={() => removeItem(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-12 text-lg font-bold bg-amber-600 hover:bg-amber-700" disabled={updateMutation.isPending || items.length === 0}>
+              {updateMutation.isPending ? "Guardando..." : "Guardar Cambios de Compra"}
+            </Button>
+          </form>
         )}
       </DialogContent>
     </Dialog>
