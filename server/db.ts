@@ -2190,7 +2190,7 @@ export async function createFinancialTransactionsForDeliveries(closureId: number
     .where(and(
       eq(financialTransactions.category, "order_delivery"),
       eq(financialTransactions.userId, userId),
-      sql`DATE(${financialTransactions.createdAt}) = ${date}`
+      sql`DATE(DATE_SUB(${financialTransactions.createdAt}, INTERVAL 4 HOUR)) = ${date}`
     ));
   const existingIds = new Set(existingRefs.map(r => r.referenceId).filter(Boolean));
 
@@ -2199,7 +2199,7 @@ export async function createFinancialTransactionsForDeliveries(closureId: number
     .where(and(
       eq(orders.deliveryPersonId, userId),
       eq(orders.status, "delivered"),
-      sql`DATE(${orders.deliveredAt}) = ${date}`
+      sql`DATE(DATE_SUB(${orders.deliveredAt}, INTERVAL 4 HOUR)) = ${date}`
     ));
 
   for (const order of deliveredOrders) {
@@ -2345,7 +2345,7 @@ export async function getExpectedDailyTotals(userId: number, date: string) {
     .where(and(
       eq(orders.deliveryPersonId, userId),
       eq(orders.status, "delivered"),
-      sql`DATE(${orders.deliveredAt}) = ${date}`
+      sql`DATE(DATE_SUB(${orders.deliveredAt}, INTERVAL 4 HOUR)) = ${date}`
     ))
     .groupBy(orders.paymentMethod);
 
@@ -2365,7 +2365,7 @@ export async function getExpectedDailyTotals(userId: number, date: string) {
       eq(sales.soldBy, userId),
       ne(sales.status, "cancelled"),
       eq(sales.paymentStatus, "completed"),
-      sql`DATE(${sales.createdAt}) = ${date}`
+      sql`DATE(DATE_SUB(${sales.createdAt}, INTERVAL 4 HOUR)) = ${date}`
     ))
     .groupBy(sales.paymentMethod);
 
@@ -2386,8 +2386,8 @@ export async function getExpectedDailyTotals(userId: number, date: string) {
     .where(and(
       eq(cashClosures.userId, userId),
       eq(cashClosures.status, "approved" as any),
-      // Fallback por si la columna `date` quedÃ³ guardada con desfase UTC en registros antiguos
-      sql`(${cashClosures.date} = ${date} OR DATE(${cashClosures.createdAt}) = ${date})`,
+      // Fallback por si la columna `date` quedó guardada con desfase UTC en registros antiguos
+      sql`(${cashClosures.date} = ${date} OR DATE(DATE_SUB(${cashClosures.createdAt}, INTERVAL 4 HOUR)) = ${date})`,
     ));
 
   if (approvedClosures.length > 0) {
