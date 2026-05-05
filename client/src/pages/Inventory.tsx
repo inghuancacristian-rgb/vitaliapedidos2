@@ -279,6 +279,7 @@ export default function Inventory() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr" | "transfer">("cash");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] = useState<"name" | "stock" | "expiry">("name");
 
   useEffect(() => {
     if (selectedItem) {
@@ -345,25 +346,51 @@ export default function Inventory() {
 
   const displayItems = useMemo(() => {
     const baseItems = activeTab === "finished" ? finishedProducts : allRawItems;
-    if (!searchTerm) return baseItems;
-    
-    const lowerSearch = searchTerm.toLowerCase();
-    return baseItems.filter((item: any) => 
-      item.product?.name?.toLowerCase().includes(lowerSearch) ||
-      item.product?.code?.toLowerCase().includes(lowerSearch)
-    );
-  }, [activeTab, finishedProducts, allRawItems, searchTerm]);
+    let filtered = baseItems;
+
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter((item: any) => 
+        item.product?.name?.toLowerCase().includes(lowerSearch) ||
+        item.product?.code?.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // Aplicar ordenamiento
+    return [...filtered].sort((a: any, b: any) => {
+      if (sortBy === "name") {
+        return (a.product?.name || "").localeCompare(b.product?.name || "");
+      }
+      if (sortBy === "stock") {
+        return (a.quantity || 0) - (b.quantity || 0);
+      }
+      if (sortBy === "expiry") {
+        if (!a.expiryDate) return 1;
+        if (!b.expiryDate) return -1;
+        return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+      }
+      return 0;
+    });
+  }, [activeTab, finishedProducts, allRawItems, searchTerm, sortBy]);
 
   const lowStockItems = activeTab === "finished" ? lowStockFinished : lowStockRaw;
 
   const inventorySummary = useMemo(() => {
     const currentItems = activeTab === "finished" ? finishedProducts : allRawItems;
 
+    const available = currentItems.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0);
+    const reserved = currentItems.reduce((acc: number, item: any) => acc + (item.onOrder || 0), 0);
+    const costValuation = currentItems.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.product?.price || 0)), 0);
+    const saleValuation = currentItems.reduce((acc: number, item: any) => acc + ((item.quantity || 0) * (item.product?.salePrice || 0)), 0);
+
     return {
       totalItems: currentItems.length,
-      units: currentItems.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0),
+      physicalStock: available + reserved,
+      availableStock: available,
+      reservedStock: reserved,
       lowStock: currentItems.filter((item: any) => item.isLowStock).length,
-      expiring: currentItems.filter((item: any) => item.expiryDate).length,
+      costValuation,
+      saleValuation,
     };
   }, [activeTab, finishedProducts, allRawItems]);
 
@@ -512,25 +539,29 @@ export default function Inventory() {
                 <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
                   <Box className="h-6 w-6" />
                 </div>
+                {inventorySummary.reservedStock > 0 && (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100 border-none">
+                    {inventorySummary.reservedStock} Reservados
+                  </Badge>
+                )}
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidades Totales</p>
-              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.units}</p>
-              <p className="text-xs text-slate-500 font-medium mt-1">Suma de stock actual</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidades Disponibles</p>
+              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.availableStock}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Físico Total: <span className="font-bold text-blue-600">{inventorySummary.physicalStock}</span></p>
             </CardContent>
           </Card>
 
           <Card className="relative overflow-hidden border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white group transition-all duration-300 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)]">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500" />
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-sky-500" />
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-red-50 rounded-2xl text-red-600">
-                  <AlertTriangle className="h-6 w-6" />
+                <div className="p-3 bg-sky-50 rounded-2xl text-sky-600">
+                  <Sparkles className="h-6 w-6" />
                 </div>
-                {inventorySummary.lowStock > 0 && <Badge variant="destructive" className="animate-pulse">Crítico</Badge>}
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Bajo</p>
-              <p className="text-2xl font-black text-slate-900 tracking-tighter">{inventorySummary.lowStock}</p>
-              <p className="text-xs text-slate-500 font-medium mt-1">Items por reponer</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valuación Inventario (Costo)</p>
+              <p className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(inventorySummary.costValuation)}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1">Basado en precio de compra</p>
             </CardContent>
           </Card>
 
@@ -538,18 +569,12 @@ export default function Inventory() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-white/10 rounded-2xl text-white">
-                  <Sparkles className="h-6 w-6" />
+                  <TriangleAlert className="h-6 w-6" />
                 </div>
               </div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Estimado</p>
-              <p className="text-2xl font-black text-white tracking-tighter">
-                {formatCurrency(
-                  (activeTab === "finished" ? finishedProducts : allRawItems).reduce(
-                    (sum: number, item: any) => sum + (item.quantity * (item.product?.price || 0)), 0
-                  )
-                )}
-              </p>
-              <p className="text-xs text-slate-500 font-medium mt-1">Costo total en stock</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valuación Potencial (Venta)</p>
+              <p className="text-xl font-black text-white tracking-tighter">{formatCurrency(inventorySummary.saleValuation)}</p>
+              <p className="text-xs text-slate-500 font-medium mt-1 text-white/50">Si se vendiera todo el stock</p>
             </CardContent>
           </Card>
         </section>
@@ -581,6 +606,35 @@ export default function Inventory() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-slate-100 rounded-2xl p-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "name" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                      onClick={() => setSortBy("name")}
+                    >
+                      A-Z
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "stock" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                      onClick={() => setSortBy("stock")}
+                    >
+                      Stock
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "expiry" ? "bg-white shadow-sm" : "text-slate-500"}`}
+                      onClick={() => setSortBy("expiry")}
+                    >
+                      Venc.
+                    </Button>
+                  </div>
+
+                  <div className="h-8 w-px bg-slate-200 mx-1" />
+
                   <Button
                     variant="ghost"
                     size="icon"
