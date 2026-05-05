@@ -27,7 +27,17 @@ import { EditProductDialog } from "@/components/EditProductDialog";
 import { ProductHistoryDialog } from "@/components/ProductHistoryDialog";
 import { formatCurrency } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, AlertTriangle, Info, History as HistoryIcon, LayoutGrid, List, Calendar, TriangleAlert } from "lucide-react";
+import { Search, Package, AlertTriangle, Info, History as HistoryIcon, LayoutGrid, List, Calendar, TriangleAlert, FileDown, Filter, ChevronDown, CheckCircle2, XCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { exportInventoryToPDF, exportInventoryToExcel } from "@/lib/inventory-export";
 
 type InventoryTab = "finished" | "raw";
 
@@ -280,6 +290,9 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "stock" | "expiry">("name");
+  const [filterStock, setFilterStock] = useState<"all" | "low" | "out" | "sufficient">("all");
+  const [filterExpiry, setFilterExpiry] = useState<"all" | "expired" | "soon">("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (selectedItem) {
@@ -348,12 +361,37 @@ export default function Inventory() {
     const baseItems = activeTab === "finished" ? finishedProducts : allRawItems;
     let filtered = baseItems;
 
+    // Filtro por término de búsqueda
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       filtered = filtered.filter((item: any) => 
         item.product?.name?.toLowerCase().includes(lowerSearch) ||
         item.product?.code?.toLowerCase().includes(lowerSearch)
       );
+    }
+
+    // Filtro por estado de stock
+    if (filterStock !== "all") {
+      filtered = filtered.filter((item: any) => {
+        if (filterStock === "out") return (item.quantity || 0) <= 0;
+        if (filterStock === "low") return item.isLowStock && (item.quantity || 0) > 0;
+        if (filterStock === "sufficient") return !item.isLowStock && (item.quantity || 0) > 0;
+        return true;
+      });
+    }
+
+    // Filtro por vencimiento
+    if (filterExpiry !== "all") {
+      const now = new Date();
+      const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      filtered = filtered.filter((item: any) => {
+        if (!item.expiryDate) return false;
+        const expiry = new Date(item.expiryDate);
+        if (filterExpiry === "expired") return expiry < now;
+        if (filterExpiry === "soon") return expiry >= now && expiry <= thirtyDays;
+        return true;
+      });
     }
 
     // Aplicar ordenamiento
@@ -371,7 +409,7 @@ export default function Inventory() {
       }
       return 0;
     });
-  }, [activeTab, finishedProducts, allRawItems, searchTerm, sortBy]);
+  }, [activeTab, finishedProducts, allRawItems, searchTerm, sortBy, filterStock, filterExpiry]);
 
   const lowStockItems = activeTab === "finished" ? lowStockFinished : lowStockRaw;
 
@@ -583,13 +621,13 @@ export default function Inventory() {
         <div className="sticky top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
           <div className="flex flex-col gap-4">
             <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/90 p-2">
-              <div className="flex flex-col md:flex-row items-center gap-4">
-                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full md:w-auto">
-                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12">
-                    <TabsTrigger value="finished" className="rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+              <div className="flex flex-col lg:flex-row items-center gap-4">
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full lg:w-auto">
+                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 w-full lg:w-auto">
+                    <TabsTrigger value="finished" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
                       Terminados
                     </TabsTrigger>
-                    <TabsTrigger value="raw" className="rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+                    <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
                       Insumos
                     </TabsTrigger>
                   </TabsList>
@@ -605,58 +643,149 @@ export default function Inventory() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-slate-100 rounded-2xl p-1">
+                <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+                  <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
+                    <Button
+                      variant={showFilters ? "secondary" : "ghost"}
+                      size="icon"
+                      className={`rounded-xl h-10 w-10 transition-all ${showFilters ? "bg-white text-primary shadow-sm" : "text-slate-500"}`}
+                      onClick={() => setShowFilters(!showFilters)}
+                    >
+                      <Filter className="h-5 w-5" />
+                    </Button>
+                    <div className="h-6 w-px bg-slate-200 mx-0.5" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-xl h-10 w-10 text-slate-500">
+                          <FileDown className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-2xl p-2 border-slate-100 shadow-xl">
+                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exportar vista actual</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "finished" ? "Terminados" : "Insumos")}>
+                          <div className="p-1.5 bg-red-50 text-red-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
+                          Descargar PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "finished" ? "Terminados" : "Insumos")}>
+                          <div className="p-1.5 bg-green-50 text-green-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
+                          Descargar Excel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "name" ? "bg-white shadow-sm" : "text-slate-500"}`}
-                      onClick={() => setSortBy("name")}
+                      size="icon"
+                      className={`rounded-xl h-10 w-10 ${viewMode === "grid" ? "bg-white shadow-sm text-slate-900" : "text-slate-400"}`}
+                      onClick={() => setViewMode("grid")}
                     >
-                      A-Z
+                      <LayoutGrid className="h-5 w-5" />
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "stock" ? "bg-white shadow-sm" : "text-slate-500"}`}
-                      onClick={() => setSortBy("stock")}
+                      size="icon"
+                      className={`rounded-xl h-10 w-10 ${viewMode === "list" ? "bg-white shadow-sm text-slate-900" : "text-slate-400"}`}
+                      onClick={() => setViewMode("list")}
                     >
-                      Stock
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`rounded-xl h-10 px-3 text-xs font-bold ${sortBy === "expiry" ? "bg-white shadow-sm" : "text-slate-500"}`}
-                      onClick={() => setSortBy("expiry")}
-                    >
-                      Venc.
+                      <List className="h-5 w-5" />
                     </Button>
                   </div>
 
-                  <div className="h-8 w-px bg-slate-200 mx-1" />
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`rounded-xl h-11 w-11 ${viewMode === "grid" ? "bg-slate-100 text-slate-900" : "text-slate-400"}`}
-                    onClick={() => setViewMode("grid")}
-                  >
-                    <LayoutGrid className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`rounded-xl h-11 w-11 ${viewMode === "list" ? "bg-slate-100 text-slate-900" : "text-slate-400"}`}
-                    onClick={() => setViewMode("list")}
-                  >
-                    <List className="h-5 w-5" />
-                  </Button>
                   {user?.role === "admin" && (
                     <AddProductDialog onProductAdded={() => refetch()} />
                   )}
                 </div>
               </div>
             </Card>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] bg-white p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ordenar por</Label>
+                      <div className="flex bg-slate-100 rounded-2xl p-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`flex-1 rounded-xl h-10 text-xs font-bold ${sortBy === "name" ? "bg-white shadow-sm text-primary" : "text-slate-500"}`}
+                          onClick={() => setSortBy("name")}
+                        >
+                          Nombre
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`flex-1 rounded-xl h-10 text-xs font-bold ${sortBy === "stock" ? "bg-white shadow-sm text-primary" : "text-slate-500"}`}
+                          onClick={() => setSortBy("stock")}
+                        >
+                          Stock
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`flex-1 rounded-xl h-10 text-xs font-bold ${sortBy === "expiry" ? "bg-white shadow-sm text-primary" : "text-slate-500"}`}
+                          onClick={() => setSortBy("expiry")}
+                        >
+                          Vencimiento
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Estado de Stock</Label>
+                      <div className="flex bg-slate-100 rounded-2xl p-1">
+                        {[
+                          { id: "all", label: "Todo" },
+                          { id: "low", label: "Bajo" },
+                          { id: "out", label: "Agotado" },
+                          { id: "sufficient", label: "Ok" }
+                        ].map((s) => (
+                          <Button
+                            key={s.id}
+                            variant="ghost"
+                            size="sm"
+                            className={`flex-1 rounded-xl h-10 text-[10px] font-bold ${filterStock === s.id ? "bg-white shadow-sm text-primary" : "text-slate-500"}`}
+                            onClick={() => setFilterStock(s.id as any)}
+                          >
+                            {s.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Vencimiento</Label>
+                      <div className="flex bg-slate-100 rounded-2xl p-1">
+                        {[
+                          { id: "all", label: "Todo" },
+                          { id: "soon", label: "Pronto" },
+                          { id: "expired", label: "Vencido" }
+                        ].map((e) => (
+                          <Button
+                            key={e.id}
+                            variant="ghost"
+                            size="sm"
+                            className={`flex-1 rounded-xl h-10 text-[10px] font-bold ${filterExpiry === e.id ? "bg-white shadow-sm text-primary" : "text-slate-500"}`}
+                            onClick={() => setFilterExpiry(e.id as any)}
+                          >
+                            {e.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -670,36 +799,49 @@ export default function Inventory() {
           </div>
         ) : (
           viewMode === "grid" || isMobile ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <motion.div 
+            layout
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+          >
+            <AnimatePresence mode="popLayout">
               {displayItems.map((item: any) => (
-                <InventoryCard 
-                  key={item.id} 
-                  item={item} 
-                  user={user} 
-                  refetch={refetch}
-                  isDialogOpen={isDialogOpen}
-                  selectedItem={selectedItem}
-                  setSelectedItem={setSelectedItem}
-                  setIsDialogOpen={setIsDialogOpen}
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                  reason={reason}
-                  setReason={setReason}
-                  type={type}
-                  setType={setType}
-                  price={price}
-                  setPrice={setPrice}
-                  expiryDate={expiryDate}
-                  setExpiryDate={setExpiryDate}
-                  registerPurchase={registerPurchase}
-                  setRegisterPurchase={setRegisterPurchase}
-                  paymentMethod={paymentMethod}
-                  setPaymentMethod={setPaymentMethod}
-                  handleUpdateInventory={handleUpdateInventory}
-                  updateInventoryMutation={updateInventoryMutation}
-                />
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <InventoryCard 
+                    item={item} 
+                    user={user} 
+                    refetch={refetch}
+                    isDialogOpen={isDialogOpen}
+                    selectedItem={selectedItem}
+                    setSelectedItem={setSelectedItem}
+                    setIsDialogOpen={setIsDialogOpen}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    reason={reason}
+                    setReason={setReason}
+                    type={type}
+                    setType={setType}
+                    price={price}
+                    setPrice={setPrice}
+                    expiryDate={expiryDate}
+                    setExpiryDate={setExpiryDate}
+                    registerPurchase={registerPurchase}
+                    setRegisterPurchase={setRegisterPurchase}
+                    paymentMethod={paymentMethod}
+                    setPaymentMethod={setPaymentMethod}
+                    handleUpdateInventory={handleUpdateInventory}
+                    updateInventoryMutation={updateInventoryMutation}
+                  />
+                </motion.div>
               ))}
-            </div>
+            </AnimatePresence>
+          </motion.div>
           ) : (
             <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white">
               <CardContent className="p-0">
