@@ -369,9 +369,9 @@ export const inventoryRouter = router({
           `Precio compra: ${formatCurrencyCents(product.price)} -> ${formatCurrencyCents(input.price)}`
         );
       }
-      if (input.expiryDate !== undefined && input.expiryDate !== (inv?.expiryDate || undefined)) {
+      if (input.expiryDate !== undefined && input.expiryDate !== (existingInv?.expiryDate || undefined)) {
         notes.push(
-          `Vencimiento: ${inv?.expiryDate || "sin fecha"} -> ${input.expiryDate || "sin fecha"}`
+          `Vencimiento: ${existingInv?.expiryDate || "sin fecha"} -> ${input.expiryDate || "sin fecha"}`
         );
       }
 
