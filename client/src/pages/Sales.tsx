@@ -45,6 +45,9 @@ import {
   ArrowRight,
   RotateCcw,
   AlertCircle,
+  Banknote,
+  QrCode,
+  ArrowLeftRight,
 } from "lucide-react";
 
 type DiscountType = "none" | "percentage" | "fixed";
@@ -567,36 +570,56 @@ export default function Sales() {
                </div>
              </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="bg-gradient-to-br from-slate-50 to-white border-slate-200/80">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <Card className="bg-white border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ventas registradas</CardTitle>
-              <ShoppingBag className="h-4 w-4 text-slate-400" />
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Ventas registradas</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center">
+                <ShoppingBag className="h-4 w-4 text-slate-400" />
+              </div>
             </CardHeader>
-            <CardContent className="text-2xl font-black text-slate-900">{salesList?.length || 0}</CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200/80">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-emerald-600/80">Total vendido</CardTitle>
-              <BadgeDollarSign className="h-4 w-4 text-emerald-400" />
-            </CardHeader>
-            <CardContent className="text-2xl font-black text-emerald-700">{formatCurrency(totalSalesAmount)}</CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200/80">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-amber-600/80">Pendientes de cobro</CardTitle>
-              <Wallet className="h-4 w-4 text-amber-400" />
-            </CardHeader>
-            <CardContent className="text-2xl font-black text-amber-700">
-              {(salesList as any[] | undefined)?.filter((sale: any) => sale.paymentStatus === "pending" && sale.status !== "cancelled").length || 0}
+            <CardContent>
+              <div className="text-3xl font-black text-slate-900">{salesList?.length || 0}</div>
+              <p className="text-[10px] text-slate-400 font-bold mt-1">TOTAL ACUMULADO</p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200/80">
+          <Card className="bg-white border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-600/80">Próximo número</CardTitle>
-              <Receipt className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-500">Total vendido</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <BadgeDollarSign className="h-4 w-4 text-emerald-500" />
+              </div>
             </CardHeader>
-            <CardContent className="text-2xl font-black text-blue-700">{nextSaleData?.saleNumber || "..."}</CardContent>
+            <CardContent>
+              <div className="text-3xl font-black text-emerald-600">{formatCurrency(totalSalesAmount)}</div>
+              <p className="text-[10px] text-emerald-500/70 font-bold mt-1">INGRESOS BRUTOS</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em] text-amber-500">Pendientes de cobro</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Wallet className="h-4 w-4 text-amber-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-black text-amber-600">
+                {(salesList as any[] | undefined)?.filter((sale: any) => sale.paymentStatus === "pending" && sale.status !== "cancelled").length || 0}
+              </div>
+              <p className="text-[10px] text-amber-500/70 font-bold mt-1">POR REGULARIZAR</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em] text-blue-500">Próximo número</CardTitle>
+              <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                <Receipt className="h-4 w-4 text-blue-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-black text-blue-600">{nextSaleData?.saleNumber || "..."}</div>
+              <p className="text-[10px] text-blue-500/70 font-bold mt-1">ORDEN SIGUIENTE</p>
+            </CardContent>
           </Card>
         </div>
 
@@ -735,12 +758,25 @@ export default function Sales() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                            <Wallet className="h-3 w-3 text-slate-400" />
-                            {paymentMethodLabel(sale.paymentMethod)}
+                            {sale.paymentMethod === "cash" ? (
+                              <Banknote className="h-3.5 w-3.5 text-emerald-500" />
+                            ) : sale.paymentMethod === "qr" ? (
+                              <QrCode className="h-3.5 w-3.5 text-violet-500" />
+                            ) : (
+                              <ArrowLeftRight className="h-3.5 w-3.5 text-blue-500" />
+                            )}
+                            <span className="tracking-tight">{paymentMethodLabel(sale.paymentMethod)}</span>
                           </div>
-                          <Badge variant={sale.paymentStatus === "completed" ? "outline" : "secondary"} className="rounded-full text-[9px] font-black uppercase tracking-tighter w-fit px-2">
+                          <Badge 
+                            variant={sale.paymentStatus === "completed" ? "outline" : "secondary"} 
+                            className={`rounded-full text-[9px] font-black uppercase tracking-wider w-fit px-2 py-0 ${
+                              sale.paymentStatus === "completed" 
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
+                                : "bg-amber-50 text-amber-600 border-amber-100"
+                            }`}
+                          >
                             {paymentStatusLabel(sale.paymentStatus)}
                           </Badge>
                         </div>
@@ -788,7 +824,7 @@ export default function Sales() {
           className={
             isMobile
               ? "max-h-[94vh] max-w-[calc(100vw-1rem)] overflow-y-auto rounded-[1.6rem] border-white/70 bg-white/95 p-4 sm:max-w-[calc(100vw-1.5rem)] sm:p-6"
-              : "flex flex-col h-[88vh] w-[min(1200px,96vw)] sm:max-w-[min(1200px,96vw)] overflow-hidden rounded-[1.8rem] border-white/70 bg-white/95 p-0"
+              : "flex flex-col h-[92vh] w-[min(1360px,96vw)] sm:max-w-[min(1360px,96vw)] overflow-hidden rounded-[1.8rem] border-slate-200/60 bg-white shadow-2xl shadow-slate-900/10 p-0"
           }
         >
           {/* Success overlay */}
@@ -807,25 +843,35 @@ export default function Sales() {
             </div>
           )}
 
-          <DialogHeader className={isMobile ? "" : "border-b border-border/70 px-6 pt-6 pb-4"}>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5" />
-              Nueva venta {nextSaleData?.saleNumber ? `- ${nextSaleData.saleNumber}` : ""}
+          <DialogHeader className={isMobile ? "" : "border-b border-slate-100 px-8 pt-6 pb-4 bg-gradient-to-r from-slate-50/80 to-white"}>
+            <DialogTitle className="flex items-center gap-3 text-lg">
+              <div className="h-9 w-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/20">
+                <ShoppingBag className="h-4.5 w-4.5 text-white" />
+              </div>
+              <div>
+                <span className="font-black text-slate-900">Nueva Venta</span>
+                {nextSaleData?.saleNumber && (
+                  <span className="ml-2 text-sm font-bold text-slate-400">#{nextSaleData.saleNumber}</span>
+                )}
+              </div>
             </DialogTitle>
-            <DialogDescription>
-              Registra una venta con varios productos, descuento por ítem y descuento global.
+            <DialogDescription className="text-slate-500">
+              Registra una venta con productos, descuentos y método de pago.
             </DialogDescription>
           </DialogHeader>
 
-          <div className={isMobile ? "mt-6 space-y-6" : "grid min-h-0 flex-1 overflow-hidden gap-0 lg:grid-cols-[minmax(0,1.14fr)_380px]"}>
-            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-6 overflow-y-auto px-6 py-6"}>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Cliente y condiciones</CardTitle>
+          <div className={isMobile ? "mt-6 space-y-6" : "grid min-h-0 flex-1 overflow-hidden gap-0 lg:grid-cols-[minmax(0,1.1fr)_420px]"}>
+            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-5 overflow-y-auto px-8 py-6"}>
+              <Card className={isMobile ? "" : "border-slate-100 shadow-sm hover:shadow-md transition-shadow"}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <UserRound className="h-4 w-4 text-slate-400" />
+                    Cliente y condiciones
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className={isMobile ? "grid gap-4" : "grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)]"}>
                   <div className="space-y-2">
-                    <Label>Cliente</Label>
+                    <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</Label>
                     <div className="relative">
                       <UserRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -898,19 +944,7 @@ export default function Sales() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Método de pago</Label>
-                      <Select value={paymentMethod} onValueChange={(value: PaymentMethod) => setPaymentMethod(value)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Efectivo</SelectItem>
-                          <SelectItem value="qr">QR</SelectItem>
-                          <SelectItem value="transfer">Transferencia</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+
                     <div className="space-y-2">
                       <Label>Estado de pago</Label>
                       <Select value={paymentStatus} onValueChange={(value: PaymentStatus) => setPaymentStatus(value)}>
@@ -927,9 +961,12 @@ export default function Sales() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Productos</CardTitle>
+              <Card className={isMobile ? "" : "border-slate-100 shadow-sm hover:shadow-md transition-shadow"}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-4 w-4 text-slate-400" />
+                    Productos
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="relative">
@@ -1127,7 +1164,7 @@ export default function Sales() {
               </Card>
             </div>
 
-            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-6 overflow-y-auto border-t border-border/70 pt-6 lg:border-t-0 lg:border-l lg:bg-slate-50/60 lg:px-6 lg:py-6"}>              
+            <div className={isMobile ? "space-y-6" : "min-h-0 space-y-5 overflow-y-auto border-t border-slate-100 pt-6 lg:border-t-0 lg:border-l lg:border-slate-100 lg:bg-gradient-to-b lg:from-slate-50/80 lg:to-white lg:px-6 lg:py-6"}>              
               <div className="space-y-4">
                 {/* Resumen tipo ticket */}
                 <div className="rounded-[2.2rem] border-2 border-slate-900 bg-white shadow-xl overflow-hidden relative">
@@ -1255,30 +1292,49 @@ export default function Sales() {
                 </Card>
 
                 {/* Método de pago destacado */}
-                <Card>
+                <Card className={isMobile ? "" : "border-slate-100 shadow-sm"}>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Forma de pago</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-slate-400" />
+                      Forma de pago
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-2">
-                      {(["cash", "qr", "transfer"] as PaymentMethod[]).map((method) => (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setPaymentMethod(method)}
-                          className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-3 text-center text-xs font-semibold transition-all ${paymentMethod === method
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
-                            }`}
-                        >
-                          <Wallet className="h-5 w-5" />
-                          {method === "cash" ? "Efectivo" : method === "qr" ? "QR" : "Transfer."}
-                        </button>
-                      ))}
+                      {(["cash", "qr", "transfer"] as PaymentMethod[]).map((method) => {
+                        const isActive = paymentMethod === method;
+                        const icon = method === "cash" ? <Banknote className="h-5 w-5" /> : method === "qr" ? <QrCode className="h-5 w-5" /> : <ArrowLeftRight className="h-5 w-5" />;
+                        const colors = method === "cash"
+                          ? isActive ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/25" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50/50"
+                          : method === "qr"
+                          ? isActive ? "border-violet-500 bg-violet-500 text-white shadow-lg shadow-violet-500/25" : "border-slate-200 bg-white text-slate-600 hover:border-violet-300 hover:bg-violet-50/50"
+                          : isActive ? "border-blue-500 bg-blue-500 text-white shadow-lg shadow-blue-500/25" : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50/50";
+                        return (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => setPaymentMethod(method)}
+                            className={`flex flex-col items-center gap-1.5 rounded-2xl border-2 px-3 py-4 text-center text-xs font-bold transition-all duration-200 ${colors}`}
+                          >
+                            {icon}
+                            {method === "cash" ? "Efectivo" : method === "qr" ? "QR" : "Transfer."}
+                          </button>
+                        );
+                      })}
                     </div>
                     {paymentMethod === "cash" && (
-                      <p className="mt-2 text-xs text-center text-muted-foreground">
+                      <p className="mt-3 text-[11px] text-center text-slate-400 font-medium">
                         Pago en efectivo al momento de la venta
+                      </p>
+                    )}
+                    {paymentMethod === "qr" && (
+                      <p className="mt-3 text-[11px] text-center text-slate-400 font-medium">
+                        Pago mediante código QR
+                      </p>
+                    )}
+                    {paymentMethod === "transfer" && (
+                      <p className="mt-3 text-[11px] text-center text-slate-400 font-medium">
+                        Pago por transferencia bancaria
                       </p>
                     )}
                     {(!openingStatus?.hasActive && user?.role !== "admin") && (
@@ -1315,25 +1371,25 @@ export default function Sales() {
             </div>
           </div>
 
-          <DialogFooter className={isMobile ? "gap-2" : "border-t border-border/70 bg-white px-6 py-4"}>
+          <DialogFooter className={isMobile ? "gap-2" : "border-t border-slate-100 bg-gradient-to-r from-slate-50/60 to-white px-8 py-4 gap-3"}>
             <Button
               variant="outline"
               onClick={() => { setIsCreateOpen(false); resetForm(); }}
-              className={isMobile ? "" : "min-w-32"}
+              className={isMobile ? "" : "min-w-36 h-12 rounded-xl border-slate-200 font-bold text-slate-600 hover:bg-slate-50"}
             >
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
               Cancelar
             </Button>
             <Button
               onClick={submitSale}
               disabled={createSaleMutation.isPending || computedCart.items.length === 0 || (!openingStatus?.hasActive && user?.role !== "admin")}
-              className={`${isMobile ? "gap-2 flex-1" : "min-w-64 gap-2"} bg-emerald-600 hover:bg-emerald-700 text-white font-bold`}
+              className={`${isMobile ? "gap-2 flex-1" : "min-w-72 gap-2.5 h-12 rounded-xl text-base"} bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-lg shadow-emerald-600/20 transition-all hover:shadow-xl hover:shadow-emerald-600/30`}
             >
               {createSaleMutation.isPending ? (
                 "Registrando..."
               ) : (
                 <>
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-5 w-5" />
                   Registrar Venta · {formatCurrency(computedCart.total)}
                 </>
               )}
