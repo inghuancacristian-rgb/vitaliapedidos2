@@ -659,7 +659,7 @@ export default function Inventory() {
                           <th className="px-6 py-5 text-left font-semibold uppercase text-[10px] tracking-widest">Código</th>
                           <th className="px-6 py-5 text-right font-semibold uppercase text-[10px] tracking-widest">P. Compra</th>
                           <th className="px-6 py-5 text-right font-semibold uppercase text-[10px] tracking-widest">P. Venta</th>
-                          <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Stock</th>
+                          <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Disponibles / Total</th>
                           <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Vencimiento</th>
                           <th className="px-6 py-5 text-center font-semibold uppercase text-[10px] tracking-widest">Acciones</th>
                         </tr>
@@ -862,19 +862,26 @@ function InventoryCard({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Stock Actual</p>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl font-black text-slate-900 tracking-tighter">{item.quantity}</p>
-                <p className="text-xs text-slate-500 font-bold mb-1 uppercase">Uds.</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
+              <div className="flex items-end gap-1">
+                <p className="text-xl font-black text-slate-900 tracking-tighter">{item.quantity}</p>
+                <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">Uds.</p>
               </div>
             </div>
-            <div className="p-4 rounded-3xl bg-slate-50 border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">En Pedidos</p>
-              <div className="flex items-end gap-2">
-                <p className="text-2xl font-black text-orange-600 tracking-tighter">{item.onOrder || 0}</p>
-                <p className="text-xs text-orange-400 font-bold mb-1 uppercase">Uds.</p>
+            <div className="p-3 rounded-2xl bg-green-50 border border-green-100 flex flex-col justify-between">
+              <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Disponibles</p>
+              <div className="flex items-end gap-1">
+                <p className="text-xl font-black text-green-700 tracking-tighter">{Math.max(0, item.quantity - (item.onOrder || 0))}</p>
+                <p className="text-[10px] text-green-500 font-bold mb-1 uppercase">Uds.</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-tight">Entrega Pendiente</p>
+              <div className="flex items-end gap-1 mt-1">
+                <p className="text-xl font-black text-orange-600 tracking-tighter">{item.onOrder || 0}</p>
+                <p className="text-[10px] text-orange-400 font-bold mb-1 uppercase">Uds.</p>
               </div>
             </div>
           </div>
@@ -981,8 +988,9 @@ function InventoryRow({
       </td>
       <td className="px-6 py-4 text-center">
         <div className="flex flex-col items-center">
-          <span className="text-base font-black text-slate-900">{item.quantity}</span>
-          {item.onOrder > 0 && <span className="text-[10px] text-orange-500 font-bold">+{item.onOrder} ped.</span>}
+          <span className="text-base font-black text-green-600" title="Disponibles">{Math.max(0, item.quantity - (item.onOrder || 0))}</span>
+          <span className="text-[10px] text-slate-500 font-bold" title="Total">de {item.quantity} totales</span>
+          {item.onOrder > 0 && <span className="text-[10px] text-orange-500 font-bold" title="Entrega Pendiente">({item.onOrder} pendientes)</span>}
         </div>
       </td>
       <td className={`px-6 py-4 text-center font-bold text-xs ${getExpiryTone(item.expiryDate)}`}>
