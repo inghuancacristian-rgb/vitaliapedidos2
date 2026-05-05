@@ -2683,33 +2683,44 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         createdAt: new Date(),
       });
 
-      const productBatches = MOCK_INVENTORY
-        .filter((entry: any) => entry.productId === item.productId)
-        .sort((a, b) => {
-          if (!a.expiryDate) return 1;
-          if (!b.expiryDate) return -1;
-          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-        });
+      if (!payload.orderId) {
+        const productBatches = MOCK_INVENTORY
+          .filter((entry: any) => entry.productId === item.productId)
+          .sort((a, b) => {
+            if (!a.expiryDate) return 1;
+            if (!b.expiryDate) return -1;
+            return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+          });
 
-      let remaining = item.quantity;
-      for (const batch of productBatches) {
-        if (remaining <= 0) break;
-        const deduct = Math.min(batch.quantity, remaining);
-        batch.quantity -= deduct;
-        remaining -= deduct;
-        batch.lastUpdated = new Date();
+        let remaining = item.quantity;
+        for (const batch of productBatches) {
+          if (remaining <= 0) break;
+          const deduct = Math.min(batch.quantity, remaining);
+          batch.quantity -= deduct;
+          remaining -= deduct;
+          batch.lastUpdated = new Date();
+        }
       }
 
       await createInventoryMovement({
         productId: item.productId,
         type: "exit",
         quantity: item.quantity,
-        reason: `Venta ${payload.saleNumber}`,
-        notes: `Salida por venta ${payload.saleNumber}`,
+        reason: payload.orderId ? `Venta Pedido ${payload.orderId}` : `Venta ${payload.saleNumber}`,
+        notes: payload.orderId ? `Salida por venta vinculada a pedido` : `Salida por venta ${payload.saleNumber}`,
         saleId: newSaleId,
         orderId: payload.orderId || undefined,
         userId: payload.soldBy,
       });
+    }
+
+    if (payload.orderId) {
+      const order = MOCK_ORDERS.find(o => o.id === payload.orderId);
+      if (order) {
+        order.status = "delivered";
+        order.paymentStatus = "completed";
+        order.updatedAt = new Date();
+      }
     }
 
     if (payload.paymentStatus === "completed") {
@@ -2761,74 +2772,84 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         throw new Error(`Producto ${item.productId} no disponible para la venta`);
       }
 
-      const productBatches = await tx.select()
-        .from(inventory)
-        .where(eq(inventory.productId, item.productId))
-        .orderBy(inventory.expiryDate);
+      if (!payload.orderId) {
+        const productBatches = await tx.select()
+          .from(inventory)
+          .where(eq(inventory.productId, item.productId))
+          .orderBy(inventory.expiryDate);
 
-      let remaining = item.quantity;
-      for (const batch of productBatches) {
-        if (remaining <= 0) break;
-        const deduct = Math.min(batch.quantity, remaining);
-        if (deduct > 0) {
-          await tx.update(inventory)
-            .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
-            .where(eq(inventory.id, batch.id));
-          
+        let remaining = item.quantity;
+        for (const batch of productBatches) {
+          if (remaining <= 0) break;
+          const deduct = Math.min(batch.quantity, remaining);
+          if (deduct > 0) {
+            await tx.update(inventory)
+              .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
+              .where(eq(inventory.id, batch.id));
+            
+            await tx.insert(inventoryMovements).values({
+              productId: item.productId,
+              type: "exit",
+              quantity: deduct,
+              batchNumber: batch.batchNumber,
+              reason: `Venta ${payload.saleNumber}`,
+              notes: `Salida por venta ${payload.saleNumber}`,
+              saleId,
+              orderId: payload.orderId,
+              userId: payload.soldBy,
+            });
+            
+            remaining -= deduct;
+          }
+        }
+
+        if (remaining > 0) {
+          const defaultInvRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
+          if (defaultInvRows.length > 0) {
+             await tx.update(inventory)
+               .set({ quantity: defaultInvRows[0].quantity - remaining, lastUpdated: new Date() })
+               .where(eq(inventory.id, defaultInvRows[0].id));
+          } else {
+             await tx.insert(inventory).values({
+                productId: item.productId,
+                quantity: -remaining,
+                minStock: 10,
+                lastUpdated: new Date()
+             });
+          }
           await tx.insert(inventoryMovements).values({
             productId: item.productId,
             type: "exit",
-            quantity: deduct,
-            batchNumber: batch.batchNumber,
+            quantity: remaining,
             reason: `Venta ${payload.saleNumber}`,
-            notes: `Salida por venta ${payload.saleNumber}`,
+            notes: `Salida por venta ${payload.saleNumber} (Sin stock previo)`,
             saleId,
             orderId: payload.orderId,
             userId: payload.soldBy,
           });
-          
-          remaining -= deduct;
         }
-      }
-
-      await tx.insert(saleItems).values({
-        saleId,
-        productId: item.productId,
-        pricingType: item.pricingType,
-        quantity: item.quantity,
-        basePrice: item.basePrice,
-        discountType: item.discountType,
-        discountValue: item.discountValue,
-        discountAmount: item.discountAmount,
-        finalUnitPrice: item.finalUnitPrice,
-        subtotal: item.subtotal,
-      });
-
-      if (remaining > 0) {
-        const defaultInvRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
-        if (defaultInvRows.length > 0) {
-           await tx.update(inventory)
-             .set({ quantity: defaultInvRows[0].quantity - remaining, lastUpdated: new Date() })
-             .where(eq(inventory.id, defaultInvRows[0].id));
-        } else {
-           await tx.insert(inventory).values({
-              productId: item.productId,
-              quantity: -remaining,
-              minStock: 10,
-              lastUpdated: new Date()
-           });
-        }
+      } else {
+        // Si hay orderId, el stock ya fue descontado por deductInventoryForOrder.
+        // Solo registramos el movimiento para trazabilidad de la venta.
         await tx.insert(inventoryMovements).values({
           productId: item.productId,
           type: "exit",
-          quantity: remaining,
-          reason: `Venta ${payload.saleNumber}`,
-          notes: `Salida por venta ${payload.saleNumber} (Sin stock previo)`,
+          quantity: item.quantity,
+          reason: `Venta Pedido vinculado`,
+          notes: `Salida ya procesada en pedido #${payload.orderId}`,
           saleId,
           orderId: payload.orderId,
           userId: payload.soldBy,
         });
       }
+    }
+
+    if (payload.orderId) {
+      await tx.update(orders).set({
+        status: "delivered",
+        paymentStatus: "completed",
+        updatedAt: new Date(),
+      }).where(eq(orders.id, payload.orderId));
     }
 
     if (payload.paymentStatus === "completed") {

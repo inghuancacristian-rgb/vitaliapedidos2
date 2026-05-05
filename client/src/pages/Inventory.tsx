@@ -866,14 +866,14 @@ function InventoryCard({
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total</p>
               <div className="flex items-end gap-1">
-                <p className="text-xl font-black text-slate-900 tracking-tighter">{item.quantity}</p>
+                <p className="text-xl font-black text-slate-900 tracking-tighter">{item.quantity + (item.onOrder || 0)}</p>
                 <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">Uds.</p>
               </div>
             </div>
             <div className="p-3 rounded-2xl bg-green-50 border border-green-100 flex flex-col justify-between">
               <p className="text-[9px] font-black text-green-600 uppercase tracking-widest mb-1">Disponibles</p>
               <div className="flex items-end gap-1">
-                <p className="text-xl font-black text-green-700 tracking-tighter">{Math.max(0, item.quantity - (item.onOrder || 0))}</p>
+                <p className="text-xl font-black text-green-700 tracking-tighter">{item.quantity}</p>
                 <p className="text-[10px] text-green-500 font-bold mb-1 uppercase">Uds.</p>
               </div>
             </div>
@@ -988,8 +988,8 @@ function InventoryRow({
       </td>
       <td className="px-6 py-4 text-center">
         <div className="flex flex-col items-center">
-          <span className="text-base font-black text-green-600" title="Disponibles">{Math.max(0, item.quantity - (item.onOrder || 0))}</span>
-          <span className="text-[10px] text-slate-500 font-bold" title="Total">de {item.quantity} totales</span>
+          <span className="text-base font-black text-green-600" title="Disponibles">{item.quantity}</span>
+          <span className="text-[10px] text-slate-500 font-bold" title="Total">de {item.quantity + (item.onOrder || 0)} totales</span>
           {item.onOrder > 0 && <span className="text-[10px] text-orange-500 font-bold" title="Entrega Pendiente">({item.onOrder} pendientes)</span>}
         </div>
       </td>
