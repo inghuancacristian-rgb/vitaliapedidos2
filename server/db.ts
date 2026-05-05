@@ -64,6 +64,32 @@ let _pool: any = null;
 
 const MOCK_DATA_FILE = path.join(process.cwd(), "server", "demo_data.json");
 
+// Memoria para modo demo (persistente mientras el servidor corra)
+export const MOCK_USERS: any[] = [
+  { id: 999, username: "admin", passwordHash: "", name: "Administrador (Modo Demo)", role: "admin", openId: "demo_admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "admin@demo.com", loginMethod: "traditional" },
+  { id: 1000, username: "admin_root", passwordHash: "$2b$10$9Sg2Com1gCSFtFhWjxkBbuLzPA9ar0ucdiPLycgbOogdudS60Uwlu", name: "Administrador Principal", role: "admin", openId: "admin_root", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "root@vitaliapro.com", loginMethod: "traditional" }
+];
+export const MOCK_CUSTOMERS: any[] = [];
+export const MOCK_PRODUCTS: any[] = [];
+export const MOCK_INVENTORY: any[] = [];
+export const MOCK_ORDERS: any[] = [];
+export const MOCK_ORDER_ITEMS: any[] = [];
+export const MOCK_MOVEMENTS: any[] = [];
+export const MOCK_PAYMENTS: any[] = [];
+export const MOCK_SUPPLIERS: any[] = [];
+export const MOCK_PURCHASES: any[] = [];
+export const MOCK_PURCHASE_ITEMS: any[] = [];
+export const MOCK_ACCOUNTS_PAYABLE: any[] = [];
+export const MOCK_DELIVERY_EXPENSES: any[] = [];
+export const MOCK_OPERATIONAL_EXPENSES: any[] = [];
+export const MOCK_FINANCIAL_TRANSACTIONS: any[] = [];
+export const MOCK_CASH_CLOSURES: any[] = [];
+export const MOCK_CASH_OPENINGS: any[] = [];
+export const MOCK_SALES: any[] = [];
+export const MOCK_SALE_ITEMS: any[] = [];
+export const MOCK_QUOTATIONS: any[] = [];
+export const MOCK_QUOTATION_ITEMS: any[] = [];
+export const MOCK_DELIVERY_EXTRA_LOAD: any[] = [];
 
 function syncMocksToDisk() {
   if (process.env.DATABASE_URL) return;
@@ -368,10 +394,6 @@ export async function updateLastSignedInById(userId: number) {
 }
 
 // Clientes
-const MOCK_CUSTOMERS: any[] = [];
-const MOCK_QUOTATIONS: any[] = [];
-export const MOCK_QUOTATION_ITEMS: any[] = [];
-export const MOCK_DELIVERY_EXTRA_LOAD: any[] = [];
 
 export async function getCustomerByNumber(clientNumber: string) {
   const db = await getDb();
@@ -470,13 +492,7 @@ export async function getProductById(productId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// Almacenamiento en memoria para modo demo (persistente mientras el servidor corra)
-const MOCK_USERS: any[] = [
-  { id: 999, username: "admin", passwordHash: "", name: "Administrador (Modo Demo)", role: "admin", openId: "demo_admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "admin@demo.com", loginMethod: "traditional" },
-  { id: 1000, username: "admin_root", passwordHash: "$2b$10$9Sg2Com1gCSFtFhWjxkBbuLzPA9ar0ucdiPLycgbOogdudS60Uwlu", name: "Administrador Principal", role: "admin", openId: "admin_root", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), email: "root@vitaliapro.com", loginMethod: "traditional" }
-];
-const MOCK_PRODUCTS: any[] = [];
-const MOCK_INVENTORY: any[] = [];
+// Productos
 
 export async function getAllProducts() {
   const db = await getDb();
@@ -617,7 +633,6 @@ export async function updateInventory(productId: number, quantity: number, expir
 }
 
 // Pedidos
-const MOCK_ORDERS: any[] = [];
 
 export async function getOrderByNumber(orderNumber: string) {
   const db = await getDb();
@@ -1061,7 +1076,6 @@ export async function completeOrderDelivery(orderId: number, method: "cash" | "q
 
 
 // Items de Pedidos
-const MOCK_ORDER_ITEMS: any[] = [];
 
 export async function createOrderItem(data: InsertOrderItem) {
   const db = await getDb();
@@ -1087,9 +1101,7 @@ export async function deleteOrderItems(orderId: number) {
   }
   return await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
 }
-
 // Pagos
-const MOCK_PAYMENTS: any[] = [];
 
 export async function createPayment(data: InsertPayment) {
   const db = await getDb();
@@ -1148,7 +1160,6 @@ export async function getGPSTrackingHistory(orderId: number) {
 }
 
 // Movimientos de Inventario
-const MOCK_MOVEMENTS: any[] = [];
 
 export async function createInventoryMovement(data: InsertInventoryMovement) {
   const db = await getDb();
@@ -1257,16 +1268,7 @@ export async function getPaymentByOrderId(orderId: number) {
 
 // --- MÓDULO FINANCIERO Y COMPRAS (DEMO MODE) ---
 
-const MOCK_SUPPLIERS: any[] = [];
-
-const MOCK_PURCHASES: any[] = [];
-const MOCK_PURCHASE_ITEMS: any[] = [];
-const MOCK_ACCOUNTS_PAYABLE: any[] = [];
-const MOCK_DELIVERY_EXPENSES: any[] = [];
-const MOCK_OPERATIONAL_EXPENSES: any[] = [];
-const MOCK_FINANCIAL_TRANSACTIONS: any[] = [];
-const MOCK_CASH_CLOSURES: any[] = [];
-const MOCK_CASH_OPENINGS: any[] = [];
+// Proveedores y Compras
 
 // Proveedores
 export async function getAllSuppliers() {
@@ -2508,8 +2510,6 @@ export async function getExpectedDailyTotals(userId: number, date: string) {
 // =============================================
 // Ventas (Sales)
 // =============================================
-export const MOCK_SALES: any[] = [];
-export const MOCK_SALE_ITEMS: any[] = [];
 
 type SaleDiscountType = "none" | "percentage" | "fixed";
 type SalePaymentStatus = "pending" | "completed";

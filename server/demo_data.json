@@ -1,0 +1,136 @@
+{
+  "MOCK_CUSTOMERS": [],
+  "MOCK_USERS": [
+    {
+      "id": 999,
+      "username": "admin",
+      "passwordHash": "",
+      "name": "Administrador (Modo Demo)",
+      "role": "admin",
+      "openId": "demo_admin",
+      "createdAt": "2026-05-05T06:13:29.383Z",
+      "updatedAt": "2026-05-05T06:13:29.383Z",
+      "lastSignedIn": "2026-05-05T06:13:29.383Z",
+      "email": "admin@demo.com",
+      "loginMethod": "traditional"
+    },
+    {
+      "id": 1000,
+      "username": "admin_root",
+      "passwordHash": "$2b$10$9Sg2Com1gCSFtFhWjxkBbuLzPA9ar0ucdiPLycgbOogdudS60Uwlu",
+      "name": "Administrador Principal",
+      "role": "admin",
+      "openId": "admin_root",
+      "createdAt": "2026-05-05T06:13:29.383Z",
+      "updatedAt": "2026-05-05T06:13:29.383Z",
+      "lastSignedIn": "2026-05-05T06:13:29.383Z",
+      "email": "root@vitaliapro.com",
+      "loginMethod": "traditional"
+    }
+  ],
+  "MOCK_PRODUCTS": [
+    {
+      "name": "Coco",
+      "code": "COC",
+      "price": 10,
+      "salePrice": 15,
+      "category": "Helados",
+      "id": 1,
+      "createdAt": "2026-05-05T06:13:29.385Z",
+      "updatedAt": "2026-05-05T06:13:29.385Z"
+    },
+    {
+      "name": "Frutilla",
+      "code": "FRU",
+      "price": 10,
+      "salePrice": 15,
+      "category": "Helados",
+      "id": 2,
+      "createdAt": "2026-05-05T06:13:29.390Z",
+      "updatedAt": "2026-05-05T06:13:29.390Z"
+    },
+    {
+      "name": "Natural",
+      "code": "NAT",
+      "price": 10,
+      "salePrice": 15,
+      "category": "Helados",
+      "id": 3,
+      "createdAt": "2026-05-05T06:13:29.391Z",
+      "updatedAt": "2026-05-05T06:13:29.391Z"
+    },
+    {
+      "name": "Vainilla",
+      "code": "VAI",
+      "price": 10,
+      "salePrice": 15,
+      "category": "Helados",
+      "id": 4,
+      "createdAt": "2026-05-05T06:13:29.392Z",
+      "updatedAt": "2026-05-05T06:13:29.392Z"
+    }
+  ],
+  "MOCK_INVENTORY": [
+    {
+      "id": 1,
+      "productId": 1,
+      "quantity": 2,
+      "minStock": 10,
+      "lastUpdated": "2026-05-05T06:18:07.531Z"
+    },
+    {
+      "id": 2,
+      "productId": 2,
+      "quantity": 2,
+      "minStock": 10,
+      "lastUpdated": "2026-05-05T06:18:07.534Z"
+    },
+    {
+      "id": 3,
+      "productId": 3,
+      "quantity": 2,
+      "minStock": 10,
+      "lastUpdated": "2026-05-05T06:18:07.534Z"
+    },
+    {
+      "id": 4,
+      "productId": 4,
+      "quantity": 2,
+      "minStock": 10,
+      "lastUpdated": "2026-05-05T06:18:07.535Z"
+    }
+  ],
+  "MOCK_ORDERS": [
+    {
+      "orderNumber": "ORD-011",
+      "customerId": 1,
+      "customerName": "Cliente Prueba",
+      "totalPrice": 30,
+      "status": "pending",
+      "paymentStatus": "pending",
+      "createdAt": "2026-05-05T06:13:29.397Z",
+      "updatedAt": "2026-05-05T06:18:07.536Z",
+      "deliveryDate": "2026-05-05T06:13:29.397Z",
+      "id": 1,
+      "deliveryPersonName": null,
+      "sourceChannel": "other"
+    }
+  ],
+  "MOCK_ORDER_ITEMS": [],
+  "MOCK_PAYMENTS": [],
+  "MOCK_MOVEMENTS": [],
+  "MOCK_SUPPLIERS": [],
+  "MOCK_PURCHASES": [],
+  "MOCK_PURCHASE_ITEMS": [],
+  "MOCK_ACCOUNTS_PAYABLE": [],
+  "MOCK_DELIVERY_EXPENSES": [],
+  "MOCK_OPERATIONAL_EXPENSES": [],
+  "MOCK_FINANCIAL_TRANSACTIONS": [],
+  "MOCK_CASH_CLOSURES": [],
+  "MOCK_CASH_OPENINGS": [],
+  "MOCK_SALES": [],
+  "MOCK_SALE_ITEMS": [],
+  "MOCK_QUOTATIONS": [],
+  "MOCK_QUOTATION_ITEMS": [],
+  "MOCK_DELIVERY_EXTRA_LOAD": []
+}
