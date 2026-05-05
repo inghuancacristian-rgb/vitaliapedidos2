@@ -106,7 +106,7 @@ export const salesRouter = router({
         items: z.array(
           z.object({
             productId: z.number(),
-            pricingType: z.enum(["unit", "wholesale"]).default("unit"),
+            pricingType: z.enum(["unit", "wholesale", "discount"]).default("unit"),
             quantity: z.number().int().min(1),
             basePrice: z.number().min(0),
             discountType: discountTypeSchema.default("none"),
@@ -121,7 +121,7 @@ export const salesRouter = router({
 
         return {
           productId: item.productId,
-          pricingType: "unit" as const,
+          pricingType: item.pricingType,
           quantity: pricing.quantity,
           basePrice: pricing.basePrice,
           discountType: item.discountType,

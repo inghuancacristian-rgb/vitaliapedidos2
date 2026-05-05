@@ -233,6 +233,7 @@ export const ordersRouter = router({
             productId: z.number(),
             quantity: z.number(),
             price: z.number(),
+            pricingType: z.enum(["unit", "wholesale", "discount"]).default("unit"),
           })
         ),
         totalPrice: z.number(),
@@ -309,6 +310,7 @@ export const ordersRouter = router({
         await createOrderItem({
           orderId: newOrder.id,
           productId: item.productId,
+          pricingType: item.pricingType,
           quantity: item.quantity,
           price: item.price,
         });
@@ -337,6 +339,7 @@ export const ordersRouter = router({
             productId: z.number(),
             quantity: z.number(),
             price: z.number(),
+            pricingType: z.enum(["unit", "wholesale", "discount"]).default("unit"),
           })
         ),
         totalPrice: z.number(),
@@ -398,6 +401,7 @@ export const ordersRouter = router({
         await createOrderItem({
           orderId: input.id,
           productId: item.productId,
+          pricingType: item.pricingType,
           quantity: item.quantity,
           price: item.price,
         });

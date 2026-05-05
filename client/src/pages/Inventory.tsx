@@ -879,14 +879,18 @@ function InventoryCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-3xl border border-sky-100 bg-sky-50/30">
-              <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-1">P. Compra</p>
-              <p className="text-lg font-black text-sky-900">{item.product?.price != null ? formatCurrency(item.product.price) : "-"}</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-2xl border border-slate-100 bg-slate-50/50">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Unitario</p>
+              <p className="text-sm font-black text-slate-900">{item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}</p>
             </div>
-            <div className="p-4 rounded-3xl border border-emerald-100 bg-emerald-50/30">
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">P. Venta</p>
-              <p className="text-lg font-black text-emerald-900">{item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}</p>
+            <div className="p-3 rounded-2xl border border-emerald-100 bg-emerald-50/30">
+              <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Descuento</p>
+              <p className="text-sm font-black text-emerald-900">{item.product?.discountPrice != null ? formatCurrency(item.product.discountPrice) : "-"}</p>
+            </div>
+            <div className="p-3 rounded-2xl border border-violet-100 bg-violet-50/30">
+              <p className="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1">Mayorista</p>
+              <p className="text-sm font-black text-violet-900">{item.product?.wholesalePrice != null ? formatCurrency(item.product.wholesalePrice) : "-"}</p>
             </div>
           </div>
 
@@ -968,8 +972,12 @@ function InventoryRow({
       <td className="px-6 py-4 text-right font-black text-sky-700">
         {item.product?.price != null ? formatCurrency(item.product.price) : "-"}
       </td>
-      <td className="px-6 py-4 text-right font-black text-emerald-700">
-        {item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}
+      <td className="px-6 py-4 text-right">
+        <div className="flex flex-col gap-1 items-end">
+          <span className="text-xs font-bold text-slate-900" title="Precio Unitario">{item.product?.salePrice != null ? formatCurrency(item.product.salePrice) : "-"}</span>
+          <span className="text-[10px] font-black text-emerald-600" title="Precio Descuento">{item.product?.discountPrice != null ? formatCurrency(item.product.discountPrice) : "-"}</span>
+          <span className="text-[10px] font-black text-violet-600" title="Precio Mayorista">{item.product?.wholesalePrice != null ? formatCurrency(item.product.wholesalePrice) : "-"}</span>
+        </div>
       </td>
       <td className="px-6 py-4 text-center">
         <div className="flex flex-col items-center">

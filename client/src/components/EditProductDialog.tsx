@@ -35,6 +35,8 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
     category: "finished_product",
     price: "",
     salePrice: "",
+    wholesalePrice: "",
+    discountPrice: "",
     imageUrl: "",
     status: "active",
   });
@@ -49,6 +51,8 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
         category: product.category || "finished_product",
         price: product.price ? (product.price / 100).toString() : "",
         salePrice: product.salePrice ? (product.salePrice / 100).toString() : "",
+        wholesalePrice: product.wholesalePrice ? (product.wholesalePrice / 100).toString() : "",
+        discountPrice: product.discountPrice ? (product.discountPrice / 100).toString() : "",
         imageUrl: product.imageUrl || "",
         status: product.status || "active",
       });
@@ -167,6 +171,8 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
       category: formData.category as "finished_product" | "raw_material" | "supplies",
       price: parseFloat(formData.price),
       salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
+      wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : 0,
+      discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : 0,
       imageUrl: formData.imageUrl || "",
       status: formData.status as "active" | "inactive",
     });
@@ -264,6 +270,41 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
                 className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, salePrice: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor={`wholesalePrice-${product.id}`} className="text-sm font-semibold text-slate-700">Precio Mayorista (Bs.)</Label>
+              <Input
+                id={`wholesalePrice-${product.id}`}
+                type="number"
+                step="any"
+                inputMode="decimal"
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                value={formData.wholesalePrice}
+                className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, wholesalePrice: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`discountPrice-${product.id}`} className="text-sm font-semibold text-slate-700">Precio Descuento (Bs.)</Label>
+              <Input
+                id={`discountPrice-${product.id}`}
+                type="number"
+                step="any"
+                inputMode="decimal"
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
+                value={formData.discountPrice}
+                className="h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:bg-white"
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, discountPrice: e.target.value }))
                 }
               />
             </div>

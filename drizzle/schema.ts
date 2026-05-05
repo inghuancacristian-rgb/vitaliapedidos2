@@ -77,6 +77,7 @@ export const products = mysqlTable("products", {
   price: int("price").notNull(), // Precio de Compra en centavos
   salePrice: int("salePrice").notNull().default(0), // Precio de Venta Unitario en centavos
   wholesalePrice: int("wholesalePrice").notNull().default(0), // Precio de Venta por Mayor en centavos
+  discountPrice: int("discountPrice").notNull().default(0), // Precio de Venta con Descuento en centavos
   wholesaleDiscountType: mysqlEnum("wholesaleDiscountType", ["percentage", "fixed"]).default("percentage"), // Tipo de descuento por mayor
   wholesaleDiscountValue: int("wholesaleDiscountValue").notNull().default(0), // Valor del descuento por mayor (% o centavos)
   status: mysqlEnum("status", ["active", "inactive"]).notNull().default("active"),
@@ -156,6 +157,7 @@ export const orderItems = mysqlTable("orderItems", {
   id: int("id").autoincrement().primaryKey(),
   orderId: int("orderId").notNull().references(() => orders.id),
   productId: int("productId").notNull().references(() => products.id),
+  pricingType: mysqlEnum("pricingType", ["unit", "wholesale", "discount"]).notNull().default("unit"),
   quantity: int("quantity").notNull(),
   price: int("price").notNull(), // Precio unitario en centavos
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -391,7 +393,7 @@ export const saleItems = mysqlTable("saleItems", {
   id: int("id").autoincrement().primaryKey(),
   saleId: int("saleId").notNull().references(() => sales.id),
   productId: int("productId").notNull().references(() => products.id),
-  pricingType: mysqlEnum("pricingType", ["unit", "wholesale"]).notNull().default("unit"),
+  pricingType: mysqlEnum("pricingType", ["unit", "wholesale", "discount"]).notNull().default("unit"),
   quantity: int("quantity").notNull(),
   basePrice: int("basePrice").notNull(), // Precio base (salePrice o wholesalePrice del producto)
   discountType: mysqlEnum("discountType", ["none", "percentage", "fixed"]).notNull().default("none"),
@@ -458,7 +460,7 @@ export const quotationItems = mysqlTable("quotationItems", {
   id: int("id").autoincrement().primaryKey(),
   quotationId: int("quotationId").notNull().references(() => quotations.id),
   productId: int("productId").notNull().references(() => products.id),
-  pricingType: mysqlEnum("pricingType", ["unit", "wholesale"]).notNull().default("unit"),
+  pricingType: mysqlEnum("pricingType", ["unit", "wholesale", "discount"]).notNull().default("unit"),
   quantity: int("quantity").notNull(),
   basePrice: int("basePrice").notNull(),
   discountType: mysqlEnum("discountType", ["none", "percentage", "fixed"]).notNull().default("none"),

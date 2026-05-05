@@ -44,6 +44,7 @@ type CartItem = {
   stock: number;
   quantity: number;
   basePrice: number;
+  pricingType: "unit" | "wholesale" | "discount";
   discountType: DiscountType;
   discountValue: number;
 };
@@ -170,6 +171,7 @@ export default function QuotationsView({ onSelectQuotation }: { onSelectQuotatio
           stock: product.stock,
           quantity: 1,
           basePrice: product.salePrice,
+          pricingType: "unit",
           discountType: "none",
           discountValue: 0,
         },
@@ -526,7 +528,12 @@ export default function QuotationsView({ onSelectQuotation }: { onSelectQuotatio
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
                             <p className="font-semibold text-sm leading-tight text-slate-900">{item.productName}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(item.basePrice)} c/u</p>
+                            <div className="flex gap-1 mt-1">
+                              <Badge variant={item.pricingType === "unit" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "unit", basePrice: products?.find(p => p.id === item.productId)?.salePrice || item.basePrice })}>U</Badge>
+                              <Badge variant={item.pricingType === "discount" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "discount", basePrice: products?.find(p => p.id === item.productId)?.discountPrice || item.basePrice })}>D</Badge>
+                              <Badge variant={item.pricingType === "wholesale" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "wholesale", basePrice: products?.find(p => p.id === item.productId)?.wholesalePrice || item.basePrice })}>M</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{formatCurrency(item.basePrice)} c/u</p>
                           </div>
                           <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-1 -mr-1" onClick={() => removeCartItem(item.productId)}>
                             <XCircle className="h-4 w-4 text-red-400 hover:text-red-600" />

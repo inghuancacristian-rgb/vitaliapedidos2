@@ -61,6 +61,7 @@ type CartItem = {
   stock: number;
   quantity: number;
   basePrice: number;
+  pricingType: "unit" | "wholesale" | "discount";
   discountType: DiscountType;
   discountValue: number;
 };
@@ -442,6 +443,7 @@ export default function Sales() {
           stock: product.stock,
           quantity: 1,
           basePrice: product.salePrice,
+          pricingType: "unit",
           discountType: "none",
           discountValue: 0,
         },
@@ -524,6 +526,7 @@ export default function Sales() {
       stock: 9999, // Hack to allow loading without failing stock validation immediately
       quantity: item.quantity,
       basePrice: item.basePrice,
+      pricingType: item.pricingType || "unit",
       discountType: item.discountType,
       discountValue: item.discountValue
     })));
@@ -1046,7 +1049,12 @@ export default function Sales() {
                           <div key={item.productId} className="flex items-center gap-3 rounded-xl border bg-white px-3 py-3">
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{item.productName}</p>
-                              <p className="text-xs text-muted-foreground">{formatCurrency(item.basePrice)} c/u</p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <Badge variant={item.pricingType === "unit" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "unit", basePrice: products?.find(p => p.id === item.productId)?.salePrice || item.basePrice })}>U</Badge>
+                                <Badge variant={item.pricingType === "discount" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "discount", basePrice: products?.find(p => p.id === item.productId)?.discountPrice || item.basePrice })}>D</Badge>
+                                <Badge variant={item.pricingType === "wholesale" ? "default" : "outline"} className="text-[8px] h-4 px-1" onClick={() => updateCartItem(item.productId, { pricingType: "wholesale", basePrice: products?.find(p => p.id === item.productId)?.wholesalePrice || item.basePrice })}>M</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">{formatCurrency(item.basePrice)} c/u</p>
                             </div>
                             <div className="flex items-center gap-1">
                               <Button
@@ -1111,13 +1119,35 @@ export default function Sales() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-bold text-slate-900 truncate">{item.productName}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-xs font-medium text-slate-400">{formatCurrency(item.basePrice)} c/u</span>
-                                  {item.discountAmount > 0 && (
-                                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] h-4 px-1.5 font-black">
-                                      - {formatCurrency(item.discountAmount)}
-                                    </Badge>
-                                  )}
+                                <div className="flex items-center gap-3 mt-1">
+                                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                    <button 
+                                      onClick={() => updateCartItem(item.productId, { pricingType: "unit", basePrice: products?.find(p => p.id === item.productId)?.salePrice || 0 })}
+                                      className={`px-2 py-0.5 rounded-md text-[9px] font-black transition-all ${item.pricingType === "unit" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                    >
+                                      UNIT.
+                                    </button>
+                                    <button 
+                                      onClick={() => updateCartItem(item.productId, { pricingType: "discount", basePrice: products?.find(p => p.id === item.productId)?.discountPrice || 0 })}
+                                      className={`px-2 py-0.5 rounded-md text-[9px] font-black transition-all ${item.pricingType === "discount" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                    >
+                                      DESC.
+                                    </button>
+                                    <button 
+                                      onClick={() => updateCartItem(item.productId, { pricingType: "wholesale", basePrice: products?.find(p => p.id === item.productId)?.wholesalePrice || 0 })}
+                                      className={`px-2 py-0.5 rounded-md text-[9px] font-black transition-all ${item.pricingType === "wholesale" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                    >
+                                      MAYOR.
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-black text-slate-500">{formatCurrency(item.basePrice)}</span>
+                                    {item.discountAmount > 0 && (
+                                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] h-4 px-1.5 font-black">
+                                        - {formatCurrency(item.discountAmount)}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-2xl border border-slate-100">

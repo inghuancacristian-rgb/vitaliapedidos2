@@ -42,7 +42,7 @@ export default function CreateOrder() {
     paymentMethod: "cash" as "qr" | "cash" | "transfer",
     deliveryPersonId: "",
     notes: "",
-    items: [{ productId: 0, productCode: "", quantity: 1, price: 0 }],
+    items: [{ productId: 0, productCode: "", quantity: 1, price: 0, pricingType: "unit" as "unit" | "wholesale" | "discount" }],
   });
 
   const [showSummary, setShowSummary] = useState(false);
@@ -83,7 +83,7 @@ export default function CreateOrder() {
       const firstProduct = products[0];
       setFormData((prev) => ({
         ...prev,
-        items: [{ productId: firstProduct.id, productCode: firstProduct.code, quantity: 1, price: firstProduct.salePrice || 0 }],
+        items: [{ productId: firstProduct.id, productCode: firstProduct.code, quantity: 1, price: firstProduct.salePrice || 0, pricingType: "unit" }],
       }));
     }
   }, [products]);
@@ -101,7 +101,7 @@ export default function CreateOrder() {
     const defaultProduct = products?.[0];
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: defaultProduct?.id || 0, productCode: defaultProduct?.code || "COCO", quantity: 1, price: defaultProduct?.salePrice || 0 }],
+      items: [...formData.items, { productId: defaultProduct?.id || 0, productCode: defaultProduct?.code || "COCO", quantity: 1, price: defaultProduct?.salePrice || 0, pricingType: "unit" }],
     });
   };
 
@@ -127,7 +127,8 @@ export default function CreateOrder() {
           productId: product.id, 
           productCode: product.code, 
           quantity: 1, 
-          price: product.salePrice || 0 
+          price: product.salePrice || 0,
+          pricingType: "unit"
         }]
       });
     }
@@ -457,6 +458,50 @@ export default function CreateOrder() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nivel de Precio</Label>
+                      <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const selectedProduct = products?.find((p: any) => p.code === item.productCode);
+                            const newItems = [...formData.items];
+                            newItems[index].pricingType = "unit";
+                            newItems[index].price = selectedProduct?.salePrice || 0;
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${item.pricingType === "unit" ? "bg-slate-900 text-white shadow-md" : "text-slate-400 hover:text-slate-600"}`}
+                        >
+                          UNIT.
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const selectedProduct = products?.find((p: any) => p.code === item.productCode);
+                            const newItems = [...formData.items];
+                            newItems[index].pricingType = "discount";
+                            newItems[index].price = selectedProduct?.discountPrice || 0;
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${item.pricingType === "discount" ? "bg-slate-900 text-white shadow-md" : "text-slate-400 hover:text-slate-600"}`}
+                        >
+                          DESC.
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const selectedProduct = products?.find((p: any) => p.code === item.productCode);
+                            const newItems = [...formData.items];
+                            newItems[index].pricingType = "wholesale";
+                            newItems[index].price = selectedProduct?.wholesalePrice || 0;
+                            setFormData({ ...formData, items: newItems });
+                          }}
+                          className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${item.pricingType === "wholesale" ? "bg-slate-900 text-white shadow-md" : "text-slate-400 hover:text-slate-600"}`}
+                        >
+                          MAYOR.
+                        </button>
+                      </div>
                     </div>
                   </div>
 

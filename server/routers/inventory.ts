@@ -155,6 +155,8 @@ export const inventoryRouter = router({
         category: z.enum(["finished_product", "raw_material", "supplies"]),
         price: z.number(),
         salePrice: z.number().optional(),
+        wholesalePrice: z.number().optional(),
+        discountPrice: z.number().optional(),
         imageUrl: z.string().optional(),
         status: z.enum(["active", "inactive"]).optional(),
       })
@@ -170,6 +172,8 @@ export const inventoryRouter = router({
         category: input.category,
         price: Math.round(input.price * 100), // Convertir a centavos
         salePrice: Math.round((input.salePrice || 0) * 100),
+        wholesalePrice: Math.round((input.wholesalePrice || 0) * 100),
+        discountPrice: Math.round((input.discountPrice || 0) * 100),
         imageUrl: input.imageUrl,
         status: (input.status || "active") as "active" | "inactive",
       });
@@ -188,7 +192,7 @@ export const inventoryRouter = router({
           type: "adjustment",
           quantity: 0,
           reason: "Producto creado",
-          notes: `Creado por ${ctx.user.name || ctx.user.username || "usuario"} con precio compra ${formatCurrencyCents(Math.round(input.price * 100))} y precio venta ${formatCurrencyCents(Math.round((input.salePrice || 0) * 100))}. Estado inicial: ${formatStatusLabel(input.status || "active")}.`,
+          notes: `Creado por ${ctx.user.name || ctx.user.username || "usuario"} con precio compra ${formatCurrencyCents(Math.round(input.price * 100))}, venta unitaria ${formatCurrencyCents(Math.round((input.salePrice || 0) * 100))}, mayorista ${formatCurrencyCents(Math.round((input.wholesalePrice || 0) * 100))} y descuento ${formatCurrencyCents(Math.round((input.discountPrice || 0) * 100))}. Estado inicial: ${formatStatusLabel(input.status || "active")}.`,
         });
       }
 
@@ -205,6 +209,8 @@ export const inventoryRouter = router({
         category: z.enum(["finished_product", "raw_material", "supplies"]).optional(),
         price: z.number().optional(),
         salePrice: z.number().optional(),
+        wholesalePrice: z.number().optional(),
+        discountPrice: z.number().optional(),
         imageUrl: z.string().optional(),
         status: z.enum(["active", "inactive"]).optional(),
       })
@@ -226,6 +232,12 @@ export const inventoryRouter = router({
       if (updateData.salePrice !== undefined) {
         updateData.salePrice = Math.round(updateData.salePrice * 100);
       }
+      if (updateData.wholesalePrice !== undefined) {
+        updateData.wholesalePrice = Math.round(updateData.wholesalePrice * 100);
+      }
+      if (updateData.discountPrice !== undefined) {
+        updateData.discountPrice = Math.round(updateData.discountPrice * 100);
+      }
 
       await updateProduct(id, updateData as any);
 
@@ -241,11 +253,18 @@ export const inventoryRouter = router({
 
       if (
         updateData.price !== undefined && updateData.price !== existingProduct.price ||
-        updateData.salePrice !== undefined && updateData.salePrice !== existingProduct.salePrice
+        updateData.salePrice !== undefined && updateData.salePrice !== existingProduct.salePrice ||
+        updateData.wholesalePrice !== undefined && updateData.wholesalePrice !== existingProduct.wholesalePrice ||
+        updateData.discountPrice !== undefined && updateData.discountPrice !== existingProduct.discountPrice
       ) {
+        const buyChange = updateData.price !== undefined ? `${formatCurrencyCents(existingProduct.price)} -> ${formatCurrencyCents(updateData.price)}` : "sin cambios";
+        const saleChange = updateData.salePrice !== undefined ? `${formatCurrencyCents(existingProduct.salePrice)} -> ${formatCurrencyCents(updateData.salePrice)}` : "sin cambios";
+        const wholesaleChange = updateData.wholesalePrice !== undefined ? `${formatCurrencyCents(existingProduct.wholesalePrice)} -> ${formatCurrencyCents(updateData.wholesalePrice)}` : "sin cambios";
+        const discountChange = updateData.discountPrice !== undefined ? `${formatCurrencyCents(existingProduct.discountPrice)} -> ${formatCurrencyCents(updateData.discountPrice)}` : "sin cambios";
+
         historyEvents.push({
           reason: "Precios actualizados",
-          notes: `${actorName} actualizó precios. Compra: ${formatCurrencyCents(existingProduct.price)} -> ${formatCurrencyCents(updateData.price ?? existingProduct.price)}. Venta: ${formatCurrencyCents(existingProduct.salePrice)} -> ${formatCurrencyCents(updateData.salePrice ?? existingProduct.salePrice)}.`,
+          notes: `${actorName} actualizó precios. Compra: ${buyChange}. Venta: ${saleChange}. Mayorista: ${wholesaleChange}. Descuento: ${discountChange}.`,
         });
       }
 
