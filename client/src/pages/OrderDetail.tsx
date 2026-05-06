@@ -327,7 +327,7 @@ export default function OrderDetail() {
                       size="icon" 
                       className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                       onClick={() => {
-                        const tel = cleanPhone(customer?.whatsapp || customer?.phone);
+                        const tel = cleanPhone(customer?.whatsapp || customer?.phone || customer?.clientNumber);
                         if (!tel) {
                           toast.error("El cliente no tiene un número válido");
                           return;
@@ -396,7 +396,7 @@ export default function OrderDetail() {
                 variant="outline" 
                 className="w-full gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                 onClick={() => {
-                  const tel = cleanPhone(customer?.whatsapp || customer?.phone);
+                  const tel = cleanPhone(customer?.whatsapp || customer?.phone || customer?.clientNumber);
                   if (!tel) {
                     toast.error("El cliente no tiene un número válido");
                     return;

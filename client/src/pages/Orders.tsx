@@ -1168,7 +1168,7 @@ function OrderGrid({ orders, user, openWhatsApp, setRescheduleOrderId, setResche
                   <Button
                     variant="outline"
                     className="h-10 px-4 rounded-xl bg-white text-emerald-600 hover:bg-emerald-50 border-emerald-200 shadow-sm font-bold gap-2 text-sm"
-                    onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone, order.orderNumber)}
+                    onClick={() => openWhatsApp(order.customerWhatsapp || order.customerPhone || order.customerNumber, order.orderNumber)}
                   >
                     <MessageCircle className="h-4 w-4" />
                     WhatsApp

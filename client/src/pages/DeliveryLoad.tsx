@@ -399,7 +399,7 @@ export default function DeliveryLoad() {
                   {filteredEntries.map((entry) => {
                     const order = entry.order;
                     const customer = entry.customer;
-                    const tel = customer?.phone || customer?.whatsapp || null;
+                    const tel = customer?.phone || customer?.whatsapp || customer?.clientNumber || null;
                     const totalItems = (entry.items || []).length;
                     const checkedItems = (entry.items || []).filter((item: any) => checked[`${order.id}:${item.id ?? item.productId}`]).length;
 
