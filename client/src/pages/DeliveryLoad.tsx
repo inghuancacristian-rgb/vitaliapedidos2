@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/currency";
-import { Package, Printer, Download, Search } from "lucide-react";
+import { Package, Printer, Download, Search, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -414,6 +414,26 @@ export default function DeliveryLoad() {
                             <p className="text-[10px] text-muted-foreground truncate">
                               Cliente: {customer?.name || "-"}{tel ? ` | ${tel}` : ""} | Pago: {paymentMethodLabel(order.paymentMethod)} | Total: {formatCurrency(order.totalPrice)}
                             </p>
+                            {tel && (
+                              <div className="flex gap-2 mt-1">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-7 px-2 text-[10px] font-bold text-emerald-600 border-emerald-200 hover:bg-emerald-50 gap-1"
+                                  onClick={() => {
+                                     const cleaned = tel.replace(/\D/g, "");
+                                     let formatted = cleaned;
+                                     if (cleaned.length === 8) formatted = "591" + cleaned;
+                                     else if (cleaned.startsWith("0") && cleaned.length === 9) formatted = "591" + cleaned.slice(1);
+                                     else if (cleaned.length > 8 && !cleaned.startsWith("591")) formatted = "591" + cleaned;
+                                     window.open(`https://wa.me/${formatted}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20sobre%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
+                                  }}
+                                >
+                                  <MessageCircle className="h-3 w-3" />
+                                  WhatsApp
+                                </Button>
+                              </div>
+                            )}
                             {order.notes && (
                               <p className="text-[10px] text-amber-600 font-medium truncate mt-0.5">
                                 Nota: {order.notes}

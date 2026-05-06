@@ -88,6 +88,15 @@ export default function OrderDetail() {
 
   const { order, items, customer } = orderDetails;
 
+  const cleanPhone = (phone: string | null | undefined) => {
+    if (!phone) return "";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 8) return "591" + cleaned;
+    if (cleaned.startsWith("0") && cleaned.length === 9) return "591" + cleaned.slice(1);
+    if (cleaned.length > 8 && !cleaned.startsWith("591")) return "591" + cleaned;
+    return cleaned;
+  };
+
   const handleMarkAsDelivered = () => {
     if (user?.role === "user") {
       updateStatusMutation.mutate({
@@ -308,6 +317,25 @@ export default function OrderDetail() {
                   )}
                 </p>
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Teléfono Cliente</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <p className="font-semibold">{customer?.phone || customer?.whatsapp || "No registrado"}</p>
+                  {(customer?.phone || customer?.whatsapp) && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      onClick={() => {
+                        const tel = cleanPhone(customer?.whatsapp || customer?.phone);
+                        window.open(`https://wa.me/${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
+                      }}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -360,16 +388,17 @@ export default function OrderDetail() {
               <CardTitle>Acciones Adicionales</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <a
-                href={`https://wa.me/${customer?.whatsapp || customer?.phone || ''}?text=Hola,%20estoy%20entregando%20tu%20pedido%20%23${order.orderNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                onClick={() => {
+                  const tel = cleanPhone(customer?.whatsapp || customer?.phone);
+                  window.open(`https://wa.me/${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
+                }}
               >
-                <Button variant="outline" className="w-full gap-2 bg-green-50">
-                  <MessageCircle className="h-4 w-4" />
-                  Contactar por WhatsApp
-                </Button>
-              </a>
+                <MessageCircle className="h-4 w-4" />
+                Contactar por WhatsApp
+              </Button>
             </CardContent>
           </Card>
         )}
