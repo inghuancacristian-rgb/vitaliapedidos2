@@ -98,6 +98,7 @@ export const generateOrdersPDF = (orders: any[], filters: any) => {
   const tableData = orders.map((order) => [
     order.orderNumber,
     order.customer?.name || order.customerName || "N/A",
+    order.customer?.phone || order.customer?.whatsapp || order.customer?.clientNumber || "-",
     format(new Date(order.createdAt), "dd/MM/yyyy HH:mm", { locale: es }),
     order.status === "pending" ? "Pendiente"
       : order.status === "assigned" ? "Asignado"
@@ -111,8 +112,9 @@ export const generateOrdersPDF = (orders: any[], filters: any) => {
 
   autoTable(doc, {
     ...getTableOptions(y),
-    head: [["Nº Pedido", "Cliente", "Fecha", "Estado", "Total", "Pago"]],
+    head: [["Nº Pedido", "Cliente", "Celular", "Fecha", "Estado", "Total", "Pago"]],
     body: tableData,
+    styles: { fontSize: 8 },
   });
 
   // Totales al final
@@ -368,15 +370,14 @@ export const generateCustomersPDF = (customers: any[]) => {
   const tableData = customers.map((c) => [
     c.clientNumber,
     c.name,
-    c.phone || "-",
-    c.whatsapp || "-",
+    c.phone || c.whatsapp || c.clientNumber || "-",
     c.zona || "Sin zona",
     c.address ? c.address.substring(0, 30) + (c.address.length > 30 ? "..." : "") : "-",
   ]);
 
   autoTable(doc, {
     ...getTableOptions(y),
-    head: [["Código", "Nombre", "Teléfono", "WhatsApp", "Zona", "Dirección"]],
+    head: [["Código", "Nombre", "Celular", "Zona", "Dirección"]],
     body: tableData,
     styles: { fontSize: 8 },
   });

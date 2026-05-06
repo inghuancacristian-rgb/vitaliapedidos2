@@ -129,7 +129,7 @@ export default function DeliveryLoad() {
     filteredEntries.forEach((entry) => {
       const order = entry.order;
       const customer = entry.customer;
-      const tel = customer?.phone || customer?.whatsapp || "";
+      const tel = customer?.phone || customer?.whatsapp || customer?.clientNumber || "";
       const products = (entry.items || [])
         .map((item: any) => `${item.productName || `Producto #${item.productId}`} x${item.quantity}`)
         .join(" | ");
@@ -171,7 +171,7 @@ export default function DeliveryLoad() {
       .map((entry, idx) => {
         const order = entry.order;
         const customer = entry.customer;
-        const tel = customer?.phone || customer?.whatsapp || "";
+        const tel = customer?.phone || customer?.whatsapp || customer?.clientNumber || "";
         const productsHtml = (entry.items || [])
           .map((item: any) => `${escapeHtml(item.productName || `Producto #${item.productId}`)} x${escapeHtml(item.quantity)}`)
           .join("<br/>");

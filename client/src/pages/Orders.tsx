@@ -257,7 +257,7 @@ export default function Orders() {
         .map((item: any) => `${item.productName || `Producto #${item.productId}`} x${item.quantity}`)
         .join(" | ");
       const totalProducts = (row.items || []).reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0);
-      const tel = customer?.phone || customer?.whatsapp || "";
+      const tel = customer?.phone || customer?.whatsapp || customer?.clientNumber || "";
 
       lines.push(
         [
@@ -308,7 +308,7 @@ export default function Orders() {
     const rowsHtml = (deliverySheet.entries || []).map((row: any, idx: number) => {
       const order = row.order;
       const customer = row.customer;
-      const tel = customer?.phone || customer?.whatsapp || "";
+      const tel = customer?.phone || customer?.whatsapp || customer?.clientNumber || "";
       const productsHtml = (row.items || [])
         .map((item: any) => `${escapeHtml(item.productName || `Producto #${item.productId}`)} x${escapeHtml(item.quantity)}`)
         .join("<br/>");
@@ -1175,11 +1175,16 @@ function OrderGrid({ orders, user, openWhatsApp, setRescheduleOrderId, setResche
                   </Button>
                   <Link href={`/order/${order.id}`}>
                     <Button
-                      variant="outline"
-                      className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
+                      className={`h-10 px-4 rounded-xl font-bold gap-2 text-sm ${
+                        user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled")
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200"
+                          : "bg-white text-blue-600 hover:bg-blue-50 border border-blue-200 shadow-sm"
+                      }`}
                     >
                       <Eye className="h-4 w-4" />
-                      Ver detalle
+                      {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled")
+                        ? "Ver detalle / Entregar"
+                        : "Ver detalle"}
                     </Button>
                   </Link>
                 </div>
@@ -1224,15 +1229,7 @@ function OrderGrid({ orders, user, openWhatsApp, setRescheduleOrderId, setResche
                     </Button>
                   )}
 
-                  {user?.role === "user" && (order.status === "assigned" || order.status === "in_transit" || order.status === "rescheduled") && (
-                    <Button 
-                      className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 font-black gap-2 text-sm"
-                      onClick={() => setDeliverOrderId(order.id)}
-                    >
-                      <DollarSign className="h-4 w-4" />
-                      Entregar
-                    </Button>
-                  )}
+
 
                   {user?.role === "user" && order.status !== "cancelled" && order.status !== "delivered" && order.cancellationRequested !== 1 && (
                     <Button
