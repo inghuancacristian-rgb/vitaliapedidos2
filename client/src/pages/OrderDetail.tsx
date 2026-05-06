@@ -318,9 +318,9 @@ export default function OrderDetail() {
                 </p>
               </div>
               <div>
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Teléfono Cliente</p>
+                <p className="text-sm font-bold text-red-500 uppercase tracking-widest">Celular</p>
                 <div className="flex items-center gap-3 mt-1">
-                  <p className="text-2xl font-black text-slate-900 tracking-tighter">
+                  <p className="text-3xl font-black text-red-600 tracking-tighter">
                     {customer?.phone || customer?.whatsapp || customer?.clientNumber || "No registrado"}
                   </p>
                   {(customer?.phone || customer?.whatsapp || customer?.clientNumber) && (
