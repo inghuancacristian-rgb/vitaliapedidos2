@@ -1173,17 +1173,15 @@ function OrderGrid({ orders, user, openWhatsApp, setRescheduleOrderId, setResche
                     <MessageCircle className="h-4 w-4" />
                     WhatsApp
                   </Button>
-                  {user?.role === "admin" && (
-                    <Link href={`/order/${order.id}`}>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver detalle
-                      </Button>
-                    </Link>
-                  )}
+                  <Link href={`/order/${order.id}`}>
+                    <Button
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl bg-white text-blue-600 hover:bg-blue-50 border-blue-200 shadow-sm font-bold gap-2 text-sm"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver detalle
+                    </Button>
+                  </Link>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
