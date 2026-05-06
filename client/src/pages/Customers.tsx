@@ -223,7 +223,7 @@ export default function Customers() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-full bg-background p-4 md:p-6 pb-20 md:pb-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>

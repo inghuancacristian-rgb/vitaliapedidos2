@@ -87,7 +87,7 @@ export default function RepartidorFinance() {
     const displayStatus = currentStatus;
     const displayDate = displayStatus?.date || today;
     return (
-      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-full">
         <Card className="border-t-4 border-t-blue-500 shadow-xl overflow-hidden">
           <CardHeader className="text-center pb-2 bg-slate-50/50">
             <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
@@ -159,7 +159,7 @@ export default function RepartidorFinance() {
 
   if (!isBoxOpen && !isLoadingOpening) {
     return (
-      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-screen">
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6 mb-10 min-h-full">
         <Card className="border-t-4 border-t-slate-400 shadow-xl overflow-hidden">
           <CardHeader className="text-center pb-2 bg-slate-50/50">
             <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
@@ -203,7 +203,7 @@ export default function RepartidorFinance() {
   const diffCents = (totalReported * 100) - (Math.abs(expected?.cash || 0) + Math.abs(expected?.qr || 0) + Math.abs(expected?.transfer || 0));
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 mb-20 md:mb-10 min-h-screen">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8 mb-20 md:mb-10 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Cierre de Caja</h1>

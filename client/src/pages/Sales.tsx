@@ -297,7 +297,7 @@ export default function Sales() {
 
   if (isLockedByPending) {
     return (
-      <div className="page-shell flex items-center justify-center pt-20 bg-slate-950 min-h-screen">
+      <div className="page-shell flex items-center justify-center pt-20 bg-slate-950 min-h-full">
         <Card className="max-w-md w-full border-none shadow-[0_32px_64px_-15px_rgba(0,0,0,0.5)] bg-slate-900 text-white rounded-[2.5rem] overflow-hidden">
           <CardHeader className="text-center pt-10">
             <div className="bg-emerald-500/10 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-12">
@@ -577,7 +577,7 @@ export default function Sales() {
           <Card className="bg-white border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400">Ventas registradas</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center">
+              <div className="min-h-full bg-slate-50 flex items-center justify-center p-4 rounded-lg">
                 <ShoppingBag className="h-4 w-4 text-slate-400" />
               </div>
             </CardHeader>
@@ -1261,7 +1261,7 @@ export default function Sales() {
                     </div>
                   </div>
                   <div className="px-6 pb-6 pt-2">
-                    <div className="flex items-center justify-center gap-2 text-[9px] text-slate-300 font-bold uppercase tracking-widest">
+                    <div className="flex items-center justify-center min-h-full text-[9px] text-slate-300 font-bold uppercase tracking-widest">
                       <div className="h-1 w-1 rounded-full bg-slate-200" />
                       Gracias por su preferencia
                       <div className="h-1 w-1 rounded-full bg-slate-200" />

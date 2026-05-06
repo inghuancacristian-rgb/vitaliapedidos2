@@ -133,7 +133,7 @@ export default function OrderDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-full bg-background p-4 md:p-6 pb-20 md:pb-6">
       <div className="max-w-4xl mx-auto">
         {/* Botón de Impresión */}
         <div className="mb-6 flex justify-end no-print">

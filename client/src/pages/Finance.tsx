@@ -156,7 +156,7 @@ export default function Finance() {
   const todaysOpenedAmount = todaysOpenings.reduce((sum: number, o: any) => sum + o.openingAmount, 0);
 
   return (
-    <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-10 min-h-screen">
+    <div className="p-4 space-y-6 max-w-5xl mx-auto mb-20 md:mb-10 min-h-full">
       <div className="flex justify-between items-center no-print">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Finanzas</h1>

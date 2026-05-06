@@ -170,7 +170,7 @@ export default function EditOrder() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-24">
+    <div className="min-h-full bg-slate-50 p-4 md:p-8 pb-24">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/orders")} className="rounded-full bg-white shadow-sm border border-slate-200">

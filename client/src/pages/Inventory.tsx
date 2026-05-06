@@ -618,7 +618,7 @@ export default function Inventory() {
         </section>
 
         {/* Barra de Búsqueda y Tabs Sticky */}
-        <div className="sticky top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
+        <div className="sticky top-14 md:top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
           <div className="flex flex-col gap-4">
             <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/90 p-2">
               <div className="flex flex-col lg:flex-row items-center gap-4">

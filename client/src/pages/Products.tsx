@@ -40,7 +40,7 @@ export default function Products() {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6 mb-20 md:mb-0">
+    <div className="min-h-full bg-background p-4 md:p-6 mb-20 md:mb-0">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
