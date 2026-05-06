@@ -187,13 +187,15 @@ export default function Orders() {
   };
 
   const openWhatsApp = (phone: string | null | undefined, orderNumber: string) => {
+    // Si no hay teléfono directamente en el objeto, intentamos buscarlo en campos alternativos
     if (!phone) {
       toast.error("Este pedido no tiene un número de teléfono registrado");
       return;
     }
+
     // Limpiar el número: dejar solo dígitos
     const cleaned = phone.replace(/\D/g, "");
-    if (!cleaned) {
+    if (!cleaned || cleaned.length < 7) {
       toast.error("El número de teléfono no es válido");
       return;
     }
@@ -204,17 +206,16 @@ export default function Orders() {
     } else if (cleaned.startsWith("0") && cleaned.length === 9) {
       formatted = "591" + cleaned.slice(1);
     } else if (cleaned.length > 8 && !cleaned.startsWith("591")) {
-      // Si no empieza con 591 y es largo, asumimos que le falta el código de país de Bolivia
-      // pero si ya tiene otro código de país esto podría fallar. 
-      // Sin embargo, para este contexto de Bolivia, es lo más probable.
-      if (cleaned.length === 11 && cleaned.startsWith("591")) {
-        formatted = cleaned;
-      } else {
+      // Si ya tiene un formato largo pero no empieza con 591, 
+      // verificamos si es de 11 dígitos (posiblemente ya tiene otro código)
+      // o si simplemente le falta el 591
+      if (cleaned.length !== 11) {
         formatted = "591" + cleaned;
       }
     }
     
-    const url = `https://wa.me/${formatted}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20sobre%20tu%20pedido%20%23${orderNumber}`;
+    // El formato wa.me/+591... es aceptado y preferido por algunos navegadores
+    const url = `https://wa.me/+${formatted}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20sobre%20tu%20pedido%20%23${orderNumber}`;
     window.open(url, "_blank");
   };
 

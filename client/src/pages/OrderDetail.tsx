@@ -328,7 +328,11 @@ export default function OrderDetail() {
                       className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                       onClick={() => {
                         const tel = cleanPhone(customer?.whatsapp || customer?.phone);
-                        window.open(`https://wa.me/${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
+                        if (!tel) {
+                          toast.error("El cliente no tiene un número válido");
+                          return;
+                        }
+                        window.open(`https://wa.me/+${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
                       }}
                     >
                       <MessageCircle className="h-4 w-4" />
@@ -393,7 +397,11 @@ export default function OrderDetail() {
                 className="w-full gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                 onClick={() => {
                   const tel = cleanPhone(customer?.whatsapp || customer?.phone);
-                  window.open(`https://wa.me/${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
+                  if (!tel) {
+                    toast.error("El cliente no tiene un número válido");
+                    return;
+                  }
+                  window.open(`https://wa.me/+${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
                 }}
               >
                 <MessageCircle className="h-4 w-4" />
