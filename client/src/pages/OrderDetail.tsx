@@ -318,14 +318,16 @@ export default function OrderDetail() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Teléfono Cliente</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <p className="font-semibold">{customer?.phone || customer?.whatsapp || "No registrado"}</p>
-                  {(customer?.phone || customer?.whatsapp) && (
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Teléfono Cliente</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-2xl font-black text-slate-900 tracking-tighter">
+                    {customer?.phone || customer?.whatsapp || customer?.clientNumber || "No registrado"}
+                  </p>
+                  {(customer?.phone || customer?.whatsapp || customer?.clientNumber) && (
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="icon" 
-                      className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                      className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 shadow-sm"
                       onClick={() => {
                         const tel = cleanPhone(customer?.whatsapp || customer?.phone || customer?.clientNumber);
                         if (!tel) {
@@ -335,7 +337,7 @@ export default function OrderDetail() {
                         window.open(`https://wa.me/+${tel}?text=Hola!%20Te%20contactamos%20de%20Vitalia%20por%20tu%20pedido%20%23${order.orderNumber}`, "_blank");
                       }}
                     >
-                      <MessageCircle className="h-4 w-4" />
+                      <MessageCircle className="h-5 w-5" />
                     </Button>
                   )}
                 </div>
