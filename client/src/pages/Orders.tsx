@@ -430,7 +430,7 @@ export default function Orders() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-0 md:p-8 pb-24">
+    <div className="min-h-full bg-slate-50 p-0 md:p-8 pb-32">
       <div className="max-w-7xl mx-auto p-4 md:p-0">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
@@ -458,7 +458,7 @@ export default function Orders() {
         </div>
 
         {/* Barra de Filtros Sticky */}
-        <div className="sticky top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 mb-8 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
+        <div className="sticky top-14 md:top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 mb-8 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
           <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/90">
             <CardContent className="p-4 md:p-6">
               <div className="flex flex-col gap-6">

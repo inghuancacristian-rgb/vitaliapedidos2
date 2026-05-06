@@ -490,3 +490,33 @@ export const deliveryExtraLoad = mysqlTable("delivery_extra_load", {
 
 export type DeliveryExtraLoad = typeof deliveryExtraLoad.$inferSelect;
 export type InsertDeliveryExtraLoad = typeof deliveryExtraLoad.$inferInsert;
+
+// Tabla de Lotes de Producción (Planta)
+export const productionBatches = mysqlTable("production_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchNumber: varchar("batchNumber", { length: 50 }).notNull().unique(),
+  type: mysqlEnum("type", ["kefir_production", "nodule_washing", "maintenance"]).notNull(),
+  status: mysqlEnum("status", ["in_progress", "completed", "cancelled"]).default("in_progress").notNull(),
+  startDate: timestamp("startDate").defaultNow().notNull(),
+  endDate: timestamp("endDate"), // Cuando se completa el lote
+  registeredBy: int("registeredBy").notNull().references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProductionBatch = typeof productionBatches.$inferSelect;
+export type InsertProductionBatch = typeof productionBatches.$inferInsert;
+
+// Tabla de Resultados de Producción (Subproductos y Producto Principal)
+export const productionOutputs = mysqlTable("production_outputs", {
+  id: int("id").autoincrement().primaryKey(),
+  batchId: int("batchId").notNull().references(() => productionBatches.id),
+  productId: int("productId").notNull().references(() => products.id),
+  quantity: int("quantity").notNull(), // Cantidad en la unidad base del producto
+  expectedQuantity: int("expectedQuantity"), // Opcional, para medir rendimiento
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProductionOutput = typeof productionOutputs.$inferSelect;
+export type InsertProductionOutput = typeof productionOutputs.$inferInsert;

@@ -91,6 +91,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider
+      className="h-screen overflow-hidden"
       style={
         {
           "--sidebar-width": `${sidebarWidth}px`,
@@ -286,7 +287,12 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4">{children}</main>
+        <main
+          className="flex-1 p-4 overflow-y-auto"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'auto' }}
+        >
+          {children}
+        </main>
       </SidebarInset>
     </>
   );

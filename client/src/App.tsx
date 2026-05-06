@@ -28,6 +28,7 @@ import Sales from "@/pages/Sales";
 import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
+import { Production } from "@/pages/Production";
 
 function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: any) {
   const { user } = useAuth();
@@ -81,6 +82,9 @@ function Router() {
           </Route>
           <Route path="/inventory">
             <ProtectedRoute component={Inventory} adminOnly={true} />
+          </Route>
+          <Route path="/production">
+            <ProtectedRoute component={Production} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />
