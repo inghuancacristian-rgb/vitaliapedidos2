@@ -48,6 +48,8 @@ import {
   Banknote,
   QrCode,
   ArrowLeftRight,
+  ChevronDown,
+  Filter
 } from "lucide-react";
 
 type DiscountType = "none" | "percentage" | "fixed";
@@ -229,6 +231,7 @@ export default function Sales() {
   const { data: customers } = trpc.customers.list.useQuery();
 
   const [historySearch, setHistorySearch] = useState("");
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const [historyDate, setHistoryDate] = useState("");
   const [historyStatus, setHistoryStatus] = useState<"all" | "completed" | "cancelled">("all");
   const productSearchRef = useRef<HTMLInputElement>(null);
@@ -626,9 +629,13 @@ export default function Sales() {
           </Card>
         </div>
 
-        <Card className="overflow-hidden">
-          <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
+        <Card className="overflow-hidden border-none shadow-xl shadow-slate-100 rounded-[2.5rem]">
+          <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-8 py-6 border-b border-slate-50">
+            <div 
+              className="flex items-center justify-between w-full md:w-auto cursor-pointer md:cursor-default"
+              onClick={() => isMobile && setIsFiltersVisible(!isFiltersVisible)}
+            >
+              <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center">
                   <RotateCcw className="h-5 w-5 text-slate-500" />
                 </div>
@@ -637,28 +644,35 @@ export default function Sales() {
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Ventas y Anulaciones</p>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 md:flex-row">
-                <div className="relative group">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
-                  <Input
-                    value={historySearch}
-                    onChange={(event) => setHistorySearch(event.target.value)}
-                    placeholder="Buscar por No. Venta o Cliente..."
-                    className="w-full pl-9 md:w-80 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
-                  />
-                </div>
-                <Input type="date" value={historyDate} onChange={(event) => setHistoryDate(event.target.value)} className="md:w-44 h-11 rounded-xl border-slate-200 bg-slate-50/50" />
-                <Select value={historyStatus} onValueChange={(value: "all" | "completed" | "cancelled") => setHistoryStatus(value)}>
-                  <SelectTrigger className="w-full md:w-44 h-11 rounded-xl border-slate-200 bg-slate-50/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="completed">Ventas Activas</SelectItem>
-                    <SelectItem value="cancelled">Ventas Anuladas</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="md:hidden">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isFiltersVisible ? 'rotate-180' : ''}`} />
+                </Button>
               </div>
+            </div>
+
+            <div className={`flex flex-col gap-3 md:flex-row w-full md:w-auto transition-all duration-300 ${isFiltersVisible ? 'flex' : 'hidden md:flex'}`}>
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                <Input
+                  value={historySearch}
+                  onChange={(event) => setHistorySearch(event.target.value)}
+                  placeholder="Buscar por No. Venta o Cliente..."
+                  className="w-full pl-9 md:w-80 h-11 rounded-xl border-slate-200 bg-slate-50/50 focus:bg-white"
+                />
+              </div>
+              <Input type="date" value={historyDate} onChange={(event) => setHistoryDate(event.target.value)} className="w-full md:w-44 h-11 rounded-xl border-slate-200 bg-slate-50/50" />
+              <Select value={historyStatus} onValueChange={(value: "all" | "completed" | "cancelled") => setHistoryStatus(value)}>
+                <SelectTrigger className="w-full md:w-44 h-11 rounded-xl border-slate-200 bg-slate-50/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="completed">Ventas Activas</SelectItem>
+                  <SelectItem value="cancelled">Ventas Anuladas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
             {isMobile ? (

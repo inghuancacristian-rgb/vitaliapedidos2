@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2, Package } from "lucide-react";
+import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2, Package, Filter, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -36,6 +36,7 @@ export default function Orders() {
 
   const orders = user?.role === "admin" ? displayOrders : deliveryOrders;
 
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
@@ -460,7 +461,31 @@ export default function Orders() {
         {/* Barra de Filtros Sticky */}
         <div className="sticky top-14 md:top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 mb-8 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
           <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2.5rem] overflow-hidden bg-white/90">
-            <CardContent className="p-4 md:p-6">
+            {/* Header del Filtro para Móvil */}
+            <div 
+              className="flex items-center justify-between px-6 py-4 md:hidden cursor-pointer active:bg-slate-50 transition-colors"
+              onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-900 rounded-xl text-white">
+                  <Filter className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800 text-sm">Filtros de Búsqueda</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    {isFiltersVisible ? 'Toca para contraer' : 'Toca para expandir'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {(statusFilter !== 'all' || dateFilter !== today || searchTerm !== "" || deliveryPersonFilter !== "all") && (
+                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                )}
+                <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isFiltersVisible ? 'rotate-180' : ''}`} />
+              </div>
+            </div>
+
+            <CardContent className={`p-4 md:p-6 transition-all duration-300 ${isFiltersVisible ? 'block' : 'hidden md:block'}`}>
               <div className="flex flex-col gap-6">
                 {/* Primera Fila: Búsqueda y Fecha */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
