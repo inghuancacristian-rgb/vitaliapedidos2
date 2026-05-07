@@ -186,7 +186,7 @@ export const financeRouter = router({
       if (!targetUserId && ctx.user?.role !== "admin") throw new TRPCError({ code: "BAD_REQUEST" });
 
       const { getDb } = await import("../db");
-      const { orders, users, customers } = await import("../drizzle/schema");
+      const { orders, users, customers } = await import("../../drizzle/schema");
       const { and, eq, sql } = await import("drizzle-orm");
       const db = await getDb();
 
