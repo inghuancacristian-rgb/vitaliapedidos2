@@ -182,19 +182,54 @@ export const financeRouter = router({
   getDeliveryHistory: protectedProcedure
     .input(z.object({ date: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      const targetUserId = ctx.user?.role === "admin" ? undefined : ctx.user?.id;
+      const targetUserId = ctx.user?.role === "admin" ? undefined : Number(ctx.user?.id);
       if (!targetUserId && ctx.user?.role !== "admin") throw new TRPCError({ code: "BAD_REQUEST" });
 
-      const allOrders = await getAllOrders();
-      const ordersForUser = allOrders.filter((o: any) =>
-        o.deliveryPersonId === targetUserId &&
-        o.status === "delivered" &&
-        (!input.date || getLocalDateKey(o.deliveredAt) === input.date)
-      );
+      const { getDb } = await import("../db");
+      const { orders, users, customers } = await import("../drizzle/schema");
+      const { and, eq, sql } = await import("drizzle-orm");
+      const db = await getDb();
 
-      const results = await Promise.all(ordersForUser.map(async (order: any) => {
-        const items = await getOrderItems(order.id);
-        return { order, items };
+      if (!db) {
+        const { getAllOrders, getOrderItems } = await import("../db");
+        const allOrders = await getAllOrders();
+        const ordersForUser = allOrders.filter((o: any) =>
+          o.deliveryPersonId === targetUserId &&
+          o.status === "delivered" &&
+          (!input.date || getLocalDateKey(o.deliveredAt) === input.date)
+        );
+
+        const results = await Promise.all(ordersForUser.map(async (order: any) => {
+          const items = await getOrderItems(order.id);
+          return { order, items };
+        }));
+        return results;
+      }
+
+      // Consulta directa a DB optimizada
+      const date = input.date || getLocalDateKey(new Date());
+      const ordersForUser = await db.select({
+        order: {
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          totalPrice: orders.totalPrice,
+          paymentMethod: orders.paymentMethod,
+          deliveredAt: orders.deliveredAt,
+          status: orders.status,
+          deliveryPersonId: orders.deliveryPersonId,
+        }
+      })
+      .from(orders)
+      .where(and(
+        eq(orders.deliveryPersonId, targetUserId!),
+        eq(orders.status, "delivered"),
+        sql`DATE(DATE_SUB(${orders.deliveredAt}, INTERVAL 4 HOUR)) = ${date}`
+      ));
+
+      const results = await Promise.all(ordersForUser.map(async (row: any) => {
+        const { getOrderItems } = await import("../db");
+        const items = await getOrderItems(row.order.id);
+        return { order: row.order, items };
       }));
 
       return results;
