@@ -536,12 +536,9 @@ export default function Inventory() {
                 </span>
               </div>
 
-              <h1 className="mt-5 text-3xl font-extrabold text-slate-900 sm:text-4xl">
-                Gestion de inventario optimizada para celular, tablet y escritorio.
+              <h1 className="mt-2 text-2xl font-extrabold text-slate-900">
+                Inventario
               </h1>
-              <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-                Consulta productos, detecta faltantes, revisa historiales y ajusta stock con una interfaz mas clara y tactil.
-              </p>
             </div>
 
             {user?.role === "admin" && isMobile ? (
