@@ -682,7 +682,7 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
         </div>
 
         {/* Lista de Transacciones - Mobile Optimized */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50/20">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50/20" style={{ WebkitOverflowScrolling: 'touch' }}>
           {isLoading ? (
             <div className="p-12 text-center flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
