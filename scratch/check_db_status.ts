@@ -16,7 +16,14 @@ async function check() {
   const connection = await mysql.createConnection(process.env.DATABASE_URL);
   const db = drizzle(connection);
 
-  const deliveredOrdersCount = await db.select().from(orders).where(eq(orders.status, "delivered"));
+  const allOrders = await db.select().from(orders);
+  const statusCounts: Record<string, number> = {};
+  allOrders.forEach(o => {
+    statusCounts[o.status] = (statusCounts[o.status] || 0) + 1;
+  });
+  console.log("Status counts:", statusCounts);
+  
+  const deliveredOrdersCount = allOrders.filter(o => o.status === "delivered");
   const completedSalesCount = await db.select().from(sales).where(eq(sales.status, "completed"));
 
   console.log("Delivered Orders:", deliveredOrdersCount.length);

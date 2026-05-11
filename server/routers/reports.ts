@@ -545,6 +545,13 @@ export const reportsRouter = router({
           totalRevenue: totalRevenue, // en centavos
           avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
           activeZones: Object.keys(zoneCounts).length
+        },
+        debug: {
+          startDate: input?.startDate,
+          endDate: input?.endDate,
+          deliveredOrdersFound: deliveredOrders.length,
+          completedSalesFound: completedSales.length,
+          totalTransactions,
         }
       };
     }),
