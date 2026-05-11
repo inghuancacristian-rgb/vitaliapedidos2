@@ -333,51 +333,153 @@ export const reportsRouter = router({
       };
     }),
 
-  // Análisis de Negocio (Gráficos)
+  // Análisis de Negocio
   getBusinessAnalysis: protectedProcedure
-    .input(z.object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-    }).optional())
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }).optional()
+    )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
 
-      let dateFilter: any = undefined;
+      let dateFilterOrders = undefined;
+      let dateFilterSales = undefined;
+
       if (input?.startDate && input?.endDate) {
-        dateFilter = and(
-          gte(orders.createdAt, new Date(input.startDate)),
-          lte(orders.createdAt, new Date(input.endDate + " 23:59:59"))
+        const start = new Date(input.startDate);
+        const end = new Date(input.endDate + " 23:59:59");
+        
+        dateFilterOrders = and(
+          gte(orders.createdAt, start),
+          lte(orders.createdAt, end)
+        );
+        dateFilterSales = and(
+          gte(sales.createdAt, start),
+          lte(sales.createdAt, end)
         );
       }
 
-      // 1. Obtener todas las órdenes entregadas en el período
+      // 1. Obtener órdenes entregadas
       const deliveredOrders = await db.query.orders.findMany({
         where: and(
           eq(orders.status, "delivered"),
-          dateFilter
+          dateFilterOrders
         ),
         with: {
-          customer: true,
           items: {
             with: {
-              product: true,
-            },
+              product: true
+            }
           },
-        },
+          customer: true
+        }
       });
 
-      // 2. Procesar entregas por fecha (Día)
+      // 2. Obtener ventas completadas (incluyendo ventas locales y delivery)
+      const completedSales = await db.query.sales.findMany({
+        where: and(
+          eq(sales.status, "completed"),
+          dateFilterSales
+        ),
+        with: {
+          items: {
+            with: {
+              product: true
+            }
+          },
+          customer: true
+        }
+      });
+
+      // Evitar duplicados: Si una venta está vinculada a una orden entregada, solo contamos la venta para el dinero
+      // pero para "entregas" podemos usar ambas fuentes.
+      const processedOrderIds = new Set(completedSales.map(s => s.orderId).filter(Boolean));
+      
+      // Métricas de Entregas (Orders + Sales que sean Delivery)
       const deliveriesByDay: Record<string, number> = {};
-      deliveredOrders.forEach(order => {
-        const date = order.deliveredAt 
-          ? new Date(order.deliveredAt).toISOString().split('T')[0]
-          : new Date(order.createdAt).toISOString().split('T')[0];
+      const productCounts: Record<string, number> = {};
+      const channelCounts: Record<string, number> = {
+        facebook: 0,
+        tiktok: 0,
+        marketplace: 0,
+        referral: 0,
+        other: 0,
+        local: 0
+      };
+      const zoneCounts: Record<string, number> = {};
+      const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
+      
+      let totalRevenue = 0;
+      let totalTransactions = 0;
+
+      // Procesar Ventas (Fuente primaria de ingresos y productos)
+      completedSales.forEach(sale => {
+        totalRevenue += sale.total;
+        totalTransactions++;
+
+        const date = new Date(sale.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
+
+        // Productos
+        sale.items.forEach(item => {
+          const name = item.product.name;
+          productCounts[name] = (productCounts[name] || 0) + item.quantity;
+        });
+
+        // Cliente
+        if (sale.customer) {
+          const channel = sale.customer.sourceChannel || "other";
+          channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+
+          if (sale.customer.zone) {
+            zoneCounts[sale.customer.zone] = (zoneCounts[sale.customer.zone] || 0) + 1;
+          }
+
+          const g = (sale.customer.gender || "").toLowerCase();
+          if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
+          else if (g.includes("f") || g.includes("w") || g.includes("m")) genderCounts.female++;
+          else genderCounts.other++;
+        } else {
+          channelCounts.local++;
+        }
       });
 
-      // Convertir a array para Recharts
-      const deliveriesData = Object.entries(deliveriesByDay)
+      // Procesar Órdenes que NO están en ventas (para no perder datos de entregas registradas solo como orden)
+      deliveredOrders.forEach(order => {
+        if (processedOrderIds.has(order.id)) return;
+
+        totalTransactions++;
+        const totalAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        totalRevenue += totalAmount;
+
+        const date = new Date(order.createdAt).toISOString().split('T')[0];
+        deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
+
+        order.items.forEach(item => {
+          const name = item.product.name;
+          productCounts[name] = (productCounts[name] || 0) + item.quantity;
+        });
+
+        if (order.customer) {
+          const channel = order.customer.sourceChannel || "other";
+          channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+          if (order.customer.zone) {
+            zoneCounts[order.customer.zone] = (zoneCounts[order.customer.zone] || 0) + 1;
+          }
+          const g = (order.customer.gender || "").toLowerCase();
+          if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
+          else if (g.includes("f") || g.includes("w") || g.includes("m")) genderCounts.female++;
+          else genderCounts.other++;
+        }
+      });
+
+      if (totalTransactions === 0) return null;
+
+      // Formatear para Recharts
+      const deliveryTrend = Object.entries(deliveriesByDay)
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
