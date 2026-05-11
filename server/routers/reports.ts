@@ -479,73 +479,32 @@ export const reportsRouter = router({
       if (totalTransactions === 0) return null;
 
       // Formatear para Recharts
-      const deliveryTrend = Object.entries(deliveriesByDay)
+      const deliveriesData = Object.entries(deliveriesByDay)
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
-      // 3. Sabores (productos) más entregados
-      const flavorStats: Record<string, number> = {};
-      deliveredOrders.forEach(order => {
-        order.items.forEach(item => {
-          const productName = item.product?.name || "Desconocido";
-          flavorStats[productName] = (flavorStats[productName] || 0) + item.quantity;
-        });
-      });
-
-      const topFlavors = Object.entries(flavorStats)
+      const topFlavors = Object.entries(productCounts)
         .map(([name, quantity]) => ({ name, quantity }))
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10);
 
-      // 4. Demografía por Género
-      const genderStats: Record<string, number> = {
-        "Masculino": 0,
-        "Femenino": 0,
-        "No especificado": 0
-      };
+      const customerDemographics = [
+        { name: "Varones", value: genderCounts.male },
+        { name: "Mujeres", value: genderCounts.female },
+        { name: "Otros/No espec.", value: genderCounts.other },
+      ].filter(v => v.value > 0);
 
-      deliveredOrders.forEach(order => {
-        const gender = order.customer?.gender;
-        const normalizedGender = gender?.toLowerCase();
-        if (normalizedGender === "varon" || normalizedGender === "male" || normalizedGender === "masculino") {
-          genderStats["Masculino"]++;
-        } else if (normalizedGender === "mujer" || normalizedGender === "female" || normalizedGender === "femenino") {
-          genderStats["Femenino"]++;
-        } else {
-          genderStats["No especificado"]++;
-        }
-      });
+      const channelsData = Object.entries(channelCounts)
+        .map(([name, value]) => ({ 
+          name: name.charAt(0).toUpperCase() + name.slice(1), 
+          value 
+        }))
+        .filter(v => v.value > 0);
 
-      const customerDemographics = Object.entries(genderStats)
-        .map(([name, value]) => ({ name, value }))
-        .filter(item => item.value > 0);
-
-      // 5. Canales de Origen
-      const channelStats: Record<string, number> = {};
-      deliveredOrders.forEach(order => {
-        const channel = order.sourceChannel || "otro";
-        channelStats[channel] = (channelStats[channel] || 0) + 1;
-      });
-
-      const channelsData = Object.entries(channelStats)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-      // 6. Distribución por Zonas
-      const zoneStats: Record<string, number> = {};
-      deliveredOrders.forEach(order => {
-        const zone = order.zone || "Sin zona";
-        zoneStats[zone] = (zoneStats[zone] || 0) + 1;
-      });
-
-      const zonesData = Object.entries(zoneStats)
+      const zonesData = Object.entries(zoneCounts)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 8);
-
-      // 7. Métricas resumen
-      const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
-      const avgOrderValue = deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
 
       return {
         deliveriesData,
@@ -554,9 +513,10 @@ export const reportsRouter = router({
         channelsData,
         zonesData,
         summary: {
-          totalDeliveries: deliveredOrders.length,
-          totalRevenue,
-          avgOrderValue,
+          totalDeliveries: totalTransactions,
+          totalRevenue: totalRevenue, // en centavos
+          avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
+          activeZones: Object.keys(zoneCounts).length
         }
       };
     }),
