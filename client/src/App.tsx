@@ -28,6 +28,7 @@ import Sales from "@/pages/Sales";
 import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
+import BusinessAnalysis from "@/pages/BusinessAnalysis";
 import { Production } from "@/pages/Production";
 
 function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: any) {
@@ -112,6 +113,9 @@ function Router() {
           </Route>
           <Route path="/expenses">
             <ProtectedRoute component={Expenses} adminOnly={true} />
+          </Route>
+          <Route path="/analysis">
+            <ProtectedRoute component={BusinessAnalysis} adminOnly={true} />
           </Route>
           <Route path={"/orders"} component={Orders} />
           <Route path={"/track/:orderId"} component={Tracking} />

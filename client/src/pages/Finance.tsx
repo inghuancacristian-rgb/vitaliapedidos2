@@ -588,73 +588,73 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
       <DialogContent className="!fixed !inset-0 !translate-x-0 !translate-y-0 !w-full !max-w-none !h-full sm:!inset-auto sm:!top-[50%] sm:!left-[50%] sm:!translate-x-[-50%] sm:!translate-y-[-50%] sm:!h-[95vh] sm:!max-w-4xl flex flex-col p-0 overflow-hidden rounded-none sm:rounded-[1.5rem] border-none sm:border bg-white">
         <div className={`${colors.light} p-4 sm:p-6 border-b ${colors.border} shrink-0`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`p-1.5 sm:p-2 rounded-xl ${colors.bg} text-white shadow-lg`}>
-                <History className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div className="flex items-center gap-3">
+              <div className={`p-2 md:p-3 rounded-2xl ${colors.bg} text-white shadow-lg`}>
+                <History className="h-5 w-5 md:h-6 md:w-6" />
               </div>
               <div>
-                <h3 className={`text-lg sm:text-xl font-black tracking-tight ${colors.text}`}>Historial - {title}</h3>
-                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground/80 hidden sm:flex items-center gap-1.5">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-400" />
-                  Registro detallado de flujo de caja
+                <h3 className={`text-lg md:text-2xl font-black tracking-tight ${colors.text}`}>Historial {title}</h3>
+                <p className="text-[10px] md:text-xs font-bold text-muted-foreground/60 flex items-center gap-1.5 uppercase tracking-widest">
+                  <span className={`inline-block w-2 h-2 rounded-full ${colors.bg} opacity-50`} />
+                  Flujo de caja detallado
                 </p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full hover:bg-slate-200/50 transition-colors"
+              className="rounded-2xl hover:bg-black/5 transition-colors h-10 w-10"
               onClick={() => onOpenChange(false)}
             >
-              <X className="h-5 w-5 text-slate-500" />
+              <X className="h-6 w-6 text-slate-500" />
             </Button>
           </div>
         </div>
 
         {/* Filtros y Resumen */}
-        <div className="p-4 sm:p-6 border-b bg-slate-50/30 space-y-4 sm:space-y-6 shrink-0">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <div className="flex flex-1 sm:flex-initial bg-white p-1 rounded-lg border shadow-sm items-center overflow-hidden">
+        <div className="p-4 md:p-6 border-b bg-white/50 backdrop-blur-sm space-y-4 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50 flex items-center">
               <Select value={dateRange} onValueChange={(v: any) => setDateRange(v)}>
-                <SelectTrigger className="w-full sm:w-40 border-none shadow-none focus:ring-0 font-medium text-xs sm:text-sm h-8 sm:h-10">
+                <SelectTrigger className="flex-1 border-none shadow-none focus:ring-0 font-bold text-xs h-9 bg-transparent">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Hoy</SelectItem>
-                  <SelectItem value="week">Última semana</SelectItem>
-                  <SelectItem value="month">Último mes</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
+                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                  <SelectItem value="today" className="rounded-xl font-bold">Hoy</SelectItem>
+                  <SelectItem value="week" className="rounded-xl font-bold">Última semana</SelectItem>
+                  <SelectItem value="month" className="rounded-xl font-bold">Último mes</SelectItem>
+                  <SelectItem value="custom" className="rounded-xl font-bold">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
 
               {dateRange === "custom" && (
-                <div className="flex items-center gap-1 px-1 border-l ml-1 sm:px-2 sm:ml-1">
+                <div className="flex items-center gap-1 px-2 border-l border-slate-200 ml-1">
                   <Input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-24 sm:w-36 border-none h-7 sm:h-8 shadow-none focus-visible:ring-0 px-1 text-[10px] sm:text-xs"
+                    className="w-[100px] border-none h-7 shadow-none focus-visible:ring-0 px-1 text-[10px] font-bold bg-transparent"
                   />
-                  <span className="text-slate-300">—</span>
+                  <span className="text-slate-400 font-bold">—</span>
                   <Input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-24 sm:w-36 border-none h-7 sm:h-8 shadow-none focus-visible:ring-0 px-1 text-[10px] sm:text-xs"
+                    className="w-[100px] border-none h-7 shadow-none focus-visible:ring-0 px-1 text-[10px] font-bold bg-transparent"
                   />
                 </div>
               )}
             </div>
 
-            <div className="flex flex-1 sm:flex-initial bg-white p-1 rounded-lg border shadow-sm">
+            <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/50">
               <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-                <SelectTrigger className="w-full sm:w-36 border-none shadow-none focus:ring-0 font-medium text-xs sm:text-sm h-8 sm:h-10">
+                <SelectTrigger className="w-full sm:w-36 border-none shadow-none focus:ring-0 font-bold text-xs h-9 bg-transparent">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="income">Ingresos</SelectItem>
-                  <SelectItem value="expense">Egresos</SelectItem>
+                <SelectContent className="rounded-2xl border-slate-100 shadow-xl">
+                  <SelectItem value="all" className="rounded-xl font-bold">Todas</SelectItem>
+                  <SelectItem value="income" className="rounded-xl font-bold">Ingresos</SelectItem>
+                  <SelectItem value="expense" className="rounded-xl font-bold">Egresos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -662,20 +662,20 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
 
           {/* Totales Cards - Mobile Optimized */}
           {data && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-              <div className="bg-white p-2 sm:p-4 rounded-xl border border-emerald-100 shadow-sm relative overflow-hidden group transition-all">
-                <p className="text-[8px] sm:text-[10px] uppercase font-black text-emerald-600 tracking-wider">Ingresos</p>
-                <p className="text-sm sm:text-2xl font-black text-slate-900">{formatCurrency(data.summary.totalIncome)}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+              <div className="bg-emerald-50/50 p-3 md:p-4 rounded-2xl border border-emerald-100 shadow-sm">
+                <p className="text-[9px] uppercase font-black text-emerald-600 tracking-widest mb-1">Ingresos</p>
+                <p className="text-lg md:text-2xl font-black text-emerald-700 tracking-tighter">{formatCurrency(data.summary.totalIncome)}</p>
               </div>
 
-              <div className={`p-2 sm:p-4 rounded-xl border shadow-sm relative overflow-hidden group transition-all ${data.summary.finalBalance >= 0 ? "border-slate-200 bg-slate-900" : "border-red-200 bg-red-900"}`}>
-                <p className="text-[8px] sm:text-[10px] uppercase font-black text-slate-400 tracking-wider">Saldo Disponible</p>
-                <p className="text-sm sm:text-2xl font-black text-white">{formatCurrency(data.summary.finalBalance)}</p>
+              <div className={`p-3 md:p-4 rounded-2xl border shadow-sm ${data.summary.finalBalance >= 0 ? "border-slate-800 bg-slate-900" : "border-red-800 bg-red-900"}`}>
+                <p className="text-[9px] uppercase font-black text-slate-400 tracking-widest mb-1">Saldo Actual</p>
+                <p className="text-lg md:text-2xl font-black text-white tracking-tighter">{formatCurrency(data.summary.finalBalance)}</p>
               </div>
 
-              <div className="col-span-2 sm:col-span-1 bg-white p-2 sm:p-4 rounded-xl border border-red-100 shadow-sm relative overflow-hidden group transition-all">
-                <p className="text-[8px] sm:text-[10px] uppercase font-black text-red-600 tracking-wider">Egresos</p>
-                <p className="text-sm sm:text-2xl font-black text-slate-900">{formatCurrency(data.summary.totalExpense)}</p>
+              <div className="col-span-2 md:col-span-1 bg-red-50/50 p-3 md:p-4 rounded-2xl border border-red-100 shadow-sm">
+                <p className="text-[9px] uppercase font-black text-red-600 tracking-widest mb-1">Egresos</p>
+                <p className="text-lg md:text-2xl font-black text-red-700 tracking-tighter">{formatCurrency(data.summary.totalExpense)}</p>
               </div>
             </div>
           )}
@@ -683,78 +683,97 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
 
         {/* Lista de Transacciones - Mobile Optimized */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y scrollbar-thin scrollbar-thumb-slate-200 bg-slate-50/20" style={{ WebkitOverflowScrolling: 'touch' }}>
+
           {isLoading ? (
             <div className="p-12 text-center flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900" />
-              <p className="text-sm font-medium text-slate-500">Recuperando registros...</p>
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-slate-900" />
+              <p className="text-sm font-black uppercase tracking-widest text-slate-400">Cargando movimientos...</p>
             </div>
           ) : data?.transactions.length === 0 ? (
-            <div className="p-12 text-center flex flex-col items-center gap-4">
-              <div className="p-4 rounded-full bg-slate-50 text-slate-300">
-                <History className="h-10 w-10" />
+            <div className="p-20 text-center flex flex-col items-center gap-4">
+              <div className="p-6 rounded-[2rem] bg-white shadow-sm text-slate-200">
+                <History className="h-12 w-12" />
               </div>
-              <p className="text-sm font-medium text-slate-500 max-w-[200px]">No se encontraron transacciones.</p>
+              <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Sin transacciones en este periodo</p>
             </div>
           ) : (
             <>
               {/* Vista Mobile: Cards */}
-              <div className="block sm:hidden divide-y divide-slate-100">
+              <div className="block md:hidden">
                 {data?.transactions.map((t: any) => (
-                  <div key={t.id} className="p-4 bg-white hover:bg-slate-50 transition-colors">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                  <div key={t.id} className="p-5 bg-white border-b border-slate-100 active:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                           <div className={`h-2 w-2 rounded-full shrink-0 ${t.type === "income" ? "bg-emerald-500" : "bg-red-500"}`} />
+                           <span className="font-black text-slate-900 text-sm truncate uppercase tracking-tight">{categoryLabel(t.category)}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                           {new Date(t.createdAt).toLocaleDateString("es-BO")} · {new Date(t.createdAt).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        <span className="font-bold text-slate-800 text-sm">{categoryLabel(t.category)}</span>
+                        </p>
                       </div>
-                      <div className={`text-sm font-black font-mono ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
-                        {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                      <div className="text-right">
+                        <p className={`text-base font-black font-mono leading-none mb-1 ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
+                          {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          Saldo: {formatCurrency(t.runningBalance)}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex justify-between items-end mt-2">
-                      <div className="text-[10px] text-slate-500 italic max-w-[70%] truncate">
-                        {t.referenceId ? `REF: #${t.referenceId}` : ""} {t.notes ? `· ${t.notes}` : ""}
+                    
+                    <div className="mt-3 flex flex-col gap-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100/50">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-black text-slate-400 uppercase tracking-widest">Responsable</span>
+                        <span className="font-bold text-slate-700">{t.userName || t.responsibleUserName || `Usuario #${t.userId || "—"}`}</span>
                       </div>
-                      <div className="text-[11px] font-bold text-slate-400">
-                        Saldo: {formatCurrency(t.runningBalance)}
-                      </div>
+                      {(t.referenceId || t.notes) && (
+                        <div className="flex flex-col gap-0.5 pt-1 border-t border-slate-200/50">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Referencia / Notas</span>
+                          <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
+                            {t.referenceId ? <span className="font-bold text-primary mr-1">#{t.referenceId}</span> : ""}
+                            {t.notes || "Sin notas adicionales"}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Vista Desktop: Table */}
-              <div className="hidden sm:block">
+              <div className="hidden md:block">
                 <table className="w-full text-sm border-separate border-spacing-0">
                   <thead className="sticky top-0 z-20">
                     <tr>
-                      <th className="text-left px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Fecha / Hora</th>
-                      <th className="text-left px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Detalle</th>
-                      <th className="text-right px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b">Monto</th>
-                      <th className="text-right px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/90 backdrop-blur-sm border-b pr-8">Saldo</th>
+                      <th className="text-left px-6 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/95 backdrop-blur-sm border-b">Fecha / Hora</th>
+                      <th className="text-left px-6 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/95 backdrop-blur-sm border-b">Detalle y Usuario</th>
+                      <th className="text-right px-6 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/95 backdrop-blur-sm border-b">Monto</th>
+                      <th className="text-right px-6 py-5 font-black text-slate-400 uppercase text-[10px] tracking-widest bg-slate-50/95 backdrop-blur-sm border-b pr-8">Saldo</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-100">
                     {data?.transactions.map((t: any) => (
-                      <tr key={t.id} className="group hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-bold text-slate-900">{new Date(t.createdAt).toLocaleDateString("es-BO")}</div>
-                          <div className="text-[10px] font-black text-slate-400 uppercase">{new Date(t.createdAt).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}</div>
+                      <tr key={t.id} className="group hover:bg-white transition-colors">
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          <div className="font-black text-slate-900">{new Date(t.createdAt).toLocaleDateString("es-BO")}</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{new Date(t.createdAt).toLocaleTimeString("es-BO", { hour: "2-digit", minute: "2-digit" })}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 mb-1">
                             <span className={`w-2 h-2 rounded-full ${t.type === "income" ? "bg-emerald-500" : "bg-red-500"}`} />
-                            <span className="font-bold text-slate-700">{categoryLabel(t.category)}</span>
+                            <span className="font-black text-slate-800 uppercase tracking-tight">{categoryLabel(t.category)}</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">{t.userName || t.responsibleUserName || `ID: ${t.userId}`}</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            {t.referenceId ? `REF: #${t.referenceId}` : ""} {t.notes ? `· ${t.notes}` : ""}
+                          <div className="text-[11px] text-slate-500 font-medium max-w-md line-clamp-2">
+                            {t.referenceId ? <span className="font-bold text-primary mr-1">#{t.referenceId}</span> : ""}
+                            {t.notes}
                           </div>
                         </td>
-                        <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
-                          {t.type === "income" ? `+ ${formatCurrency(t.amount)}` : `- ${formatCurrency(t.amount)}`}
+                        <td className={`px-6 py-5 text-right font-mono font-black text-lg whitespace-nowrap ${t.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
+                          {t.type === "income" ? `+${formatCurrency(t.amount)}` : `-${formatCurrency(t.amount)}`}
                         </td>
-                        <td className="px-6 py-4 text-right pr-8 whitespace-nowrap">
+                        <td className="px-6 py-5 text-right pr-8 whitespace-nowrap">
                            <span className={`inline-block font-black font-mono text-base ${t.runningBalance >= 0 ? "text-slate-900" : "text-red-700"}`}>
                             {formatCurrency(t.runningBalance)}
                            </span>
@@ -769,34 +788,34 @@ function BoxHistoryModal({ paymentMethod, title, colorClass, open, onOpenChange 
         </div>
 
         {/* Acciones */}
-        <div className="p-4 sm:p-6 border-t bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="hidden sm:flex items-center gap-2">
+        <div className="p-4 md:p-6 border-t bg-slate-50 flex flex-row items-center justify-between gap-3 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="hidden md:flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-slate-300"></span>
-            <span className="text-xs font-black text-slate-500 uppercase tracking-tighter">
-              {data?.transactions.length || 0} registros
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              {data?.transactions.length || 0} registros encontrados
             </span>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleExportCsv} 
-              className="flex-1 sm:flex-initial gap-1 sm:gap-2 bg-white font-bold text-slate-700 shadow-sm text-[10px] sm:text-xs h-8 sm:h-10"
+              className="flex-1 md:flex-initial gap-2 bg-white font-bold text-slate-700 shadow-sm text-[10px] h-10 rounded-xl border-slate-200"
             >
-              <Download className="h-3 w-3 sm:h-4 sm:w-4" /> CSV
+              <Download className="h-4 w-4" /> CSV
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handlePrint} 
-              className="flex-1 sm:flex-initial gap-1 sm:gap-2 bg-white font-bold text-slate-700 shadow-sm text-[10px] sm:text-xs h-8 sm:h-10"
+              className="flex-1 md:flex-initial gap-2 bg-white font-bold text-slate-700 shadow-sm text-[10px] h-10 rounded-xl border-slate-200"
             >
-              <Printer className="h-3 w-3 sm:h-4 sm:w-4" /> PDF
+              <Printer className="h-4 w-4" /> PDF
             </Button>
             <Button
               variant="default"
               size="sm"
-              className="flex-1 sm:flex-initial font-black uppercase tracking-widest text-[10px] px-4 sm:px-6 h-8 sm:h-10"
+              className="flex-1 md:flex-initial font-black uppercase tracking-widest text-[10px] px-8 h-10 rounded-xl bg-slate-900 hover:bg-slate-800"
               onClick={() => onOpenChange(false)}
             >
               Cerrar

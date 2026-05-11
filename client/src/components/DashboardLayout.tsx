@@ -132,6 +132,7 @@ function DashboardLayoutContent({
     { icon: DollarSign, label: "Finanzas", path: "/finance" },
     { icon: Users, label: "Repartidores", path: "/delivery-persons" },
     { icon: FileText, label: "Reportes", path: "/reports" },
+    { icon: BarChart3, label: "Análisis", path: "/analysis" },
   ];
 
   const deliveryMenuItems = [

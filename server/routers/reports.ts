@@ -332,4 +332,130 @@ export const reportsRouter = router({
         newCustomers,
       };
     }),
+
+  // Análisis de Negocio (Gráficos)
+  getBusinessAnalysis: protectedProcedure
+    .input(z.object({
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return null;
+
+      let dateFilter: any = undefined;
+      if (input?.startDate && input?.endDate) {
+        dateFilter = and(
+          gte(orders.createdAt, new Date(input.startDate)),
+          lte(orders.createdAt, new Date(input.endDate + " 23:59:59"))
+        );
+      }
+
+      // 1. Obtener todas las órdenes entregadas en el período
+      const deliveredOrders = await db.query.orders.findMany({
+        where: and(
+          eq(orders.status, "delivered"),
+          dateFilter
+        ),
+        with: {
+          customer: true,
+          items: {
+            with: {
+              product: true,
+            },
+          },
+        },
+      });
+
+      // 2. Procesar entregas por fecha (Día)
+      const deliveriesByDay: Record<string, number> = {};
+      deliveredOrders.forEach(order => {
+        const date = order.deliveredAt 
+          ? new Date(order.deliveredAt).toISOString().split('T')[0]
+          : new Date(order.createdAt).toISOString().split('T')[0];
+        deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
+      });
+
+      // Convertir a array para Recharts
+      const deliveriesData = Object.entries(deliveriesByDay)
+        .map(([date, count]) => ({ date, count }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      // 3. Sabores (productos) más entregados
+      const flavorStats: Record<string, number> = {};
+      deliveredOrders.forEach(order => {
+        order.items.forEach(item => {
+          const productName = item.product?.name || "Desconocido";
+          flavorStats[productName] = (flavorStats[productName] || 0) + item.quantity;
+        });
+      });
+
+      const topFlavors = Object.entries(flavorStats)
+        .map(([name, quantity]) => ({ name, quantity }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 10);
+
+      // 4. Demografía por Género
+      const genderStats: Record<string, number> = {
+        "Masculino": 0,
+        "Femenino": 0,
+        "No especificado": 0
+      };
+
+      deliveredOrders.forEach(order => {
+        const gender = order.customer?.gender;
+        const normalizedGender = gender?.toLowerCase();
+        if (normalizedGender === "varon" || normalizedGender === "male" || normalizedGender === "masculino") {
+          genderStats["Masculino"]++;
+        } else if (normalizedGender === "mujer" || normalizedGender === "female" || normalizedGender === "femenino") {
+          genderStats["Femenino"]++;
+        } else {
+          genderStats["No especificado"]++;
+        }
+      });
+
+      const customerDemographics = Object.entries(genderStats)
+        .map(([name, value]) => ({ name, value }))
+        .filter(item => item.value > 0);
+
+      // 5. Canales de Origen
+      const channelStats: Record<string, number> = {};
+      deliveredOrders.forEach(order => {
+        const channel = order.sourceChannel || "otro";
+        channelStats[channel] = (channelStats[channel] || 0) + 1;
+      });
+
+      const channelsData = Object.entries(channelStats)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+      // 6. Distribución por Zonas
+      const zoneStats: Record<string, number> = {};
+      deliveredOrders.forEach(order => {
+        const zone = order.zone || "Sin zona";
+        zoneStats[zone] = (zoneStats[zone] || 0) + 1;
+      });
+
+      const zonesData = Object.entries(zoneStats)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8);
+
+      // 7. Métricas resumen
+      const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+      const avgOrderValue = deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0;
+
+      return {
+        deliveriesData,
+        topFlavors,
+        customerDemographics,
+        channelsData,
+        zonesData,
+        summary: {
+          totalDeliveries: deliveredOrders.length,
+          totalRevenue,
+          avgOrderValue,
+        }
+      };
+    }),
 });
