@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
@@ -520,3 +521,65 @@ export const productionOutputs = mysqlTable("production_outputs", {
 
 export type ProductionOutput = typeof productionOutputs.$inferSelect;
 export type InsertProductionOutput = typeof productionOutputs.$inferInsert;
+
+// Definición de Relaciones (Drizzle Relational API)
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id],
+  }),
+  items: many(orderItems),
+  deliveryPerson: one(users, {
+    fields: [orders.deliveryPersonId],
+    references: [users.id],
+  }),
+}));
+
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const salesRelations = relations(sales, ({ one, many }) => ({
+  customer: one(customers, {
+    fields: [sales.customerId],
+    references: [customers.id],
+  }),
+  items: many(saleItems),
+  order: one(orders, {
+    fields: [sales.orderId],
+    references: [orders.id],
+  }),
+  seller: one(users, {
+    fields: [sales.soldBy],
+    references: [users.id],
+  }),
+}));
+
+export const saleItemsRelations = relations(saleItems, ({ one }) => ({
+  sale: one(sales, {
+    fields: [saleItems.saleId],
+    references: [sales.id],
+  }),
+  product: one(products, {
+    fields: [saleItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const customersRelations = relations(customers, ({ many }) => ({
+  orders: many(orders),
+  sales: many(sales),
+}));
+
+export const productsRelations = relations(products, ({ many }) => ({
+  orderItems: many(orderItems),
+  saleItems: many(saleItems),
+  inventory: many(inventory),
+}));

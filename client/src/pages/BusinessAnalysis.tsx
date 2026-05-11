@@ -287,6 +287,67 @@ export default function BusinessAnalysis() {
           </ResponsiveContainer>
         </ChartCard>
 
+        {/* Métodos de Pago */}
+        <ChartCard 
+          title="Métodos de Pago" 
+          description="Distribución por volumen de dinero"
+          icon={<DollarSign size={18} className="text-green-600" />}
+        >
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={data.paymentMethods}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={8}
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {data.paymentMethods.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={["#10b981", "#3b82f6", "#f59e0b"][index % 3]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value: number) => `Bs. ${value.toLocaleString()}`} />
+              <Legend verticalAlign="bottom" height={36}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        {/* Top Clientes */}
+        <ChartCard 
+          title="Top 10 Clientes" 
+          description="Clientes con mayor volumen de compra (Bs.)"
+          icon={<Users size={18} className="text-purple-600" />}
+        >
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data.topCustomers} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
+              <XAxis type="number" fontSize={12} hide />
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                fontSize={11} 
+                width={120}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip 
+                 formatter={(value: number) => `Bs. ${value.toLocaleString()}`}
+                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
+              <Bar 
+                dataKey="value" 
+                fill="#8b5cf6" 
+                radius={[0, 4, 4, 0]} 
+                name="Monto (Bs.)"
+                barSize={18}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
         {/* Zonas */}
         <ChartCard 
           title="Distribución Geográfica" 

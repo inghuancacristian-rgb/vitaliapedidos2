@@ -411,9 +411,8 @@ export const reportsRouter = router({
       };
       const zoneCounts: Record<string, number> = {};
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
-      
-      let totalRevenue = 0;
-      let totalTransactions = 0;
+        const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
+      const customerSales: Record<string, { name: string, value: number }> = {};
 
       // Procesar Ventas (Fuente primaria de ingresos y productos)
       completedSales.forEach(sale => {
@@ -423,6 +422,10 @@ export const reportsRouter = router({
         const date = new Date(sale.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
 
+        // Métodos de pago
+        const method = sale.paymentMethod || "cash";
+        paymentCounts[method] = (paymentCounts[method] || 0) + sale.total;
+
         // Productos
         sale.items.forEach(item => {
           const name = item.product.name;
@@ -431,6 +434,10 @@ export const reportsRouter = router({
 
         // Cliente
         if (sale.customer) {
+          const cId = sale.customer.id.toString();
+          if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0 };
+          customerSales[cId].value += sale.total;
+
           const channel = sale.customer.sourceChannel || "other";
           channelCounts[channel] = (channelCounts[channel] || 0) + 1;
 
@@ -444,10 +451,13 @@ export const reportsRouter = router({
           else genderCounts.other++;
         } else {
           channelCounts.local++;
+          const cName = sale.customerName || "Venta Local";
+          if (!customerSales["local"]) customerSales["local"] = { name: "Ventas Locales", value: 0 };
+          customerSales["local"].value += sale.total;
         }
       });
 
-      // Procesar Órdenes que NO están en ventas (para no perder datos de entregas registradas solo como orden)
+      // Procesar Órdenes que NO están en ventas
       deliveredOrders.forEach(order => {
         if (processedOrderIds.has(order.id)) return;
 
@@ -464,6 +474,10 @@ export const reportsRouter = router({
         });
 
         if (order.customer) {
+          const cId = order.customer.id.toString();
+          if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0 };
+          customerSales[cId].value += totalAmount;
+
           const channel = order.customer.sourceChannel || "other";
           channelCounts[channel] = (channelCounts[channel] || 0) + 1;
           if (order.customer.zone) {
@@ -506,12 +520,26 @@ export const reportsRouter = router({
         .sort((a, b) => b.value - a.value)
         .slice(0, 8);
 
+      const paymentMethods = Object.entries(paymentCounts)
+        .map(([name, value]) => ({ 
+          name: name === "cash" ? "Efectivo" : name === "qr" ? "QR" : "Transferencia", 
+          value: value / 100 
+        }))
+        .filter(v => v.value > 0);
+
+      const topCustomers = Object.values(customerSales)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 10)
+        .map(c => ({ name: c.name, value: c.value / 100 }));
+
       return {
         deliveriesData,
         topFlavors,
         customerDemographics,
         channelsData,
         zonesData,
+        paymentMethods,
+        topCustomers,
         summary: {
           totalDeliveries: totalTransactions,
           totalRevenue: totalRevenue, // en centavos
