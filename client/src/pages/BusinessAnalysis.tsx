@@ -368,6 +368,9 @@ export default function BusinessAnalysis() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+      <div className="pt-8 pb-4 text-center">
+        <p className="text-gray-300 text-[10px] font-mono uppercase tracking-widest">Análisis de Negocio v1.2.0 • Sincronizado</p>
+      </div>
     </>
   )}
 </div>
