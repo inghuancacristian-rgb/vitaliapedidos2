@@ -413,6 +413,9 @@ export const reportsRouter = router({
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
         const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
       const customerSales: Record<string, { name: string, value: number }> = {};
+      
+      let totalRevenue = 0;
+      let totalTransactions = 0;
 
       // Procesar Ventas (Fuente primaria de ingresos y productos)
       completedSales.forEach(sale => {
