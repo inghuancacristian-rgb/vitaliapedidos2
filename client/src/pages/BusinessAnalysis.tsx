@@ -32,7 +32,11 @@ import {
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export default function BusinessAnalysis() {
-  const [period, setPeriod] = useState<"7d" | "30d" | "month" | "all">("30d");
+  const [period, setPeriod] = useState<"7d" | "30d" | "month" | "all" | "custom">("30d");
+  const [customDates, setCustomDates] = useState({
+    start: format(subDays(new Date(), 30), "yyyy-MM-dd"),
+    end: format(new Date(), "yyyy-MM-dd")
+  });
 
   const getDateRange = () => {
     const now = new Date();
@@ -43,6 +47,8 @@ export default function BusinessAnalysis() {
         return { startDate: format(subDays(now, 30), "yyyy-MM-dd"), endDate: format(now, "yyyy-MM-dd") };
       case "month":
         return { startDate: format(startOfMonth(now), "yyyy-MM-dd"), endDate: format(endOfMonth(now), "yyyy-MM-dd") };
+      case "custom":
+        return { startDate: customDates.start, endDate: customDates.end };
       default:
         return { startDate: "2024-01-01", endDate: format(now, "yyyy-MM-dd") };
     }
@@ -55,21 +61,6 @@ export default function BusinessAnalysis() {
     endDate,
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
-        <p className="text-gray-500 animate-pulse font-medium">Cargando análisis de negocio...</p>
-      </div>
-    );
-  }
-
-  if (!data) return (
-    <div className="p-6 text-center">
-      <p className="text-gray-500">No hay datos disponibles para el período seleccionado.</p>
-    </div>
-  );
-
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -79,25 +70,62 @@ export default function BusinessAnalysis() {
           <p className="text-gray-500">Métricas avanzadas y comportamiento de clientes</p>
         </div>
 
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
-          {(["7d", "30d", "month", "all"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                period === p 
-                  ? "bg-green-600 text-white shadow-sm" 
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {p === "7d" ? "7 días" : p === "30d" ? "30 días" : p === "month" ? "Mes" : "Todo"}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {period === "custom" && (
+            <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm">
+              <input 
+                type="date" 
+                value={customDates.start} 
+                onChange={(e) => setCustomDates(prev => ({ ...prev, start: e.target.value }))}
+                className="text-xs font-bold bg-transparent border-none focus:ring-0"
+              />
+              <span className="text-gray-400">/</span>
+              <input 
+                type="date" 
+                value={customDates.end} 
+                onChange={(e) => setCustomDates(prev => ({ ...prev, end: e.target.value }))}
+                className="text-xs font-bold bg-transparent border-none focus:ring-0"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+            {(["7d", "30d", "month", "all", "custom"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                  period === p 
+                    ? "bg-green-600 text-white shadow-sm" 
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {p === "7d" ? "7 días" : p === "30d" ? "30 días" : p === "month" ? "Mes" : p === "custom" ? "Rango" : "Todo"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+          <p className="text-gray-500 animate-pulse font-medium">Cargando análisis de negocio...</p>
+        </div>
+      ) : !data ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 bg-white rounded-3xl border border-dashed border-gray-300 p-12">
+          <div className="p-6 rounded-full bg-gray-50 text-gray-300">
+            <TrendingUp className="h-12 w-12" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-gray-800">No hay datos disponibles</h3>
+            <p className="text-gray-500 max-w-sm">No se encontraron entregas ni ventas para el periodo comprendido entre el {format(new Date(startDate), "dd 'de' MMMM", { locale: es })} y el {format(new Date(endDate), "dd 'de' MMMM", { locale: es })}.</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard 
           title="Entregas Totales" 
           value={data.summary.totalDeliveries} 
@@ -279,8 +307,10 @@ export default function BusinessAnalysis() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 }
 
 function MetricCard({ title, value, icon, color, footer }: { title: string, value: string | number, icon: React.ReactNode, color: string, footer: string }) {

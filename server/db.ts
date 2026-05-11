@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
+import * as schema from "../drizzle/schema";
 
 function getInsertId(result: any): number {
   if (Array.isArray(result) && result.length > 0) {
@@ -175,8 +176,8 @@ export async function getDb() {
       if (!_pool) {
         _pool = mysql.createPool(process.env.DATABASE_URL);
       }
-      _db = drizzle(_pool);
-      console.log("[Database] [v1.1.0] Connected to MySQL via TSX");
+      _db = drizzle(_pool, { schema });
+      console.log("[Database] [v1.1.1] Connected to MySQL via TSX with Relational Schema");
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
