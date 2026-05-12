@@ -15,7 +15,7 @@ import {
   orderItems,
   saleItems,
 } from "../../drizzle/schema";
-import { desc, eq, and, gte, lte, sql, ne } from "drizzle-orm";
+import { desc, eq, and, gte, lte, lt, sql, ne } from "drizzle-orm";
 
 export const reportsRouter = router({
   // Reporte de Pedidos
@@ -436,7 +436,7 @@ export const reportsRouter = router({
       });
 
       // Procesar Ventas (Fuente primaria de ingresos y productos)
-      completedSales.forEach(sale => {
+      completedSales.forEach((sale: any) => {
         totalRevenue += sale.total;
         totalTransactions++;
 
@@ -448,7 +448,7 @@ export const reportsRouter = router({
         paymentCounts[method] = (paymentCounts[method] || 0) + sale.total;
 
         // Productos
-        sale.items.forEach(item => {
+        sale.items.forEach((item: any) => {
           const name = item.product.name;
           productCounts[name] = (productCounts[name] || 0) + item.quantity;
         });
@@ -479,17 +479,17 @@ export const reportsRouter = router({
       });
 
       // Procesar Órdenes que NO están en ventas
-      deliveredOrders.forEach(order => {
+      deliveredOrders.forEach((order: any) => {
         if (processedOrderIds.has(order.id)) return;
 
         totalTransactions++;
-        const totalAmount = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalAmount = order.items.reduce((sum: any, item: any) => sum + (item.price * item.quantity), 0);
         totalRevenue += totalAmount;
 
         const date = new Date(order.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
 
-        order.items.forEach(item => {
+        order.items.forEach((item: any) => {
           const name = item.product.name;
           productCounts[name] = (productCounts[name] || 0) + item.quantity;
         });
@@ -510,6 +510,32 @@ export const reportsRouter = router({
           else genderCounts.other++;
         }
       });
+
+      // Retención: Identificar clientes que tuvieron compras ANTES del rango seleccionado
+      const customerIdsInPeriod = new Set<number>();
+      completedSales.forEach((s: any) => { if (s.customer?.id) customerIdsInPeriod.add(s.customer.id); });
+      deliveredOrders.forEach((o: any) => { if (o.customer?.id) customerIdsInPeriod.add(o.customer.id); });
+
+      // Para cada cliente en el período, verificar si tenía actividad ANTES
+      let newCustomers = 0;
+      let returningCustomers = 0;
+
+      if (input?.startDate && customerIdsInPeriod.size > 0) {
+        const rangeStart = new Date(input.startDate);
+        for (const customerId of Array.from(customerIdsInPeriod)) {
+          // Buscar órdenes o ventas de este cliente ANTES del rango
+          const priorOrder = await db.query.orders.findFirst({
+            where: and(eq(orders.customerId, customerId), lt(orders.createdAt, rangeStart))
+          });
+          const priorSale = !priorOrder ? await db.query.sales.findFirst({
+            where: and(eq(sales.customerId, customerId), lt(sales.createdAt, rangeStart))
+          }) : null;
+          if (priorOrder || priorSale) returningCustomers++;
+          else newCustomers++;
+        }
+      } else {
+        newCustomers = customerIdsInPeriod.size;
+      }
 
       if (totalTransactions === 0) return null;
 
@@ -560,6 +586,11 @@ export const reportsRouter = router({
         }))
         .sort((a, b) => b.value - a.value);
 
+      const customerRetention = [
+        { name: "Clientes Nuevos", value: newCustomers },
+        { name: "Clientes Recurrentes", value: returningCustomers },
+      ].filter(v => v.value > 0);
+
       return {
         deliveriesData,
         topFlavors,
@@ -569,6 +600,7 @@ export const reportsRouter = router({
         paymentMethods,
         topCustomers,
         expensesByCategory,
+        customerRetention,
         summary: {
           totalTransactions: totalTransactions,
           totalDeliveries: deliveredOrders.length,
@@ -577,7 +609,11 @@ export const reportsRouter = router({
           totalExpenses: totalExpenses,
           netIncome: totalRevenue - totalExpenses,
           avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
-          activeZones: Object.keys(zoneCounts).length
+          activeZones: Object.keys(zoneCounts).length,
+          totalCustomers: customerIdsInPeriod.size,
+          newCustomers,
+          returningCustomers,
+          retentionRate: customerIdsInPeriod.size > 0 ? Math.round((returningCustomers / customerIdsInPeriod.size) * 100) : 0,
         },
         debug: {
           startDate: input?.startDate,
@@ -588,4 +624,4 @@ export const reportsRouter = router({
         }
       };
     }),
-});
+});

@@ -30,6 +30,9 @@ import {
   ShoppingCart,
   Download,
   FileText,
+  UserCheck,
+  UserPlus,
+  RefreshCw,
 } from "lucide-react";
 import { exportBusinessToPDF, exportBusinessToExcel } from "../lib/business-export";
 
@@ -152,29 +155,33 @@ export default function BusinessAnalysis() {
         </div>
       ) : (
         <>
-          {/* Metric Cards */}
+          {/* Metric Cards - Row 1: Operaciones */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         <MetricCard 
           title="Transacciones Totales" 
           value={data.summary.totalTransactions} 
           icon={<TrendingUp size={20} />} 
           color="blue"
-          footer="Entregas y ventas sumadas"
+          footer="Entregas + ventas del período"
         />
         <MetricCard 
           title="N° de Entregas" 
           value={data.summary.totalDeliveries} 
           icon={<Package size={20} />} 
           color="green"
-          footer="Pedidos de delivery"
+          footer="Pedidos delivery completados"
         />
         <MetricCard 
           title="N° de Ventas" 
           value={data.summary.totalSales} 
           icon={<ShoppingCart size={20} />} 
           color="orange"
-          footer="Ventas directas/caja"
+          footer="Ventas directas / caja"
         />
+      </div>
+
+      {/* Metric Cards - Row 2: Finanzas */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         <MetricCard 
           title="Ingresos Brutos" 
           value={`Bs. ${(data.summary.totalRevenue / 100).toLocaleString()}`} 
@@ -187,7 +194,7 @@ export default function BusinessAnalysis() {
           value={`Bs. ${(data.summary.totalExpenses / 100).toLocaleString()}`} 
           icon={<Briefcase size={20} />} 
           color="red"
-          footer="Egresos pagados"
+          footer="Egresos pagados en el período"
         />
         <MetricCard 
           title="Utilidad Neta" 
@@ -195,6 +202,38 @@ export default function BusinessAnalysis() {
           icon={<TrendingUp size={20} />} 
           color="purple"
           footer="Ganancia real obtenida"
+        />
+      </div>
+
+      {/* Metric Cards - Row 3: Retención */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <MetricCard 
+          title="Clientes del Período" 
+          value={data.summary.totalCustomers} 
+          icon={<Users size={20} />} 
+          color="indigo"
+          footer="Total clientes únicos atendidos"
+        />
+        <MetricCard 
+          title="Clientes Nuevos" 
+          value={data.summary.newCustomers} 
+          icon={<UserPlus size={20} />} 
+          color="teal"
+          footer="Primera compra en el período"
+        />
+        <MetricCard 
+          title="Clientes Recurrentes" 
+          value={data.summary.returningCustomers} 
+          icon={<UserCheck size={20} />} 
+          color="green"
+          footer="Ya compraron antes"
+        />
+        <MetricCard 
+          title="Tasa de Retención" 
+          value={`${data.summary.retentionRate}%`} 
+          icon={<RefreshCw size={20} />} 
+          color={data.summary.retentionRate >= 40 ? "purple" : data.summary.retentionRate >= 20 ? "orange" : "red"}
+          footer={data.summary.retentionRate >= 40 ? "¡Excelente fidelización!" : data.summary.retentionRate >= 20 ? "Mejorable" : "Foco en retención"}
         />
       </div>
 
@@ -301,6 +340,39 @@ export default function BusinessAnalysis() {
               <Legend verticalAlign="bottom" height={36}/>
             </PieChart>
           </ResponsiveContainer>
+        </ChartCard>
+
+        {/* Retención: Nuevos vs Recurrentes */}
+        <ChartCard 
+          title="Retención de Clientes" 
+          description="Clientes nuevos vs. recurrentes en el período"
+          icon={<UserCheck size={18} className="text-teal-600" />}
+        >
+          {data.customerRetention && data.customerRetention.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={data.customerRetention}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={8}
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  <Cell fill="#14b8a6" />
+                  <Cell fill="#8b5cf6" />
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">
+              Selecciona un rango con fecha de inicio para ver retención
+            </div>
+          )}
         </ChartCard>
 
         {/* Canales */}
@@ -458,6 +530,9 @@ function MetricCard({ title, value, icon, color, footer }: { title: string, valu
     blue: "from-blue-50 text-blue-600 bg-blue-100",
     purple: "from-purple-50 text-purple-600 bg-purple-100",
     orange: "from-orange-50 text-orange-600 bg-orange-100",
+    red: "from-red-50 text-red-600 bg-red-100",
+    teal: "from-teal-50 text-teal-600 bg-teal-100",
+    indigo: "from-indigo-50 text-indigo-600 bg-indigo-100",
   }[color] || "from-gray-50 text-gray-600 bg-gray-100";
 
   return (
