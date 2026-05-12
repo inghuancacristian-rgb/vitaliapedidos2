@@ -177,9 +177,9 @@ export async function getDb() {
         _pool = mysql.createPool(process.env.DATABASE_URL);
       }
       _db = drizzle(_pool, { schema });
-      console.log("[Database] [v1.1.1] Connected to MySQL via TSX with Relational Schema");
+      console.log(`[Database] SUCCESS: Connected to production MySQL at ${new URL(process.env.DATABASE_URL).hostname}`);
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] CRITICAL ERROR: Failed to connect to MySQL:", error);
       _db = null;
       _pool = null;
     }

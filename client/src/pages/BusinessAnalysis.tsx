@@ -26,6 +26,8 @@ import {
   Calendar,
   DollarSign,
   Info,
+  Briefcase,
+  ShoppingCart,
 } from "lucide-react";
 
 // Colores para los gráficos
@@ -138,21 +140,28 @@ export default function BusinessAnalysis() {
           value={`Bs. ${(data.summary.totalRevenue / 100).toLocaleString()}`} 
           icon={<DollarSign size={20} />} 
           color="blue"
-          footer="Ingresos brutos generados"
+          footer="Ingresos brutos del periodo"
+        />
+        <MetricCard 
+          title="Gastos" 
+          value={`Bs. ${(data.summary.totalExpenses / 100).toLocaleString()}`} 
+          icon={<ShoppingCart size={20} />} 
+          color="orange"
+          footer="Egresos operativos pagados"
+        />
+        <MetricCard 
+          title="Utilidad Neta" 
+          value={`Bs. ${(data.summary.netIncome / 100).toLocaleString()}`} 
+          icon={<Briefcase size={20} />} 
+          color="purple"
+          footer="Ganancia real después de gastos"
         />
         <MetricCard 
           title="Ticket Promedio" 
           value={`Bs. ${(data.summary.avgOrderValue / 100).toFixed(2)}`} 
           icon={<Package size={20} />} 
-          color="purple"
+          color="green"
           footer="Valor promedio por pedido"
-        />
-        <MetricCard 
-          title="Zonas Activas" 
-          value={data.zonesData.length} 
-          icon={<MapPin size={20} />} 
-          color="orange"
-          footer="Sectores con cobertura"
         />
       </div>
 
@@ -345,6 +354,34 @@ export default function BusinessAnalysis() {
                 barSize={18}
               />
             </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        {/* Distribución de Gastos */}
+        <ChartCard 
+          title="Gastos por Categoría" 
+          description="Egresos operativos del negocio"
+          icon={<ShoppingCart size={18} className="text-orange-600" />}
+        >
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={data.expensesByCategory}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={5}
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {data.expensesByCategory.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value: number) => `Bs. ${value.toLocaleString()}`} />
+              <Legend verticalAlign="bottom" height={36}/>
+            </PieChart>
           </ResponsiveContainer>
         </ChartCard>
 

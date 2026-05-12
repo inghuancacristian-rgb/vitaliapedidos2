@@ -11,7 +11,10 @@ import {
   financialTransactions,
   cashClosures,
   users,
-} from "../../drizzle/schema.js";
+  operationalExpenses,
+  orderItems,
+  saleItems,
+} from "../../drizzle/schema";
 import { desc, eq, and, gte, lte, sql, ne } from "drizzle-orm";
 
 export const reportsRouter = router({
@@ -411,11 +414,26 @@ export const reportsRouter = router({
       };
       const zoneCounts: Record<string, number> = {};
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
-        const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
+      const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
       const customerSales: Record<string, { name: string, value: number }> = {};
+      const expenseCounts: Record<string, number> = {};
+      let totalExpenses = 0;
       
       let totalRevenue = 0;
       let totalTransactions = 0;
+
+      const dateFilterExpenses = input?.startDate && input?.endDate 
+        ? and(gte(operationalExpenses.expenseDate, new Date(input.startDate)), lte(operationalExpenses.expenseDate, new Date(input.endDate + " 23:59:59")))
+        : undefined;
+
+      const expensesData = await db.query.operationalExpenses.findMany({
+        where: and(eq(operationalExpenses.status, "paid"), dateFilterExpenses)
+      });
+
+      expensesData.forEach(exp => {
+        totalExpenses += exp.amount;
+        expenseCounts[exp.category] = (expenseCounts[exp.category] || 0) + exp.amount;
+      });
 
       // Procesar Ventas (Fuente primaria de ingresos y productos)
       completedSales.forEach(sale => {
@@ -535,6 +553,13 @@ export const reportsRouter = router({
         .slice(0, 10)
         .map(c => ({ name: c.name, value: c.value / 100 }));
 
+      const expensesByCategory = Object.entries(expenseCounts)
+        .map(([name, value]) => ({ 
+          name: name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '), 
+          value: value / 100 
+        }))
+        .sort((a, b) => b.value - a.value);
+
       return {
         deliveriesData,
         topFlavors,
@@ -543,9 +568,12 @@ export const reportsRouter = router({
         zonesData,
         paymentMethods,
         topCustomers,
+        expensesByCategory,
         summary: {
           totalDeliveries: totalTransactions,
-          totalRevenue: totalRevenue, // en centavos
+          totalRevenue: totalRevenue, 
+          totalExpenses: totalExpenses,
+          netIncome: totalRevenue - totalExpenses,
           avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
           activeZones: Object.keys(zoneCounts).length
         },
