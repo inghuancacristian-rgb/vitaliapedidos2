@@ -350,237 +350,229 @@ export const reportsRouter = router({
 
       let dateFilterOrders = undefined;
       let dateFilterSales = undefined;
+      
+      let start: Date;
+      let end: Date;
 
       if (input?.startDate && input?.endDate) {
-        const start = new Date(input.startDate);
-        const end = new Date(input.endDate + " 23:59:59");
-        
-        dateFilterOrders = and(
-          gte(orders.createdAt, start),
-          lte(orders.createdAt, end)
-        );
-        dateFilterSales = and(
-          gte(sales.createdAt, start),
-          lte(sales.createdAt, end)
-        );
+        start = new Date(input.startDate);
+        end = new Date(input.endDate + " 23:59:59");
+      } else {
+        // Default to last 30 days if no dates provided
+        end = new Date();
+        start = new Date();
+        start.setDate(end.getDate() - 30);
       }
 
-      // 1. Obtener órdenes entregadas
+      dateFilterOrders = and(gte(orders.createdAt, start), lte(orders.createdAt, end));
+      dateFilterSales = and(gte(sales.createdAt, start), lte(sales.createdAt, end));
+
+      // 0. Calcular periodo previo para tendencias
+      const duration = end.getTime() - start.getTime();
+      const prevEnd = new Date(start.getTime() - 1);
+      const prevStart = new Date(start.getTime() - duration);
+
+      const prevDateFilterOrders = and(gte(orders.createdAt, prevStart), lte(orders.createdAt, prevEnd));
+      const prevDateFilterSales = and(gte(sales.createdAt, prevStart), lte(sales.createdAt, prevEnd));
+
+      // 1. Obtener datos del periodo actual
       const deliveredOrders = await db.query.orders.findMany({
-        where: and(
-          eq(orders.status, "delivered"),
-          dateFilterOrders
-        ),
-        with: {
-          items: {
-            with: {
-              product: true
-            }
-          },
-          customer: true
-        }
+        where: and(eq(orders.status, "delivered"), dateFilterOrders),
+        with: { items: { with: { product: true } }, customer: true }
       });
 
-      // 2. Obtener ventas completadas (incluyendo ventas locales y delivery)
       const completedSales = await db.query.sales.findMany({
-        where: and(
-          eq(sales.status, "completed"),
-          dateFilterSales
-        ),
-        with: {
-          items: {
-            with: {
-              product: true
-            }
-          },
-          customer: true
-        }
+        where: and(eq(sales.status, "completed"), dateFilterSales),
+        with: { items: { with: { product: true } }, customer: true }
       });
 
-      // Evitar duplicados: Si una venta está vinculada a una orden entregada, solo contamos la venta para el dinero
-      // pero para "entregas" podemos usar ambas fuentes.
+      // 2. Obtener datos del periodo previo para tendencias
+      const prevDeliveredOrders = await db.query.orders.findMany({
+        where: and(eq(orders.status, "delivered"), prevDateFilterOrders),
+        with: { items: { with: { product: true } } }
+      });
+
+      const prevCompletedSales = await db.query.sales.findMany({
+        where: and(eq(sales.status, "completed"), prevDateFilterSales),
+        with: { items: { with: { product: true } } }
+      });
+
+      // Evitar duplicados de IDs de órdenes procesadas en ventas
       const processedOrderIds = new Set(completedSales.map(s => s.orderId).filter(Boolean));
+      const prevProcessedOrderIds = new Set(prevCompletedSales.map(s => s.orderId).filter(Boolean));
       
-      // Métricas de Entregas (Orders + Sales que sean Delivery)
+      // Métricas y Contadores
       const deliveriesByDay: Record<string, number> = {};
-      const productCounts: Record<string, number> = {};
-      const channelCounts: Record<string, number> = {
-        facebook: 0,
-        tiktok: 0,
-        marketplace: 0,
-        referral: 0,
-        other: 0,
-        local: 0
-      };
+      const productStats: Record<number, { 
+        name: string, 
+        units: number, 
+        revenue: number, 
+        cost: number, 
+        prevUnits: number,
+        prevRevenue: number 
+      }> = {};
+      
+      const channelCounts: Record<string, number> = { facebook: 0, tiktok: 0, marketplace: 0, referral: 0, other: 0, local: 0 };
       const zoneCounts: Record<string, number> = {};
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
       const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
       const customerSales: Record<string, { name: string, value: number, count: number }> = {};
       const expenseCounts: Record<string, number> = {};
       let totalExpenses = 0;
-      
       let totalRevenue = 0;
       let totalTransactions = 0;
 
-      const dateFilterExpenses = input?.startDate && input?.endDate 
-        ? and(gte(operationalExpenses.expenseDate, new Date(input.startDate)), lte(operationalExpenses.expenseDate, new Date(input.endDate + " 23:59:59")))
-        : undefined;
-
+      // Gastos
+      const dateFilterExpenses = and(gte(operationalExpenses.expenseDate, start), lte(operationalExpenses.expenseDate, end));
       const expensesData = await db.query.operationalExpenses.findMany({
         where: and(eq(operationalExpenses.status, "paid"), dateFilterExpenses)
       });
-
       expensesData.forEach(exp => {
         totalExpenses += exp.amount;
         expenseCounts[exp.category] = (expenseCounts[exp.category] || 0) + exp.amount;
       });
 
-      // Procesar Ventas (Fuente primaria de ingresos y productos)
+      // Función helper para procesar productos
+      const processItems = (items: any[], isCurrent: boolean) => {
+        items.forEach(item => {
+          const pId = item.product.id;
+          if (!productStats[pId]) {
+            productStats[pId] = { 
+              name: item.product.name, 
+              units: 0, 
+              revenue: 0, 
+              cost: 0, 
+              prevUnits: 0, 
+              prevRevenue: 0 
+            };
+          }
+          const qty = item.quantity;
+          const rev = (item.price || item.finalUnitPrice || 0) * qty;
+          const cost = (item.product.price || 0) * qty;
+
+          if (isCurrent) {
+            productStats[pId].units += qty;
+            productStats[pId].revenue += rev;
+            productStats[pId].cost += cost;
+          } else {
+            productStats[pId].prevUnits += qty;
+            productStats[pId].prevRevenue += rev;
+          }
+        });
+      };
+
+      // Procesar Periodo Actual
       completedSales.forEach((sale: any) => {
         totalRevenue += sale.total;
         totalTransactions++;
-
         const date = new Date(sale.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
+        paymentCounts[sale.paymentMethod || "cash"] = (paymentCounts[sale.paymentMethod || "cash"] || 0) + sale.total;
+        processItems(sale.items, true);
 
-        // Métodos de pago
-        const method = sale.paymentMethod || "cash";
-        paymentCounts[method] = (paymentCounts[method] || 0) + sale.total;
-
-        // Productos
-        sale.items.forEach((item: any) => {
-          const name = item.product.name;
-          productCounts[name] = (productCounts[name] || 0) + item.quantity;
-        });
-
-        // Cliente
         if (sale.customer) {
           const cId = sale.customer.id.toString();
           if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0, count: 0 };
           customerSales[cId].value += sale.total;
           customerSales[cId].count += 1;
-
-          const channel = sale.customer.sourceChannel || "other";
-          channelCounts[channel] = (channelCounts[channel] || 0) + 1;
-
-          if (sale.customer.zone) {
-            zoneCounts[sale.customer.zone] = (zoneCounts[sale.customer.zone] || 0) + 1;
-          }
-
+          channelCounts[sale.customer.sourceChannel || "other"]++;
+          if (sale.customer.zone) zoneCounts[sale.customer.zone] = (zoneCounts[sale.customer.zone] || 0) + 1;
           const g = (sale.customer.gender || "").toLowerCase();
           if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
-          else if (g.includes("f") || g.includes("w") || g.includes("m")) genderCounts.female++;
+          else if (g.includes("f") || g.includes("w")) genderCounts.female++;
           else genderCounts.other++;
         } else {
           channelCounts.local++;
-          const cName = sale.customerName || "Venta Local";
-          if (!customerSales["local"]) customerSales["local"] = { name: "Ventas Locales", value: 0, count: 0 };
-          customerSales["local"].value += sale.total;
-          customerSales["local"].count += 1;
         }
       });
 
-      // Procesar Órdenes que NO están en ventas
       deliveredOrders.forEach((order: any) => {
         if (processedOrderIds.has(order.id)) return;
-
         totalTransactions++;
-        const totalAmount = order.items.reduce((sum: any, item: any) => sum + (item.price * item.quantity), 0);
-        totalRevenue += totalAmount;
-
+        const amount = order.items.reduce((sum: any, i: any) => sum + (i.price * i.quantity), 0);
+        totalRevenue += amount;
         const date = new Date(order.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
-
-        order.items.forEach((item: any) => {
-          const name = item.product.name;
-          productCounts[name] = (productCounts[name] || 0) + item.quantity;
-        });
-
+        processItems(order.items, true);
         if (order.customer) {
           const cId = order.customer.id.toString();
           if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0, count: 0 };
-          customerSales[cId].value += totalAmount;
+          customerSales[cId].value += amount;
           customerSales[cId].count += 1;
-
-          const channel = order.customer.sourceChannel || "other";
-          channelCounts[channel] = (channelCounts[channel] || 0) + 1;
-          if (order.customer.zone) {
-            zoneCounts[order.customer.zone] = (zoneCounts[order.customer.zone] || 0) + 1;
-          }
+          channelCounts[order.customer.sourceChannel || "other"]++;
+          if (order.customer.zone) zoneCounts[order.customer.zone] = (zoneCounts[order.customer.zone] || 0) + 1;
           const g = (order.customer.gender || "").toLowerCase();
           if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
-          else if (g.includes("f") || g.includes("w") || g.includes("m")) genderCounts.female++;
+          else if (g.includes("f") || g.includes("w")) genderCounts.female++;
           else genderCounts.other++;
         }
       });
 
-      // Retención mejorada: contar transacciones por cliente DENTRO del período
-      // Un cliente es recurrente si:
-      //   (a) compró 2 o más veces en este período, O
-      //   (b) tiene al menos una compra ANTES del inicio del rango
+      // Procesar Periodo Previo (solo para tendencias de productos)
+      prevCompletedSales.forEach((sale: any) => processItems(sale.items, false));
+      prevDeliveredOrders.forEach((order: any) => {
+        if (!prevProcessedOrderIds.has(order.id)) processItems(order.items, false);
+      });
+
+      // Retención
       const customerTransactionCount: Record<number, number> = {};
-
-      completedSales.forEach((s: any) => {
-        if (s.customer?.id) {
-          customerTransactionCount[s.customer.id] = (customerTransactionCount[s.customer.id] || 0) + 1;
-        }
-      });
-      deliveredOrders.forEach((o: any) => {
-        if (o.customer?.id) {
-          customerTransactionCount[o.customer.id] = (customerTransactionCount[o.customer.id] || 0) + 1;
-        }
-      });
-
+      completedSales.forEach(s => s.customer?.id && (customerTransactionCount[s.customer.id] = (customerTransactionCount[s.customer.id] || 0) + 1));
+      deliveredOrders.forEach(o => o.customer?.id && (customerTransactionCount[o.customer.id] = (customerTransactionCount[o.customer.id] || 0) + 1));
       const customerIdsInPeriod = new Set<number>(Object.keys(customerTransactionCount).map(Number));
-
       let newCustomers = 0;
       let returningCustomers = 0;
 
       for (const customerId of Array.from(customerIdsInPeriod)) {
-        // Si compró 2 o más veces en el período → recurrente
         if (customerTransactionCount[customerId] >= 2) {
           returningCustomers++;
           continue;
         }
-        // Si solo compró una vez en el período, verificar si tiene historial PREVIO
-        if (input?.startDate) {
-          const rangeStart = new Date(input.startDate);
-          const priorOrder = await db.query.orders.findFirst({
-            where: and(eq(orders.customerId, customerId), lt(orders.createdAt, rangeStart))
-          });
-          const priorSale = !priorOrder ? await db.query.sales.findFirst({
-            where: and(eq(sales.customerId, customerId), lt(sales.createdAt, rangeStart))
-          }) : null;
-          if (priorOrder || priorSale) returningCustomers++;
-          else newCustomers++;
-        } else {
-          newCustomers++;
-        }
+        const priorOrder = await db.query.orders.findFirst({
+          where: and(eq(orders.customerId, customerId), lt(orders.createdAt, start))
+        });
+        const priorSale = !priorOrder ? await db.query.sales.findFirst({
+          where: and(eq(sales.customerId, customerId), lt(sales.createdAt, start))
+        }) : null;
+        if (priorOrder || priorSale) returningCustomers++;
+        else newCustomers++;
       }
 
-      if (totalTransactions === 0) return null;
+      // Ranking de Productos Mejorado
+      const productRanking = Object.entries(productStats)
+        .map(([id, stats]) => {
+          const revenue = stats.revenue / 100;
+          const prevRevenue = stats.prevRevenue / 100;
+          const cost = stats.cost / 100;
+          const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
+          const trend = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : revenue > 0 ? 100 : 0;
+
+          return {
+            id: Number(id),
+            name: stats.name,
+            units: stats.units,
+            revenue,
+            margin: Math.round(margin),
+            trend: Math.round(trend),
+            prevUnits: stats.prevUnits
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
 
       // Formatear para Recharts
       const deliveriesData = Object.entries(deliveriesByDay)
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
-      const topFlavors = Object.entries(productCounts)
-        .map(([name, quantity]) => ({ name, quantity }))
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 10);
+      const topFlavors = productRanking.slice(0, 10).map(p => ({ name: p.name, quantity: p.units }));
 
       const customerDemographics = [
         { name: "Varones", value: genderCounts.male },
         { name: "Mujeres", value: genderCounts.female },
-        { name: "Otros/No espec.", value: genderCounts.other },
+        { name: "Otros", value: genderCounts.other },
       ].filter(v => v.value > 0);
 
       const channelsData = Object.entries(channelCounts)
-        .map(([name, value]) => ({ 
-          name: name.charAt(0).toUpperCase() + name.slice(1), 
-          value 
-        }))
+        .map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value }))
         .filter(v => v.value > 0);
 
       const zonesData = Object.entries(zoneCounts)
@@ -612,9 +604,24 @@ export const reportsRouter = router({
         { name: "Clientes Recurrentes", value: returningCustomers },
       ].filter(v => v.value > 0);
 
+      // Datos para la Matriz BCG
+      // X: Unidades (Volumen), Y: Tendencia (Crecimiento)
+      const bcgMatrix = productRanking.map(p => ({
+        name: p.name,
+        units: p.units,
+        trend: p.trend,
+        revenue: p.revenue,
+        // Determinamos cuadrante
+        quadrant: p.units > (productRanking[0]?.units / 3) 
+          ? (p.trend > 0 ? "Estrella" : "Vaca")
+          : (p.trend > 0 ? "Interrogante" : "Perro")
+      }));
+
       return {
         deliveriesData,
         topFlavors,
+        productRanking,
+        bcgMatrix,
         customerDemographics,
         channelsData,
         zonesData,
@@ -623,25 +630,17 @@ export const reportsRouter = router({
         expensesByCategory,
         customerRetention,
         summary: {
-          totalTransactions: totalTransactions,
+          totalTransactions,
           totalDeliveries: deliveredOrders.length,
           totalSales: completedSales.length,
-          totalRevenue: totalRevenue, 
-          totalExpenses: totalExpenses,
+          totalRevenue, 
+          totalExpenses,
           netIncome: totalRevenue - totalExpenses,
           avgOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
-          activeZones: Object.keys(zoneCounts).length,
           totalCustomers: customerIdsInPeriod.size,
           newCustomers,
           returningCustomers,
           retentionRate: customerIdsInPeriod.size > 0 ? Math.round((returningCustomers / customerIdsInPeriod.size) * 100) : 0,
-        },
-        debug: {
-          startDate: input?.startDate,
-          endDate: input?.endDate,
-          deliveredOrdersFound: deliveredOrders.length,
-          completedSalesFound: completedSales.length,
-          totalTransactions,
         }
       };
     }),
