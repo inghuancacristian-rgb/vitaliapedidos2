@@ -92,10 +92,21 @@ async function startServer() {
   });
   
   // Version endpoint for deployment verification
-  const APP_VERSION = "1.0.5";
+  const APP_VERSION = "1.5.0";
   app.get("/api/version", (_req, res) => {
     res.json({ version: APP_VERSION, buildTime: new Date().toISOString(), nodeEnv: process.env.NODE_ENV });
   });
+
+  app.get("/api/debug-db-status", async (_req, res) => {
+    const { getDb } = await import("../db");
+    const db = await getDb();
+    res.json({
+      dbConnected: !!db,
+      envHasDatabaseUrl: !!process.env.DATABASE_URL,
+      databaseUrlStart: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) : "missing",
+    });
+  });
+
   console.log(`[App] Version ${APP_VERSION} starting...`);
 
   // tRPC API
