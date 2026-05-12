@@ -179,7 +179,7 @@ export async function getDb() {
         _pool = mysql.createPool(process.env.DATABASE_URL);
         console.log("[Database] Pool created successfully");
       }
-      _db = drizzle(_pool, { schema });
+      _db = drizzle(_pool, { schema, mode: "default" });
       console.log("[Database] Drizzle instance initialized");
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);
