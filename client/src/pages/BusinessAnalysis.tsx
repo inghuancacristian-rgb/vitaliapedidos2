@@ -181,7 +181,7 @@ export default function BusinessAnalysis() {
       </div>
 
       {/* Metric Cards - Row 2: Finanzas */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <MetricCard 
           title="Ingresos Brutos" 
           value={`Bs. ${(data.summary.totalRevenue / 100).toLocaleString()}`} 
@@ -202,6 +202,13 @@ export default function BusinessAnalysis() {
           icon={<TrendingUp size={20} />} 
           color="purple"
           footer="Ganancia real obtenida"
+        />
+        <MetricCard 
+          title="Ticket Promedio" 
+          value={`Bs. ${(data.summary.avgOrderValue / 100).toFixed(2)}`} 
+          icon={<ShoppingCart size={20} />} 
+          color="teal"
+          footer="Venta promedio por pedido"
         />
       </div>
 
@@ -236,6 +243,32 @@ export default function BusinessAnalysis() {
           footer={data.summary.retentionRate >= 40 ? "¡Excelente fidelización!" : data.summary.retentionRate >= 20 ? "Mejorable" : "Foco en retención"}
         />
       </div>
+
+      {/* Metric Cards - Row 4: Ingeniería Comercial & Marketing */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+        <MetricCard 
+          title="Frecuencia de Compra" 
+          value={(data.summary.totalTransactions / Math.max(1, data.summary.totalCustomers)).toFixed(2)} 
+          icon={<RefreshCw size={20} />} 
+          color="teal"
+          footer="Compras promedio por cliente"
+        />
+        <MetricCard 
+          title="Venta Promedio por Cliente" 
+          value={`Bs. ${(data.summary.totalRevenue / 100 / Math.max(1, data.summary.totalCustomers)).toFixed(2)}`} 
+          icon={<DollarSign size={20} />} 
+          color="indigo"
+          footer="Ingreso medio por cliente único"
+        />
+        <MetricCard 
+          title="Crecimiento de Cartera" 
+          value={`${((data.summary.newCustomers / Math.max(1, data.summary.totalCustomers)) * 100).toFixed(1)}%`} 
+          icon={<UserPlus size={20} />} 
+          color="blue"
+          footer="% de clientes nuevos vs total"
+        />
+      </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tendencia de Entregas */}
@@ -432,51 +465,46 @@ export default function BusinessAnalysis() {
         {/* Top Clientes */}
         <ChartCard 
           title="Top 10 Clientes" 
-          description="Clientes con mayor volumen de compra (Bs.)"
+          description="Detalle de compras y volumen por cliente"
           icon={<Users size={18} className="text-purple-600" />}
         >
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.topCustomers} layout="vertical" margin={{ left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
-              <XAxis type="number" fontSize={12} hide />
-              <YAxis 
-                dataKey="name" 
-                type="category" 
-                fontSize={11} 
-                width={120}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip 
-                 formatter={(value: number, name: string, props: any) => {
-                   if (name === "Monto (Bs.)") return [`Bs. ${value.toLocaleString()}`, name];
-                   return [value, name];
-                 }}
-                 labelFormatter={(label) => `Cliente: ${label}`}
-                 content={({ active, payload, label }) => {
-                   if (active && payload && payload.length) {
-                     const data = payload[0].payload;
-                     return (
-                       <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-100">
-                         <p className="font-bold text-gray-800 mb-1">{label}</p>
-                         <p className="text-sm text-purple-600">Monto: Bs. {data.value.toLocaleString()}</p>
-                         <p className="text-sm text-gray-600">Ventas: {data.count}</p>
-                       </div>
-                     );
-                   }
-                   return null;
-                 }}
-                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Bar 
-                dataKey="value" 
-                fill="#8b5cf6" 
-                radius={[0, 4, 4, 0]} 
-                name="Monto (Bs.)"
-                barSize={18}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] tracking-wider">
+                  <th className="py-3 px-2 font-semibold">Cliente</th>
+                  <th className="py-3 px-2 font-semibold text-center">Compras</th>
+                  <th className="py-3 px-2 font-semibold text-right">Total (Bs.)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {data.topCustomers.map((customer, i) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 flex items-center justify-center rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold">
+                          {i + 1}
+                        </span>
+                        <span className="font-medium text-gray-700 truncate max-w-[120px]">
+                          {customer.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        customer.count >= 2 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {customer.count} {customer.count === 1 ? 'vez' : 'veces'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 text-right font-bold text-gray-900">
+                      Bs. {customer.value.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </ChartCard>
 
         {/* Distribución de Gastos */}
