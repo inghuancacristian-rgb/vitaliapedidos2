@@ -175,13 +175,13 @@ export async function getDb() {
     try {
       if (!_pool) {
         _pool = mysql.createPool(process.env.DATABASE_URL);
+        console.log("[Database] Pool created successfully");
       }
       _db = drizzle(_pool, { schema });
-      console.log(`[Database] SUCCESS: Connected to production MySQL at ${new URL(process.env.DATABASE_URL).hostname}`);
+      console.log("[Database] Drizzle instance initialized");
     } catch (error) {
-      console.error("[Database] CRITICAL ERROR: Failed to connect to MySQL:", error);
+      console.error("[Database] Error in getDb:", error instanceof Error ? error.message : String(error));
       _db = null;
-      _pool = null;
     }
   }
   return _db;

@@ -112,8 +112,8 @@ export async function authenticateUser(username: string, password: string) {
   }
 
   const db = await getDb();
-  // Fallback para Modo Demo (solo si no hay base de datos o si falla lo anterior)
-  if (!db && username === "admin" && password === "admin123") {
+  // Fallback para Modo Demo (solo si no hay base de datos CONFIGURADA)
+  if (!process.env.DATABASE_URL && username === "admin" && password === "admin123") {
     console.log("[Auth] Demo Mode: Hardcoded admin authenticated");
     return {
       id: 999,
