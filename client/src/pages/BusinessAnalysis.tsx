@@ -28,7 +28,10 @@ import {
   Info,
   Briefcase,
   ShoppingCart,
+  Download,
+  FileText,
 } from "lucide-react";
+import { exportBusinessToPDF, exportBusinessToExcel } from "../lib/business-export";
 
 // Colores para los gráficos
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
@@ -105,6 +108,29 @@ export default function BusinessAnalysis() {
                 {p === "7d" ? "7 días" : p === "30d" ? "30 días" : p === "month" ? "Mes" : p === "custom" ? "Rango" : "Todo"}
               </button>
             ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (data) exportBusinessToPDF(data, period === "7d" ? "Últimos 7 días" : period === "30d" ? "Últimos 30 días" : period === "month" ? "Este Mes" : period === "custom" ? "Rango Personalizado" : "Todo el histórico");
+              }}
+              disabled={!data || isLoading}
+              className="flex items-center justify-center p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Exportar a PDF"
+            >
+              <FileText className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => {
+                if (data) exportBusinessToExcel(data, period === "7d" ? "Últimos 7 días" : period === "30d" ? "Últimos 30 días" : period === "month" ? "Este Mes" : period === "custom" ? "Rango Personalizado" : "Todo el histórico");
+              }}
+              disabled={!data || isLoading}
+              className="flex items-center justify-center p-2 bg-green-50 text-green-600 hover:bg-green-100 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Exportar a Excel"
+            >
+              <Download className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
