@@ -153,41 +153,48 @@ export default function BusinessAnalysis() {
       ) : (
         <>
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
         <MetricCard 
-          title="Entregas Totales" 
-          value={data.summary.totalDeliveries} 
+          title="Transacciones Totales" 
+          value={data.summary.totalTransactions} 
           icon={<TrendingUp size={20} />} 
-          color="green"
-          footer="Órdenes entregadas con éxito"
+          color="blue"
+          footer="Entregas y ventas sumadas"
         />
         <MetricCard 
-          title="Venta Total" 
+          title="N° de Entregas" 
+          value={data.summary.totalDeliveries} 
+          icon={<Package size={20} />} 
+          color="green"
+          footer="Pedidos de delivery"
+        />
+        <MetricCard 
+          title="N° de Ventas" 
+          value={data.summary.totalSales} 
+          icon={<ShoppingCart size={20} />} 
+          color="orange"
+          footer="Ventas directas/caja"
+        />
+        <MetricCard 
+          title="Ingresos Brutos" 
           value={`Bs. ${(data.summary.totalRevenue / 100).toLocaleString()}`} 
           icon={<DollarSign size={20} />} 
           color="blue"
-          footer="Ingresos brutos del periodo"
+          footer="Dinero total ingresado"
         />
         <MetricCard 
-          title="Gastos" 
+          title="Gastos Operativos" 
           value={`Bs. ${(data.summary.totalExpenses / 100).toLocaleString()}`} 
-          icon={<ShoppingCart size={20} />} 
-          color="orange"
-          footer="Egresos operativos pagados"
+          icon={<Briefcase size={20} />} 
+          color="red"
+          footer="Egresos pagados"
         />
         <MetricCard 
           title="Utilidad Neta" 
           value={`Bs. ${(data.summary.netIncome / 100).toLocaleString()}`} 
-          icon={<Briefcase size={20} />} 
+          icon={<TrendingUp size={20} />} 
           color="purple"
-          footer="Ganancia real después de gastos"
-        />
-        <MetricCard 
-          title="Ticket Promedio" 
-          value={`Bs. ${(data.summary.avgOrderValue / 100).toFixed(2)}`} 
-          icon={<Package size={20} />} 
-          color="green"
-          footer="Valor promedio por pedido"
+          footer="Ganancia real obtenida"
         />
       </div>
 

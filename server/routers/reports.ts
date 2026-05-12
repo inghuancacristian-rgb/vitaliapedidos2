@@ -570,7 +570,9 @@ export const reportsRouter = router({
         topCustomers,
         expensesByCategory,
         summary: {
-          totalDeliveries: totalTransactions,
+          totalTransactions: totalTransactions,
+          totalDeliveries: deliveredOrders.length,
+          totalSales: completedSales.length,
           totalRevenue: totalRevenue, 
           totalExpenses: totalExpenses,
           netIncome: totalRevenue - totalExpenses,
