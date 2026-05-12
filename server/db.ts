@@ -170,6 +170,8 @@ function loadMocks() {
 loadMocks();
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
+let _dbInitError: string | null = null;
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -180,11 +182,16 @@ export async function getDb() {
       _db = drizzle(_pool, { schema });
       console.log("[Database] Drizzle instance initialized");
     } catch (error) {
-      console.error("[Database] Error in getDb:", error instanceof Error ? error.message : String(error));
+      _dbInitError = error instanceof Error ? error.message : String(error);
+      console.error("[Database] Error in getDb:", _dbInitError);
       _db = null;
     }
   }
   return _db;
+}
+
+export function getDbInitError() {
+  return _dbInitError;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

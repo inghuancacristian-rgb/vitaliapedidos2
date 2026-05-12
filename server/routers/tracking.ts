@@ -26,7 +26,7 @@ export const trackingRouter = router({
 
       // Verificar que el repartidor está asignado a este pedido
       const allOrders = await getAllOrders();
-      const order = allOrders.find((o) => o.id === input.orderId);
+      const order = allOrders.find((o: any) => o.id === input.orderId);
 
       if (!order || order.deliveryPersonId !== ctx.user?.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
@@ -48,7 +48,7 @@ export const trackingRouter = router({
     .input(z.object({ orderId: z.number() }))
     .query(async ({ ctx, input }) => {
       const allOrders = await getAllOrders();
-      const order = allOrders.find((o) => o.id === input.orderId);
+      const order = allOrders.find((o: any) => o.id === input.orderId);
 
       if (!order) {
         throw new TRPCError({ code: "NOT_FOUND" });
@@ -67,7 +67,7 @@ export const trackingRouter = router({
     .input(z.object({ orderId: z.number() }))
     .query(async ({ ctx, input }) => {
       const allOrders = await getAllOrders();
-      const order = allOrders.find((o) => o.id === input.orderId);
+      const order = allOrders.find((o: any) => o.id === input.orderId);
 
       if (!order) {
         throw new TRPCError({ code: "NOT_FOUND" });

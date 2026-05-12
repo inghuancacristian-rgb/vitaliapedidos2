@@ -150,7 +150,7 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins: Plugin[] = [react(), tailwindcss()];
+const plugins: any[] = [react(), tailwindcss()];
 
 export default defineConfig({
   plugins,

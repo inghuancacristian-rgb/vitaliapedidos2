@@ -54,14 +54,14 @@ export const statsRouter = router({
     }
 
     const orders = await getAllOrders();
-    const myOrders = orders.filter((o) => o.deliveryPersonId === ctx.user?.id);
+    const myOrders = orders.filter((o: any) => o.deliveryPersonId === ctx.user?.id);
 
     const stats = {
       totalAssigned: myOrders.length,
-      pending: myOrders.filter((o) => o.status === "assigned").length,
-      inTransit: myOrders.filter((o) => o.status === "in_transit").length,
-      delivered: myOrders.filter((o) => o.status === "delivered").length,
-      cancelled: myOrders.filter((o) => o.status === "cancelled").length,
+      pending: myOrders.filter((o: any) => o.status === "assigned").length,
+      inTransit: myOrders.filter((o: any) => o.status === "in_transit").length,
+      delivered: myOrders.filter((o: any) => o.status === "delivered").length,
+      cancelled: myOrders.filter((o: any) => o.status === "cancelled").length,
     };
 
     return stats;

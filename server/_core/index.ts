@@ -98,12 +98,13 @@ async function startServer() {
   });
 
   app.get("/api/debug-db-status", async (_req, res) => {
-    const { getDb } = await import("../db");
+    const { getDb, getDbInitError } = await import("../db");
     const db = await getDb();
     res.json({
       dbConnected: !!db,
       envHasDatabaseUrl: !!process.env.DATABASE_URL,
       databaseUrlStart: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) : "missing",
+      initError: getDbInitError(),
     });
   });
 
