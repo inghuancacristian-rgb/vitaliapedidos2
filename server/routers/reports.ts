@@ -415,7 +415,7 @@ export const reportsRouter = router({
       const zoneCounts: Record<string, number> = {};
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
       const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
-      const customerSales: Record<string, { name: string, value: number }> = {};
+      const customerSales: Record<string, { name: string, value: number, count: number }> = {};
       const expenseCounts: Record<string, number> = {};
       let totalExpenses = 0;
       
@@ -456,8 +456,9 @@ export const reportsRouter = router({
         // Cliente
         if (sale.customer) {
           const cId = sale.customer.id.toString();
-          if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0 };
+          if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0, count: 0 };
           customerSales[cId].value += sale.total;
+          customerSales[cId].count += 1;
 
           const channel = sale.customer.sourceChannel || "other";
           channelCounts[channel] = (channelCounts[channel] || 0) + 1;
@@ -473,8 +474,9 @@ export const reportsRouter = router({
         } else {
           channelCounts.local++;
           const cName = sale.customerName || "Venta Local";
-          if (!customerSales["local"]) customerSales["local"] = { name: "Ventas Locales", value: 0 };
+          if (!customerSales["local"]) customerSales["local"] = { name: "Ventas Locales", value: 0, count: 0 };
           customerSales["local"].value += sale.total;
+          customerSales["local"].count += 1;
         }
       });
 
@@ -496,8 +498,9 @@ export const reportsRouter = router({
 
         if (order.customer) {
           const cId = order.customer.id.toString();
-          if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0 };
+          if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0, count: 0 };
           customerSales[cId].value += totalAmount;
+          customerSales[cId].count += 1;
 
           const channel = order.customer.sourceChannel || "other";
           channelCounts[channel] = (channelCounts[channel] || 0) + 1;
@@ -511,19 +514,37 @@ export const reportsRouter = router({
         }
       });
 
-      // Retención: Identificar clientes que tuvieron compras ANTES del rango seleccionado
-      const customerIdsInPeriod = new Set<number>();
-      completedSales.forEach((s: any) => { if (s.customer?.id) customerIdsInPeriod.add(s.customer.id); });
-      deliveredOrders.forEach((o: any) => { if (o.customer?.id) customerIdsInPeriod.add(o.customer.id); });
+      // Retención mejorada: contar transacciones por cliente DENTRO del período
+      // Un cliente es recurrente si:
+      //   (a) compró 2 o más veces en este período, O
+      //   (b) tiene al menos una compra ANTES del inicio del rango
+      const customerTransactionCount: Record<number, number> = {};
 
-      // Para cada cliente en el período, verificar si tenía actividad ANTES
+      completedSales.forEach((s: any) => {
+        if (s.customer?.id) {
+          customerTransactionCount[s.customer.id] = (customerTransactionCount[s.customer.id] || 0) + 1;
+        }
+      });
+      deliveredOrders.forEach((o: any) => {
+        if (o.customer?.id) {
+          customerTransactionCount[o.customer.id] = (customerTransactionCount[o.customer.id] || 0) + 1;
+        }
+      });
+
+      const customerIdsInPeriod = new Set<number>(Object.keys(customerTransactionCount).map(Number));
+
       let newCustomers = 0;
       let returningCustomers = 0;
 
-      if (input?.startDate && customerIdsInPeriod.size > 0) {
-        const rangeStart = new Date(input.startDate);
-        for (const customerId of Array.from(customerIdsInPeriod)) {
-          // Buscar órdenes o ventas de este cliente ANTES del rango
+      for (const customerId of Array.from(customerIdsInPeriod)) {
+        // Si compró 2 o más veces en el período → recurrente
+        if (customerTransactionCount[customerId] >= 2) {
+          returningCustomers++;
+          continue;
+        }
+        // Si solo compró una vez en el período, verificar si tiene historial PREVIO
+        if (input?.startDate) {
+          const rangeStart = new Date(input.startDate);
           const priorOrder = await db.query.orders.findFirst({
             where: and(eq(orders.customerId, customerId), lt(orders.createdAt, rangeStart))
           });
@@ -532,9 +553,9 @@ export const reportsRouter = router({
           }) : null;
           if (priorOrder || priorSale) returningCustomers++;
           else newCustomers++;
+        } else {
+          newCustomers++;
         }
-      } else {
-        newCustomers = customerIdsInPeriod.size;
       }
 
       if (totalTransactions === 0) return null;
@@ -577,7 +598,7 @@ export const reportsRouter = router({
       const topCustomers = Object.values(customerSales)
         .sort((a, b) => b.value - a.value)
         .slice(0, 10)
-        .map(c => ({ name: c.name, value: c.value / 100 }));
+        .map(c => ({ name: c.name, value: c.value / 100, count: c.count }));
 
       const expensesByCategory = Object.entries(expenseCounts)
         .map(([name, value]) => ({ 

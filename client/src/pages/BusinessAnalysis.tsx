@@ -448,7 +448,24 @@ export default function BusinessAnalysis() {
                 tickLine={false}
               />
               <Tooltip 
-                 formatter={(value: number) => `Bs. ${value.toLocaleString()}`}
+                 formatter={(value: number, name: string, props: any) => {
+                   if (name === "Monto (Bs.)") return [`Bs. ${value.toLocaleString()}`, name];
+                   return [value, name];
+                 }}
+                 labelFormatter={(label) => `Cliente: ${label}`}
+                 content={({ active, payload, label }) => {
+                   if (active && payload && payload.length) {
+                     const data = payload[0].payload;
+                     return (
+                       <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-100">
+                         <p className="font-bold text-gray-800 mb-1">{label}</p>
+                         <p className="text-sm text-purple-600">Monto: Bs. {data.value.toLocaleString()}</p>
+                         <p className="text-sm text-gray-600">Ventas: {data.count}</p>
+                       </div>
+                     );
+                   }
+                   return null;
+                 }}
                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
               <Bar 

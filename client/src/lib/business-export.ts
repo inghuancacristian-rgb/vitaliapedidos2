@@ -25,7 +25,7 @@ type BusinessData = {
   zonesData: { name: string; value: number }[];
   customerDemographics: { name: string; value: number }[];
   paymentMethods: { name: string; value: number }[];
-  topCustomers: { name: string; value: number }[];
+  topCustomers: { name: string; value: number; count: number }[];
   expensesByCategory: { name: string; value: number }[];
   customerRetention: { name: string; value: number }[];
 };
@@ -164,6 +164,29 @@ export const exportBusinessToPDF = (data: BusinessData, periodStr: string) => {
     styles: { fontSize: 9 },
   });
 
+  yPos = (doc as any).lastAutoTable.finalY + 10;
+  if (yPos > 230) { doc.addPage(); yPos = 20; }
+
+  // SECCIÓN 6: Top Clientes
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("6. Top Clientes por Volumen de Compra", 14, yPos);
+  yPos += 5;
+
+  (doc as any).autoTable({
+    startY: yPos,
+    head: [["#", "Cliente", "Compras", "Monto Total (Bs.)"]],
+    body: data.topCustomers.map((c, i) => [
+      (i + 1).toString(), 
+      c.name, 
+      c.count.toString(),
+      c.value.toFixed(2)
+    ]),
+    theme: "striped",
+    headStyles: { fillColor: [75, 85, 99], textColor: 255 },
+    styles: { fontSize: 9 },
+  });
+
   // Footer
   const pageCount = (doc as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -254,10 +277,11 @@ export const exportBusinessToExcel = (data: BusinessData, periodStr: string) => 
 
   // ── Hoja 6: TOP CLIENTES ──
   const wsClients = XLSX.utils.aoa_to_sheet([
-    ["#", "CLIENTE", "COMPRAS ACUMULADAS (Bs.)"],
-    ...data.topCustomers.map((c, i) => [i + 1, c.name, +c.value.toFixed(2)]),
+    ["#", "CLIENTE", "CANT. COMPRAS", "MONTO TOTAL (Bs.)"],
+    ...data.topCustomers.map((c, i) => [i + 1, c.name, c.count, +c.value.toFixed(2)]),
   ]);
   XLSX.utils.book_append_sheet(wb, wsClients, "Top Clientes");
+
 
   XLSX.writeFile(wb, `analisis_negocio_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
 };
