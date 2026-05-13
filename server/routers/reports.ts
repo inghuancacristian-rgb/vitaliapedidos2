@@ -411,6 +411,8 @@ export const reportsRouter = router({
         prevUnits: number,
         prevRevenue: number 
       }> = {};
+      const retailStats: any = {};
+      const wholesaleStats: any = {};
       
       const channelCounts: Record<string, number> = { facebook: 0, tiktok: 0, marketplace: 0, referral: 0, other: 0, local: 0 };
       const segmentedChannels: Record<string, Record<string, number>> = {
@@ -465,7 +467,16 @@ export const reportsRouter = router({
             productStats[pId].units += qty;
             productStats[pId].revenue += rev;
             productStats[pId].cost += cost;
-            if (segment) (segmentMetrics as any)[segment].units += qty;
+            if (segment) {
+              (segmentMetrics as any)[segment].units += qty;
+              const segStats = segment === "retail" ? retailStats : wholesaleStats;
+              if (!segStats[pId]) {
+                segStats[pId] = { name: item.product.name, units: 0, revenue: 0, cost: 0, prevUnits: 0, prevRevenue: 0 };
+              }
+              segStats[pId].units += qty;
+              segStats[pId].revenue += rev;
+              segStats[pId].cost += cost;
+            }
           } else {
             productStats[pId].prevUnits += qty;
             productStats[pId].prevRevenue += rev;
@@ -568,26 +579,32 @@ export const reportsRouter = router({
         else newCustomers++;
       }
 
-      // Ranking de Productos Mejorado
-      const productRanking = Object.entries(productStats)
-        .map(([id, stats]) => {
-          const revenue = stats.revenue / 100;
-          const prevRevenue = stats.prevRevenue / 100;
-          const cost = stats.cost / 100;
-          const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
-          const trend = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : revenue > 0 ? 100 : 0;
+      // Ranking de Productos Mejorado (Segmentado)
+      const getRankingFromStats = (stats: any) => {
+        return Object.entries(stats)
+          .map(([id, s]: [any, any]) => {
+            const revenue = s.revenue / 100;
+            const prevRevenue = s.prevRevenue / 100;
+            const cost = s.cost / 100;
+            const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
+            const trend = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : revenue > 0 ? 100 : 0;
 
-          return {
-            id: Number(id),
-            name: stats.name,
-            units: stats.units,
-            revenue,
-            margin: Math.round(margin),
-            trend: Math.round(trend),
-            prevUnits: stats.prevUnits
-          };
-        })
-        .sort((a, b) => b.revenue - a.revenue);
+            return {
+              id: Number(id),
+              name: s.name,
+              units: s.units,
+              revenue,
+              margin: Math.round(margin),
+              trend: Math.round(trend),
+              prevUnits: s.prevUnits
+            };
+          })
+          .sort((a: any, b: any) => b.revenue - a.revenue);
+      };
+
+      const productRanking = getRankingFromStats(productStats);
+      const retailRanking = getRankingFromStats(retailStats);
+      const wholesaleRanking = getRankingFromStats(wholesaleStats);
 
       // Formatear para Recharts
       const deliveriesData = Object.entries(deliveriesByDay)
