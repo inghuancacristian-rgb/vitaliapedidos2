@@ -103,6 +103,13 @@ export const salesRouter = router({
         discountType: discountTypeSchema.default("none"),
         discountValue: z.number().default(0),
         notes: z.string().optional(),
+        items: z.array(
+          z.object({
+            productId: z.number(),
+            pricingType: z.enum(["local", "delivery"]).default("local"),
+            quantity: z.number(),
+            basePrice: z.number(),
+            discountType: discountTypeSchema.default("none"),
             discountValue: z.number().default(0),
           })
         ).min(1, "Debes agregar al menos un producto"),
