@@ -106,6 +106,14 @@ function classifyHistoryEvent(movement: any) {
     };
   }
 
+  if (notes.includes("auto-registrado") || reason.includes("compra rÃ¡pida")) {
+    return {
+      eventType: "purchase",
+      title: "Compra registrada (Rápida)",
+      description: notes || "Se registró una compra rápida desde el ajuste de inventario.",
+    };
+  }
+
   if (movement.type === "entry") {
     if (reason.includes("producci")) {
       return {
@@ -511,7 +519,12 @@ export const inventoryRouter = router({
       });
 
       const purchaseTimeline = purchases
-        .filter((purchase: any) => purchase.purchaseStatus !== "cancelled")
+        .filter((purchase: any) => {
+          const isCancelled = purchase.purchaseStatus === "cancelled";
+          const isAutoRegistered = (purchase.notes || "").toLowerCase().includes("auto-registrado");
+          // Si es auto-registrado, ya estÃ¡ en 'movements', por lo que no lo agregamos de nuevo
+          return !isCancelled && !isAutoRegistered;
+        })
         .map((purchase: any) => ({
           id: `purchase-item-${purchase.id}`,
           source: "purchase",

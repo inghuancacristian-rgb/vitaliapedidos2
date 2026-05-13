@@ -162,7 +162,8 @@ export function ProductHistoryDialog({
           Historial
         </Button>
       </DialogTrigger>
-        <DialogHeader className="shrink-0 pb-2 border-b bg-muted/5">
+      <DialogContent className="max-w-4xl max-h-[95vh] w-[98vw] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="shrink-0 p-4 pb-2 border-b bg-muted/5">
           <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-primary">Kardex de Inventario</DialogTitle>
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="outline" className="font-mono text-[10px] sm:text-xs bg-background/50 backdrop-blur-sm px-2 py-0">
