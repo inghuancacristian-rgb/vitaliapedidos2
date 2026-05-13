@@ -257,100 +257,111 @@ export function ProductHistoryDialog({
               </div>
             </div>
 
-            <div className="rounded-lg border bg-muted/20 p-3 shrink-0">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm">
-                <span className="font-bold">{data.product.name}</span>
-                <span className="text-muted-foreground">
-                  Compra: {formatCurrency(data.product.price)}
-                </span>
-                <span className="text-muted-foreground">
-                  Venta: {formatCurrency(data.product.salePrice)}
-                </span>
-                <span className="text-muted-foreground font-medium">
-                  Eventos: {data.summary.totalEvents}
-                </span>
-              </div>
+            <div className="rounded-lg border bg-muted/10 px-4 py-2 shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="font-bold text-sm text-slate-800">{data.product.name}</span>
+              <span className="text-xs text-muted-foreground">Compra: <strong>{formatCurrency(data.product.price)}</strong></span>
+              <span className="text-xs text-muted-foreground">Venta: <strong>{formatCurrency(data.product.salePrice)}</strong></span>
+              <span className="text-xs text-muted-foreground">Total eventos: <strong>{data.summary.totalEvents}</strong></span>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto rounded-2xl border shadow-inner bg-background/50">
-              <Table className="relative">
-                <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-md z-20 shadow-sm">
-                  <TableRow className="hover:bg-transparent border-b-2">
-                    <TableHead className="w-[120px] sm:w-[150px] text-xs uppercase font-black text-muted-foreground px-5 py-4">Fecha / Hora</TableHead>
-                    <TableHead className="text-xs uppercase font-black text-muted-foreground px-4">Concepto / Movimiento</TableHead>
-                    <TableHead className="text-right text-xs uppercase font-black text-emerald-700 bg-emerald-500/5 px-6">Entrada</TableHead>
-                    <TableHead className="text-right text-xs uppercase font-black text-red-700 bg-red-500/5 px-6">Salida</TableHead>
-                    <TableHead className="text-right text-xs uppercase font-black bg-muted/30 px-6 border-l">Saldo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.timeline.map((event: any) => (
-                    <TableRow key={event.id} className="group hover:bg-muted/10 transition-colors border-b last:border-0">
-                      <TableCell className="py-4 px-5 align-top whitespace-nowrap">
-                        <p className="text-sm font-bold text-slate-800">
-                          {formatDateTime(event.createdAt).split(",")[0]}
+            {/* KARDEX TABLE - fixed layout so all columns always fit */}
+            <div className="flex-1 min-h-0 overflow-auto rounded-xl border shadow-sm bg-white">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col style={{width: '130px'}} />
+                  <col style={{width: 'auto'}} />
+                  <col style={{width: '90px'}} />
+                  <col style={{width: '90px'}} />
+                  <col style={{width: '90px'}} />
+                </colgroup>
+                <thead className="sticky top-0 z-20 bg-slate-900 text-white">
+                  <tr>
+                    <th className="text-left text-xs font-black uppercase tracking-wider px-4 py-3 border-r border-slate-700">Fecha / Hora</th>
+                    <th className="text-left text-xs font-black uppercase tracking-wider px-4 py-3 border-r border-slate-700">Concepto / Movimiento</th>
+                    <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-emerald-800 border-r border-emerald-700">Entrada</th>
+                    <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-red-900 border-r border-red-800">Salida</th>
+                    <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-slate-700">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.timeline.map((event: any, idx: number) => (
+                    <tr
+                      key={event.id}
+                      className={`border-b transition-colors hover:bg-slate-50 ${
+                        idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
+                      }`}
+                    >
+                      <td className="px-4 py-3 align-top border-r border-slate-100 whitespace-nowrap">
+                        <p className="text-xs font-bold text-slate-800 leading-tight">
+                          {formatDateTime(event.createdAt).split(',')[0]}
                         </p>
-                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                          {formatDateTime(event.createdAt).split(",")[1]}
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                          {formatDateTime(event.createdAt).split(',')[1]}
                         </p>
-                      </TableCell>
-                      <TableCell className="py-4 px-4 min-w-[250px]">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="shrink-0 p-1.5 rounded-lg bg-muted/50 group-hover:bg-background shadow-sm transition-all">
-                              {getEventIcon(event.eventType)}
-                            </span>
-                            <span className="font-black text-sm sm:text-base tracking-tight text-slate-800">{event.title}</span>
-                            <span className="scale-95 origin-left">{getEventBadge(event.eventType)}</span>
+                      </td>
+                      <td className="px-4 py-3 align-top border-r border-slate-100 overflow-hidden">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                            <span className="shrink-0">{getEventIcon(event.eventType)}</span>
+                            <span className="font-bold text-xs text-slate-900 truncate">{event.title}</span>
+                            <span className="shrink-0">{getEventBadge(event.eventType)}</span>
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed font-medium">
+                          <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">
                             {event.description}
                           </p>
-                          
-                          {(event.orderNumber || event.saleNumber || event.userName || event.deliveryPersonName) && (
-                            <div className="flex flex-wrap gap-x-2.5 gap-y-1.5 pt-1.5">
+                          {(event.orderNumber || event.saleNumber || event.userName) && (
+                            <div className="flex flex-wrap gap-1 pt-0.5">
                               {event.orderNumber && (
-                                <span className="flex items-center gap-1.5 text-[11px] text-blue-700 font-black bg-blue-100/50 px-2.5 py-1 rounded-lg border border-blue-200">
-                                  #PEDIDO: {event.orderNumber}
+                                <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                  #{event.orderNumber}
                                   {event.orderStatus && (
-                                    <span className={`ml-1 font-black ${event.orderStatus === 'delivered' ? 'text-green-600' : 'text-orange-600'}`}>
+                                    <span className={`ml-1 ${event.orderStatus === 'delivered' ? 'text-green-600' : 'text-orange-500'}`}>
                                       {event.orderStatus === 'delivered' ? 'OK' : '...'}
                                     </span>
                                   )}
                                 </span>
                               )}
                               {event.saleNumber && (
-                                <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-black bg-emerald-100/50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                                  #VENTA: {event.saleNumber}
+                                <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                                  #V:{event.saleNumber}
                                 </span>
                               )}
                               {event.userName && (
-                                <span className="flex items-center gap-1.5 text-[11px] text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                                  <User className="h-3 w-3" />
-                                  {event.userName.split(" ")[0]}
+                                <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                  {event.userName.split(' ')[0]}
                                 </span>
                               )}
                             </div>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="py-4 px-6 text-right font-black text-base text-emerald-700 bg-emerald-500/5 align-top">
-                        {event.entry > 0 ? `+${event.entry}` : ""}
-                      </TableCell>
-                      <TableCell className="py-4 px-6 text-right font-black text-base text-red-700 bg-red-500/5 align-top">
-                        {event.exit > 0 ? `-${event.exit}` : ""}
-                      </TableCell>
-                      <TableCell className="py-4 px-6 text-right font-black text-lg bg-muted/30 border-l align-top text-slate-900">
-                        {event.balance}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="px-3 py-3 text-right align-top bg-emerald-50/30 border-r border-emerald-100">
+                        {event.entry > 0 && (
+                          <span className="font-black text-sm text-emerald-700">+{event.entry}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right align-top bg-red-50/30 border-r border-red-100">
+                        {event.exit > 0 && (
+                          <span className="font-black text-sm text-red-700">-{event.exit}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right align-top bg-slate-50">
+                        <span className={`font-black text-base ${
+                          event.balance > 0 ? 'text-slate-900' :
+                          event.balance < 0 ? 'text-red-700' :
+                          'text-slate-400'
+                        }`}>
+                          {event.balance}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
               {data.timeline.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                  <Clock3 className="h-12 w-12 mb-2" />
-                  <p className="text-sm font-bold uppercase tracking-widest">Sin movimientos</p>
+                <div className="flex flex-col items-center justify-center py-24 opacity-40">
+                  <Clock3 className="h-12 w-12 mb-3" />
+                  <p className="text-sm font-black uppercase tracking-widest">Sin movimientos registrados</p>
                 </div>
               )}
             </div>
