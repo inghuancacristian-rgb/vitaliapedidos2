@@ -155,6 +155,13 @@ export function ProductHistoryDialog({
   );
 
   return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-2 hover:bg-primary/5 transition-colors">
+          <Eye className="h-4 w-4" />
+          Historial
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-6xl h-[92vh] sm:h-[90vh] w-[98vw] flex flex-col p-0 overflow-hidden border-none shadow-2xl rounded-2xl">
         <DialogHeader className="shrink-0 p-5 pb-3 border-b bg-muted/5">
           <div className="flex items-center justify-between">
