@@ -559,20 +559,48 @@ export const inventoryRouter = router({
       );
 
       let runningBalance = 0;
-      const timelineWithKardex = timeline.map((event) => {
+      const timelineWithKardex = timeline.map((event: any) => {
         let entry = 0;
         let exit = 0;
 
-        // Lógica de Kardex:
-        // Evitamos doble descuento: order_reservation ya descuenta el stock físico.
-        // order_delivery es solo un cambio de estado del stock ya reservado.
-        const isActuallyDeducted = event.eventType !== "order_delivery";
+        // -------------------------------------------------------
+        // KARDEX SEMANTICO: se basa en el tipo de evento,
+        // no en el campo 'type' de la BD (que puede ser 'adjustment'
+        // incluso para compras rapidas, produccion, etc.)
+        // -------------------------------------------------------
 
-        if (isActuallyDeducted) {
-          if (event.movementType === "entry") {
-            entry = event.quantity || 0;
+        // ENTRADAS: todo lo que SUMA stock fisico
+        const ENTRY_TYPES = new Set([
+          "purchase",          // Compra de proveedor
+          "inventory_entry",   // Entrada manual de inventario
+          "production",        // Ingreso por produccion
+          "sale_cancellation", // Anulacion de venta (devuelve stock)
+          "order_cancellation",// Pedido cancelado (devuelve stock)
+        ]);
+
+        // SALIDAS: todo lo que RESTA stock fisico
+        const EXIT_TYPES = new Set([
+          "sale",              // Venta registrada
+          "order_reservation", // Pedido reservado (descuenta fisicamente)
+          "inventory_exit",    // Salida manual de inventario
+        ]);
+
+        // NEUTROS (0 impacto en saldo):
+        // - order_delivery: la entrega no mueve stock (ya fue descontado en order_reservation)
+        // - created, updated, deactivated, reactivated: no tocan el stock
+        // - inventory_adjustment: ajuste sin cantidad definida
+
+        if (event.quantity && event.quantity > 0) {
+          if (ENTRY_TYPES.has(event.eventType)) {
+            entry = event.quantity;
+          } else if (EXIT_TYPES.has(event.eventType)) {
+            exit = event.quantity;
+          }
+          // Si el eventType no esta en ninguno, se clasifica por movementType como fallback
+          else if (event.movementType === "entry") {
+            entry = event.quantity;
           } else if (event.movementType === "exit") {
-            exit = event.quantity || 0;
+            exit = event.quantity;
           }
         }
 
@@ -602,13 +630,17 @@ export const inventoryRouter = router({
         finalTimeline = finalTimeline.filter(e => new Date(e.createdAt) <= end);
       }
 
-      const totalSoldUnits = finalTimeline
-        .filter((event: any) => event.eventType === "sale")
-        .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
-
+      // Usar los valores ya calculados del Kardex (entry/exit semantico)
+      // Totales de TODAS las entradas (compras + produccion + devoluciones)
       const totalPurchasedUnits = finalTimeline
-        .filter((event: any) => event.eventType === "purchase")
-        .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
+        .reduce((sum: number, event: any) => sum + (event.entry || 0), 0);
+
+      // Totales de TODAS las salidas (ventas + pedidos + salidas manuales)
+      const totalSoldUnits = finalTimeline
+        .reduce((sum: number, event: any) => sum + (event.exit || 0), 0);
+
+      // Saldo calculado por Kardex (ultimo registro de la timeline ordenada desc = el mas reciente)
+      const kardexFinalBalance = finalTimeline.length > 0 ? finalTimeline[0].balance : runningBalance;
 
       return {
         product,
@@ -618,8 +650,11 @@ export const inventoryRouter = router({
           totalSoldUnits,
           totalPurchasedUnits,
           currentStatus: product.status,
-          initialBalance: finalTimeline.length > 0 ? finalTimeline[finalTimeline.length - 1].balance - (finalTimeline[finalTimeline.length - 1].entry - finalTimeline[finalTimeline.length - 1].exit) : runningBalance,
-          finalBalance: finalTimeline.length > 0 ? finalTimeline[0].balance : runningBalance,
+          // saldo mas antiguo de la timeline antes de sus propios movimientos
+          initialBalance: finalTimeline.length > 0
+            ? finalTimeline[finalTimeline.length - 1].balance - (finalTimeline[finalTimeline.length - 1].entry - finalTimeline[finalTimeline.length - 1].exit)
+            : 0,
+          finalBalance: kardexFinalBalance,
         },
         timeline: finalTimeline,
       };
