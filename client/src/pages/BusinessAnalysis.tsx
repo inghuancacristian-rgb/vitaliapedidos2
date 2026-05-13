@@ -236,7 +236,7 @@ export default function BusinessAnalysis() {
 
       <div className="pt-8 pb-4 text-center">
         <p className="text-gray-300 text-[10px] font-mono uppercase tracking-[0.3em]">
-          Business Intelligence Engine v2.5 • Segment Analysis Active
+          Business Intelligence Engine v2.6 • Segment Analysis Active
         </p>
       </div>
     </div>
