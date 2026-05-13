@@ -3,6 +3,8 @@ import { trpc } from "@/lib/trpc";
 import { formatCurrency } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -144,8 +146,11 @@ export function ProductHistoryDialog({
   productName,
 }: ProductHistoryDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const { data, isLoading } = trpc.inventory.getProductHistory.useQuery(
-    { productId },
+    { productId, startDate, endDate },
     { enabled: isOpen }
   );
 
@@ -175,6 +180,43 @@ export function ProductHistoryDialog({
           </div>
         ) : (
           <div className="flex flex-col gap-3 overflow-hidden flex-1 min-h-0">
+            {/* Filtros de Fecha */}
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-muted/10 shrink-0">
+              <div className="space-y-1.5">
+                <Label htmlFor="start-date" className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Inicio</Label>
+                <Input
+                  id="start-date"
+                  type="date"
+                  size="sm"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="end-date" className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Fin</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="end-date"
+                    type="date"
+                    size="sm"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  {(startDate || endDate) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 px-2 text-[10px]" 
+                      onClick={() => { setStartDate(""); setEndDate(""); }}
+                    >
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 shrink-0">
               <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
                 <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Código</p>
@@ -192,10 +234,16 @@ export function ProductHistoryDialog({
                 <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Vendidas</p>
                 <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.summary.totalSoldUnits}</p>
               </div>
-              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border bg-muted/30 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Estado</p>
-                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">
-                  {data.summary.currentStatus === "inactive" ? "Dado de baja" : "Activo"}
+              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-emerald-700 font-bold leading-tight">Saldo Final</p>
+                <p className="font-bold text-sm sm:text-base text-emerald-800 leading-tight mt-0.5">
+                  {data.summary.finalBalance} uds.
+                </p>
+              </div>
+              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border border-slate-200 bg-slate-50/50 p-2 sm:p-3">
+                <p className="text-[10px] sm:text-xs text-slate-600 font-bold leading-tight">Saldo Inicial</p>
+                <p className="font-bold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
+                  {data.summary.initialBalance} uds.
                 </p>
               </div>
             </div>
@@ -219,11 +267,11 @@ export function ProductHistoryDialog({
               <Table>
                 <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
                   <TableRow>
-                    <TableHead className="w-[120px] text-[10px] sm:text-xs uppercase font-bold">Fecha</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs uppercase font-bold">Concepto / Detalle</TableHead>
-                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold text-emerald-600">Ent.</TableHead>
-                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold text-red-600">Sal.</TableHead>
-                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold bg-muted/20">Saldo</TableHead>
+                    <TableHead className="w-[110px] text-[10px] uppercase font-bold">Fecha / Hora</TableHead>
+                    <TableHead className="text-[10px] uppercase font-bold">Concepto / Detalle de Movimiento</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-bold text-emerald-600 bg-emerald-50/30">Entrada</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-bold text-red-600 bg-red-50/30">Salida</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-bold bg-muted/50 border-l">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -275,13 +323,13 @@ export function ProductHistoryDialog({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2 text-right font-medium text-emerald-600 align-top">
+                      <TableCell className="py-2 text-right font-bold text-emerald-700 bg-emerald-50/10 align-top">
                         {event.entry > 0 ? `+${event.entry}` : ""}
                       </TableCell>
-                      <TableCell className="py-2 text-right font-medium text-red-600 align-top">
+                      <TableCell className="py-2 text-right font-bold text-red-700 bg-red-50/10 align-top">
                         {event.exit > 0 ? `-${event.exit}` : ""}
                       </TableCell>
-                      <TableCell className="py-2 text-right font-bold bg-muted/5 align-top">
+                      <TableCell className="py-2 text-right font-black bg-muted/30 border-l align-top text-slate-900">
                         {event.balance}
                       </TableCell>
                     </TableRow>

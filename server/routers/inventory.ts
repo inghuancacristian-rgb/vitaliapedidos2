@@ -471,7 +471,11 @@ export const inventoryRouter = router({
     }),
 
   getProductHistory: protectedProcedure
-    .input(z.object({ productId: z.number() }))
+    .input(z.object({ 
+      productId: z.number(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }))
     .query(async ({ input }) => {
       const [product, stock, movements, purchases] = await Promise.all([
         getProductById(input.productId),
@@ -570,16 +574,26 @@ export const inventoryRouter = router({
       });
 
       // Ordenar descendente para la UI
-      timelineWithKardex.sort(
+      let finalTimeline = timelineWithKardex.sort(
         (a: any, b: any) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
-      const totalSoldUnits = timelineWithKardex
+      // Aplicar filtros de fecha si existen
+      if (input.startDate) {
+        const start = new Date(input.startDate);
+        finalTimeline = finalTimeline.filter(e => new Date(e.createdAt) >= start);
+      }
+      if (input.endDate) {
+        const end = new Date(input.endDate + " 23:59:59");
+        finalTimeline = finalTimeline.filter(e => new Date(e.createdAt) <= end);
+      }
+
+      const totalSoldUnits = finalTimeline
         .filter((event: any) => event.eventType === "sale")
         .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
 
-      const totalPurchasedUnits = timelineWithKardex
+      const totalPurchasedUnits = finalTimeline
         .filter((event: any) => event.eventType === "purchase")
         .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
 
@@ -587,12 +601,14 @@ export const inventoryRouter = router({
         product,
         stock,
         summary: {
-          totalEvents: timelineWithKardex.length,
+          totalEvents: finalTimeline.length,
           totalSoldUnits,
           totalPurchasedUnits,
           currentStatus: product.status,
+          initialBalance: finalTimeline.length > 0 ? finalTimeline[finalTimeline.length - 1].balance - (finalTimeline[finalTimeline.length - 1].entry - finalTimeline[finalTimeline.length - 1].exit) : runningBalance,
+          finalBalance: finalTimeline.length > 0 ? finalTimeline[0].balance : runningBalance,
         },
-        timeline: timelineWithKardex,
+        timeline: finalTimeline,
       };
     }),
 
