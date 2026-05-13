@@ -528,6 +528,21 @@ export const inventoryRouter = router({
 
       // Compras del modulo Compras: solo "received" y no "auto-registrado"
       // (auto-registrado = compra rapida que SI crea un inventoryMovement)
+      // Definir tipos de impacto para el cálculo
+      const ENTRY_TYPES = new Set([
+        "purchase",          // Compra de proveedor
+        "inventory_entry",   // Entrada manual de inventario
+        "production",        // Ingreso por produccion
+        "sale_cancellation", // Anulacion de venta (devuelve stock)
+        "order_cancellation",// Pedido cancelado (devuelve stock)
+      ]);
+
+      const EXIT_TYPES = new Set([
+        "sale",              // Venta registrada
+        "order_reservation", // Pedido reservado (descuenta fisicamente)
+        "inventory_exit",    // Salida manual de inventario
+      ]);
+
       const purchaseTimeline = (purchases || [])
         .filter((purchase: any) => {
           const isReceived = purchase.purchaseStatus === "received" || purchase.status === "received";
@@ -560,6 +575,40 @@ export const inventoryRouter = router({
 
       timeline.push(...purchaseTimeline);
 
+      // --- RECONCILIACIÓN DE SALDO INICIAL ---
+      // Calculamos cuánto suman los movimientos actuales para ver si falta algo 
+      // para llegar al Stock Físico Actual.
+      let currentMovementsSum = 0;
+      timeline.forEach((event: any) => {
+        // Ignoramos eventos puramente informativos
+        const isNeutral = event.eventType === "order_delivery" || 
+                          event.eventType === "updated" || 
+                          event.eventType === "created";
+        
+        if (!isNeutral && event.quantity > 0) {
+          if (event.movementType === "entry" || ENTRY_TYPES.has(event.eventType)) {
+            currentMovementsSum += event.quantity;
+          } else if (event.movementType === "exit" || EXIT_TYPES.has(event.eventType)) {
+            currentMovementsSum -= event.quantity;
+          }
+        }
+      });
+
+      const discrepancy = currentStock - currentMovementsSum;
+      if (discrepancy !== 0) {
+        // Asignar la discrepancia al evento inicial de creación/apertura
+        const initialEvent = timeline.find(e => e.eventType === "created");
+        if (initialEvent) {
+          initialEvent.quantity = Math.abs(discrepancy);
+          initialEvent.movementType = discrepancy > 0 ? "entry" : "exit";
+          initialEvent.title = "Saldo Inicial / Apertura";
+          initialEvent.description = "Ajuste automático para sincronizar el historial con el stock físico actual.";
+          // Ya no es neutral si tiene cantidad
+          (initialEvent as any).isAdjustmentRecord = true; 
+        }
+      }
+      // ---------------------------------------
+
       // Calcular Kardex (Saldo acumulado)
       // Ordenar ascendente para el cálculo
       timeline.sort(
@@ -572,39 +621,12 @@ export const inventoryRouter = router({
         let entry = 0;
         let exit = 0;
 
-        // -------------------------------------------------------
-        // KARDEX SEMANTICO: se basa en el tipo de evento,
-        // no en el campo 'type' de la BD (que puede ser 'adjustment'
-        // incluso para compras rapidas, produccion, etc.)
-        // -------------------------------------------------------
-
-        // ENTRADAS: todo lo que SUMA stock fisico
-        const ENTRY_TYPES = new Set([
-          "purchase",          // Compra de proveedor
-          "inventory_entry",   // Entrada manual de inventario
-          "production",        // Ingreso por produccion
-          "sale_cancellation", // Anulacion de venta (devuelve stock)
-          "order_cancellation",// Pedido cancelado (devuelve stock)
-        ]);
-
-        // SALIDAS: todo lo que RESTA stock fisico
-        const EXIT_TYPES = new Set([
-          "sale",              // Venta registrada
-          "order_reservation", // Pedido reservado (descuenta fisicamente)
-          "inventory_exit",    // Salida manual de inventario
-        ]);
-
-        // NEUTROS (0 impacto en saldo):
-        // - order_delivery: la entrega no mueve stock (ya fue descontado en order_reservation)
-        // - created, updated, deactivated, reactivated: no tocan el stock
-        // - inventory_adjustment: ajuste sin cantidad definida
-
         if (event.quantity && event.quantity > 0) {
           // Evitar doble descuento: la reserva ya resto stock. 
           // La entrega es un evento informativo/financiero para el Kardex.
-          const isNeutral = event.eventType === "order_delivery" || 
+          const isNeutral = (event.eventType === "order_delivery" || 
                             event.eventType === "updated" || 
-                            event.eventType === "created";
+                            event.eventType === "created") && !(event as any).isAdjustmentRecord;
 
           if (!isNeutral) {
             if (event.movementType === "entry" || ENTRY_TYPES.has(event.eventType)) {
@@ -612,9 +634,6 @@ export const inventoryRouter = router({
             } else if (event.movementType === "exit" || EXIT_TYPES.has(event.eventType)) {
               exit = event.quantity;
             } else if (event.movementType === "adjustment") {
-              // Si es un ajuste con cantidad, lo tratamos segun el contexto
-              // pero la mayoria de ajustes en este sistema se graban como entry/exit
-              // por el router updateQuantity.
               if (ENTRY_TYPES.has(event.eventType)) entry = event.quantity;
               else if (EXIT_TYPES.has(event.eventType)) exit = event.quantity;
             }
