@@ -485,10 +485,11 @@ export const inventoryRouter = router({
       endDate: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const [product, stock, movements] = await Promise.all([
+      const [product, stock, movements, purchases] = await Promise.all([
         getProductById(input.productId),
         getInventoryByProductId(input.productId),
         getInventoryMovements(input.productId),
+        getPurchasesByProductId(input.productId),
       ]);
 
       if (!product) {
@@ -499,9 +500,14 @@ export const inventoryRouter = router({
         (movement.reason || "").toLowerCase().includes("producto creado")
       );
 
-      // El UNICO libro contable es inventoryMovements.
-      // Cada compra, venta, pedido, produccion, etc. crea un movimiento en esta tabla.
-      // No mezclamos registros de la tabla 'purchases' para evitar doble conteo.
+      // NOTA IMPORTANTE: createPurchase() actualiza inventory.quantity DIRECTAMENTE
+      // sin crear un inventoryMovement. Por eso necesitamos DOS fuentes:
+      // 1. inventoryMovements → para ajustes manuales, ventas, pedidos, produccion
+      // 2. purchases (received) → para compras del modulo Compras (no tienen movement)
+      //
+      // Para evitar doble conteo, excluimos del purchaseTimeline las compras
+      // que SI tienen un movimiento (marcadas como "auto-registrado").
+
       let timeline: any[] = movements.map((movement: any) => {
         const classification = classifyHistoryEvent(movement);
         return {
@@ -520,6 +526,25 @@ export const inventoryRouter = router({
         };
       });
 
+      // Compras del modulo Compras: solo "received" y no "auto-registrado"
+      // (auto-registrado = compra rapida que SI crea un inventoryMovement)
+      const purchaseTimeline = (purchases || [])
+        .filter((purchase: any) => {
+          const isReceived = purchase.purchaseStatus === "received" || purchase.status === "received";
+          const isAutoRegistered = (purchase.notes || "").toLowerCase().includes("auto-registrado");
+          return isReceived && !isAutoRegistered;
+        })
+        .map((purchase: any) => ({
+          id: `purchase-item-${purchase.id}`,
+          source: "purchase",
+          createdAt: purchase.createdAt || purchase.purchaseCreatedAt || purchase.orderDate,
+          quantity: purchase.quantity,
+          movementType: "entry",
+          eventType: "purchase",
+          title: "Compra de proveedor",
+          description: `Compra ${purchase.purchaseNumber || ""} de ${purchase.supplierName || "proveedor"} - ${formatCurrencyCents(purchase.price)} x unidad.${purchase.expiryDate ? ` Venc: ${purchase.expiryDate}.` : ""}`,
+        }));
+
       if (!hasCreationMovement) {
         timeline.push({
           id: `product-created-${product.id}`,
@@ -532,6 +557,8 @@ export const inventoryRouter = router({
           description: `Se registro el producto ${product.name} con codigo ${product.code}.`,
         });
       }
+
+      timeline.push(...purchaseTimeline);
 
       // Calcular Kardex (Saldo acumulado)
       // Ordenar ascendente para el cálculo
@@ -573,16 +600,24 @@ export const inventoryRouter = router({
         // - inventory_adjustment: ajuste sin cantidad definida
 
         if (event.quantity && event.quantity > 0) {
-          if (ENTRY_TYPES.has(event.eventType)) {
-            entry = event.quantity;
-          } else if (EXIT_TYPES.has(event.eventType)) {
-            exit = event.quantity;
-          }
-          // Si el eventType no esta en ninguno, se clasifica por movementType como fallback
-          else if (event.movementType === "entry") {
-            entry = event.quantity;
-          } else if (event.movementType === "exit") {
-            exit = event.quantity;
+          // Evitar doble descuento: la reserva ya resto stock. 
+          // La entrega es un evento informativo/financiero para el Kardex.
+          const isNeutral = event.eventType === "order_delivery" || 
+                            event.eventType === "updated" || 
+                            event.eventType === "created";
+
+          if (!isNeutral) {
+            if (event.movementType === "entry" || ENTRY_TYPES.has(event.eventType)) {
+              entry = event.quantity;
+            } else if (event.movementType === "exit" || EXIT_TYPES.has(event.eventType)) {
+              exit = event.quantity;
+            } else if (event.movementType === "adjustment") {
+              // Si es un ajuste con cantidad, lo tratamos segun el contexto
+              // pero la mayoria de ajustes en este sistema se graban como entry/exit
+              // por el router updateQuantity.
+              if (ENTRY_TYPES.has(event.eventType)) entry = event.quantity;
+              else if (EXIT_TYPES.has(event.eventType)) exit = event.quantity;
+            }
           }
         }
 
