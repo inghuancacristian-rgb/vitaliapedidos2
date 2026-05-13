@@ -56,6 +56,7 @@ export const customers = mysqlTable("customers", {
   gender: varchar("gender", { length: 30 }),
   socioeconomicLevel: varchar("socioeconomicLevel", { length: 50 }),
   sourceChannel: mysqlEnum("sourceChannel", ["facebook", "tiktok", "marketplace", "referral", "other"]).default("other"),
+  customerType: mysqlEnum("customerType", ["retail", "wholesale"]).default("retail").notNull(),
   interestHealthFitness: int("interestHealthFitness").notNull().default(0),
   interestNaturalFood: int("interestNaturalFood").notNull().default(0),
   interestDigestiveIssues: int("interestDigestiveIssues").notNull().default(0),

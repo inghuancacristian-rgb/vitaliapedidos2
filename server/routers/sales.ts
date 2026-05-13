@@ -103,16 +103,10 @@ export const salesRouter = router({
         discountType: discountTypeSchema.default("none"),
         discountValue: z.number().default(0),
         notes: z.string().optional(),
-        items: z.array(
-          z.object({
-            productId: z.number(),
-            pricingType: z.enum(["unit", "wholesale", "discount"]).default("unit"),
-            quantity: z.number().int().min(1),
-            basePrice: z.number().min(0),
-            discountType: discountTypeSchema.default("none"),
             discountValue: z.number().default(0),
           })
         ).min(1, "Debes agregar al menos un producto"),
+        customerType: z.enum(["retail", "wholesale"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -145,7 +139,8 @@ export const salesRouter = router({
           clientNumber: input.customerPhone,
           clientName: input.customerName,
           zone: "Venta Directa",
-          sourceChannel: "other"
+          sourceChannel: "other",
+          customerType: input.customerType
         });
         if (customer) {
           customerId = customer.id;

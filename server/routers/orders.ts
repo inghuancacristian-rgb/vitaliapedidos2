@@ -240,6 +240,7 @@ export const ordersRouter = router({
         paymentMethod: z.enum(["qr", "cash", "transfer"]).optional(),
         deliveryPersonId: z.number().optional(),
         notes: z.string().optional(),
+        customerType: z.enum(["retail", "wholesale"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -252,6 +253,7 @@ export const ordersRouter = router({
         clientName: input.clientName,
         zone: input.zone,
         sourceChannel: input.sourceChannel,
+        customerType: input.customerType,
       });
 
       if (!customer) {
@@ -347,6 +349,7 @@ export const ordersRouter = router({
         deliveryPersonId: z.number().optional(),
         notes: z.string().optional(),
         status: z.string().optional(),
+        customerType: z.enum(["retail", "wholesale"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -370,6 +373,7 @@ export const ordersRouter = router({
         clientName: input.clientName,
         zone: input.zone,
         sourceChannel: input.sourceChannel,
+        customerType: input.customerType,
       });
 
       if (!customer) {

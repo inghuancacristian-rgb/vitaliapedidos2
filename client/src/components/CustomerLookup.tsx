@@ -11,7 +11,8 @@ interface CustomerLookupProps {
   clientName: string;
   zone: string;
   sourceChannel?: string;
-  onChange: (patch: { clientNumber?: string; clientName?: string; zone?: string; sourceChannel?: string }) => void;
+  customerType?: string;
+  onChange: (patch: { clientNumber?: string; clientName?: string; zone?: string; sourceChannel?: string; customerType?: string }) => void;
 }
 
 export function CustomerLookup({
@@ -50,6 +51,9 @@ export function CustomerLookup({
     if (exactCustomer.sourceChannel && exactCustomer.sourceChannel !== sourceChannel) {
       patch.sourceChannel = exactCustomer.sourceChannel;
     }
+    if (exactCustomer.customerType && exactCustomer.customerType !== (patch.customerType || "")) {
+      patch.customerType = exactCustomer.customerType;
+    }
 
     if (Object.keys(patch).length > 0) {
       onChange(patch);
@@ -62,6 +66,7 @@ export function CustomerLookup({
       clientName: customer.name || "",
       zone: customer.zone || "",
       sourceChannel: customer.sourceChannel || "other",
+      customerType: customer.customerType || "retail",
     });
     setSearchTerm("");
   };
@@ -123,6 +128,9 @@ export function CustomerLookup({
           <span>
             Cliente reconocido: <strong>{exactCustomer.name}</strong>
             {exactCustomer.zone ? ` · ${exactCustomer.zone}` : ""}
+            {exactCustomer.customerType === "wholesale" && (
+              <Badge className="ml-2 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Mayorista</Badge>
+            )}
           </span>
         </div>
       )}

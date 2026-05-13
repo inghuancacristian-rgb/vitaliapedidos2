@@ -14,6 +14,7 @@ import {
 import { TRPCError } from "@trpc/server";
 
 const sourceChannelSchema = z.enum(["facebook", "tiktok", "marketplace", "referral", "other"]);
+const customerTypeSchema = z.enum(["retail", "wholesale"]);
 
 function getActivityDate(activity: any) {
   return activity.deliveryDate || activity.createdAt || null;
@@ -279,6 +280,7 @@ export const customersRouter = router({
         lifestyleGym: z.boolean().optional(),
         lifestyleVegan: z.boolean().optional(),
         lifestyleBiohacking: z.boolean().optional(),
+        customerType: customerTypeSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -313,6 +315,7 @@ export const customersRouter = router({
         lifestyleGym: input.lifestyleGym ? 1 : 0,
         lifestyleVegan: input.lifestyleVegan ? 1 : 0,
         lifestyleBiohacking: input.lifestyleBiohacking ? 1 : 0,
+        customerType: input.customerType || "retail",
       });
 
       return { success: true };
@@ -337,6 +340,7 @@ export const customersRouter = router({
         lifestyleGym: z.boolean().optional(),
         lifestyleVegan: z.boolean().optional(),
         lifestyleBiohacking: z.boolean().optional(),
+        customerType: customerTypeSchema.optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -353,6 +357,7 @@ export const customersRouter = router({
         lifestyleGym: data.lifestyleGym === undefined ? undefined : data.lifestyleGym ? 1 : 0,
         lifestyleVegan: data.lifestyleVegan === undefined ? undefined : data.lifestyleVegan ? 1 : 0,
         lifestyleBiohacking: data.lifestyleBiohacking === undefined ? undefined : data.lifestyleBiohacking ? 1 : 0,
+        customerType: data.customerType,
       });
       return { success: true };
     }),

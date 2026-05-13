@@ -5,6 +5,7 @@ export async function ensureCustomerRecord(input: {
   clientName: string;
   zone: string;
   sourceChannel?: "facebook" | "tiktok" | "marketplace" | "referral" | "other";
+  customerType?: "retail" | "wholesale";
 }) {
   let customer = await getCustomerByNumber(input.clientNumber);
 
@@ -14,6 +15,7 @@ export async function ensureCustomerRecord(input: {
       name: input.clientName,
       zone: input.zone,
       sourceChannel: input.sourceChannel || "other",
+      customerType: input.customerType || "retail",
     });
     customer = await getCustomerByNumber(input.clientNumber);
   } else {
@@ -29,6 +31,10 @@ export async function ensureCustomerRecord(input: {
     
     if (input.sourceChannel && (!customer.sourceChannel || customer.sourceChannel === "other")) {
       (updates as any).sourceChannel = input.sourceChannel;
+    }
+    
+    if (input.customerType && input.customerType !== customer.customerType) {
+      (updates as any).customerType = input.customerType;
     }
 
     if (Object.keys(updates).length > 0) {

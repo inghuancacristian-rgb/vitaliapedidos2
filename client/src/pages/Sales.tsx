@@ -215,6 +215,7 @@ export default function Sales() {
   const [productSearch, setProductSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [selectedCustomerType, setSelectedCustomerType] = useState<"retail" | "wholesale">("retail");
   const [anonymousCustomerName, setAnonymousCustomerName] = useState("");
   const [saleChannel, setSaleChannel] = useState<"local" | "delivery">("local");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -344,6 +345,7 @@ export default function Sales() {
     setNotes("");
     setCartItems([]);
     setAnonymousCustomerPhone("");
+    setSelectedCustomerType("retail");
   };
 
   const clearCart = () => {
@@ -445,8 +447,8 @@ export default function Sales() {
           productCode: product.code,
           stock: product.stock,
           quantity: 1,
-          basePrice: product.salePrice,
-          pricingType: "unit",
+          basePrice: selectedCustomerType === "wholesale" ? (product.wholesalePrice || product.salePrice) : product.salePrice,
+          pricingType: selectedCustomerType === "wholesale" ? "wholesale" : "unit",
           discountType: "none",
           discountValue: 0,
         },
@@ -498,9 +500,10 @@ export default function Sales() {
       discountType: globalDiscountType,
       discountValue: globalDiscountValue,
       notes,
+      customerType: selectedCustomerType,
       items: computedCart.items.map((item) => ({
         productId: item.productId,
-        pricingType: "unit",
+        pricingType: item.pricingType,
         quantity: item.quantity,
         basePrice: item.basePrice,
         discountType: item.discountType,
@@ -911,6 +914,29 @@ export default function Sales() {
                             onClick={() => {
                               setSelectedCustomerId(customer.id);
                               setCustomerSearch(customer.name);
+                              const type = customer.customerType || "retail";
+                              setSelectedCustomerType(type);
+                              
+                              // Auto-update cart prices if becoming wholesale
+                              if (type === "wholesale") {
+                                setCartItems(current => current.map(item => {
+                                  const prod = products?.find(p => p.id === item.productId);
+                                  return {
+                                    ...item,
+                                    pricingType: "wholesale",
+                                    basePrice: prod?.wholesalePrice || item.basePrice
+                                  };
+                                }));
+                              } else {
+                                setCartItems(current => current.map(item => {
+                                  const prod = products?.find(p => p.id === item.productId);
+                                  return {
+                                    ...item,
+                                    pricingType: "unit",
+                                    basePrice: prod?.salePrice || item.basePrice
+                                  };
+                                }));
+                              }
                             }}
                           >
                             <span className="font-medium">{customer.name}</span>
@@ -941,9 +967,13 @@ export default function Sales() {
                         <Button type="button" size="sm" variant="ghost" onClick={() => {
                           setSelectedCustomerId(null);
                           setCustomerSearch("");
+                          setSelectedCustomerType("retail");
                         }}>
                           Cambiar
                         </Button>
+                        {selectedCustomerType === "wholesale" && (
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Mayorista</Badge>
+                        )}
                       </div>
                     )}
                   </div>

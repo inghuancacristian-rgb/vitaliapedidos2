@@ -95,6 +95,7 @@ export default function Customers() {
     lifestyleGym: false,
     lifestyleVegan: false,
     lifestyleBiohacking: false,
+    customerType: "retail" as "retail" | "wholesale",
   });
   const utils = trpc.useUtils();
 
@@ -124,6 +125,7 @@ export default function Customers() {
         lifestyleGym: false,
         lifestyleVegan: false,
         lifestyleBiohacking: false,
+        customerType: "retail" as "retail" | "wholesale",
       });
       void Promise.all([
         utils.customers.list.invalidate(),
@@ -378,6 +380,9 @@ export default function Customers() {
                             {customer.debt > 0 && (
                               <Badge variant="destructive">Deuda</Badge>
                             )}
+                            {customer.customerType === "wholesale" && (
+                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200">Mayorista</Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {customer.clientNumber}
@@ -528,9 +533,9 @@ export default function Customers() {
                   </Card>
                   <Card>
                     <CardContent className="pt-4">
-                      <p className="text-xs text-muted-foreground">Deuda</p>
-                      <p className="font-semibold">
-                        {formatCurrency(customerDetails.summary?.debt || 0)}
+                      <p className="text-xs text-muted-foreground">Tipo</p>
+                      <p className="font-semibold capitalize">
+                        {customerDetails.customer.customerType || "retail"}
                       </p>
                     </CardContent>
                   </Card>
@@ -641,23 +646,41 @@ export default function Customers() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Canal de origen</Label>
-                <Select
-                  value={newCustomer.sourceChannel}
-                  onValueChange={(val) => setNewCustomer((prev) => ({ ...prev, sourceChannel: val as SourceChannel }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un canal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CHANNELS.map((channel) => (
-                      <SelectItem key={channel.value} value={channel.value}>
-                        {channel.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Canal de origen</Label>
+                  <Select
+                    value={newCustomer.sourceChannel}
+                    onValueChange={(val) => setNewCustomer((prev) => ({ ...prev, sourceChannel: val as SourceChannel }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un canal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CHANNELS.map((channel) => (
+                        <SelectItem key={channel.value} value={channel.value}>
+                          {channel.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tipo de Cliente</Label>
+                  <Select
+                    value={newCustomer.customerType}
+                    onValueChange={(val) => setNewCustomer((prev) => ({ ...prev, customerType: val as any }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="retail">Minorista</SelectItem>
+                      <SelectItem value="wholesale">Mayorista</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -861,6 +884,7 @@ export default function Customers() {
                       lifestyleGym: newCustomer.lifestyleGym,
                       lifestyleVegan: newCustomer.lifestyleVegan,
                       lifestyleBiohacking: newCustomer.lifestyleBiohacking,
+                      customerType: newCustomer.customerType,
                     });
                   }}
                 >

@@ -48,7 +48,8 @@ export default function EditOrder() {
     deliveryPersonId: "",
     notes: "",
     status: "",
-    items: [] as { productId: number; productCode: string; quantity: number; price: number }[],
+    customerType: "retail" as "retail" | "wholesale",
+    items: [] as { productId: number; productCode: string; quantity: number; price: number; pricingType: "unit" | "wholesale" | "discount" }[],
   });
 
   const { data: products } = trpc.inventory.getProductsWithStock.useQuery();
@@ -87,11 +88,13 @@ export default function EditOrder() {
         deliveryPersonId: order.deliveryPersonId?.toString() || "",
         notes: order.notes || "",
         status: order.status || "pending",
+        customerType: (customer?.customerType as any) || "retail",
         items: items.map((item: any) => ({
           productId: item.productId,
           productCode: item.productCode || "",
           quantity: item.quantity,
           price: item.price,
+          pricingType: (item.pricingType as any) || "unit",
         })),
       });
     }
@@ -119,7 +122,8 @@ export default function EditOrder() {
           productId: defaultProduct?.id || 0,
           productCode: defaultProduct?.code || "",
           quantity: 1,
-          price: defaultProduct?.salePrice || 0,
+          price: formData.customerType === "wholesale" ? (defaultProduct?.wholesalePrice || defaultProduct?.salePrice || 0) : (defaultProduct?.salePrice || 0),
+          pricingType: formData.customerType === "wholesale" ? "wholesale" : "unit",
         },
       ],
     });
@@ -139,6 +143,7 @@ export default function EditOrder() {
       id: orderId,
       ...formData,
       deliveryPersonId: formData.deliveryPersonId ? parseInt(formData.deliveryPersonId) : undefined,
+      customerType: formData.customerType,
       totalPrice,
     });
   };
@@ -197,12 +202,36 @@ export default function EditOrder() {
                 clientName={formData.clientName}
                 zone={formData.zone}
                 sourceChannel={formData.sourceChannel}
-                onChange={(patch) =>
+                onChange={(patch) => {
+                  const newCustomerType = patch.customerType || formData.customerType;
+                  
+                  // Auto-update cart prices if becoming wholesale
+                  let updatedItems = formData.items;
+                  if (newCustomerType !== formData.customerType) {
+                    updatedItems = formData.items.map(item => {
+                      const prod = products?.find(p => p.id === item.productId);
+                      if (newCustomerType === "wholesale") {
+                        return {
+                          ...item,
+                          pricingType: "wholesale",
+                          price: prod?.wholesalePrice || item.price
+                        };
+                      } else {
+                        return {
+                          ...item,
+                          pricingType: "unit",
+                          price: prod?.salePrice || item.price
+                        };
+                      }
+                    });
+                  }
+
                   setFormData((prev) => ({
                     ...prev,
                     ...patch,
-                  }))
-                }
+                    items: updatedItems,
+                  }));
+                }}
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -368,11 +397,15 @@ export default function EditOrder() {
                         onValueChange={(val) => {
                           const prod = products?.find(p => p.code === val);
                           const newItems = [...formData.items];
+                          const pricingType = formData.customerType === "wholesale" ? "wholesale" : "unit";
+                          const price = formData.customerType === "wholesale" ? (prod?.wholesalePrice || prod?.salePrice || 0) : (prod?.salePrice || 0);
+                          
                           newItems[index] = {
                             ...newItems[index],
                             productCode: val,
                             productId: prod?.id || 0,
-                            price: prod?.salePrice || 0,
+                            price: price,
+                            pricingType: pricingType,
                           };
                           setFormData({ ...formData, items: newItems });
                         }}

@@ -51,9 +51,10 @@ import { exportBusinessToPDF, exportBusinessToExcel } from "../lib/business-expo
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
 export default function BusinessAnalysis() {
-  const [activeTab, setActiveTab] = useState<"overview" | "ranking" | "bcg">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "ranking" | "bcg" | "comparison">("overview");
   const [period, setPeriod] = useState<"7d" | "30d" | "month" | "quarter" | "year" | "custom">("30d");
   const [sortBy, setSortBy] = useState<"revenue" | "units" | "margin" | "trend">("revenue");
+  const [segmentFilter, setSegmentFilter] = useState<"all" | "retail" | "wholesale">("all");
   
   const [customDates, setCustomDates] = useState({
     start: format(subDays(new Date(), 30), "yyyy-MM-dd"),
@@ -107,11 +108,12 @@ export default function BusinessAnalysis() {
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
               Análisis <span className="text-green-600">Inteligente</span>
             </h1>
-            <p className="text-gray-500 font-medium">Transformando datos en decisiones estratégicas</p>
+            <p className="text-gray-500 font-medium">Segmentación y comparativa estratégica</p>
           </div>
 
-          <div className="flex items-center gap-2 bg-white p-1 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-2xl border border-gray-200 shadow-sm">
             <TabButton active={activeTab === "overview"} onClick={() => setActiveTab("overview")} icon={<LayoutDashboard size={16} />} label="General" />
+            <TabButton active={activeTab === "comparison"} onClick={() => setActiveTab("comparison")} icon={<Users size={16} />} label="Comparativa" />
             <TabButton active={activeTab === "ranking"} onClick={() => setActiveTab("ranking")} icon={<Award size={16} />} label="Ranking" />
             <TabButton active={activeTab === "bcg"} onClick={() => setActiveTab("bcg")} icon={<Target size={16} />} label="Matriz BCG" />
           </div>
@@ -119,51 +121,64 @@ export default function BusinessAnalysis() {
 
         {/* Filtros Premium */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-3xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Período:</span>
-            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
-              <PeriodButton active={period === "month"} onClick={() => setPeriod("month")} label="Este Mes" />
-              <PeriodButton active={period === "quarter"} onClick={() => setPeriod("quarter")} label="Trimestre" />
-              <PeriodButton active={period === "year"} onClick={() => setPeriod("year")} label="Año" />
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Período:</span>
+              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                <PeriodButton active={period === "month"} onClick={() => setPeriod("month")} label="Este Mes" />
+                <PeriodButton active={period === "quarter"} onClick={() => setPeriod("quarter")} label="Trimestre" />
+                <PeriodButton active={period === "year"} onClick={() => setPeriod("year")} label="Año" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 border-l border-gray-100 pl-6">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Segmento:</span>
+              <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                <PeriodButton active={segmentFilter === "all"} onClick={() => setSegmentFilter("all")} label="Todos" />
+                <PeriodButton active={segmentFilter === "retail"} onClick={() => setSegmentFilter("retail")} label="Minoristas" />
+                <PeriodButton active={segmentFilter === "wholesale"} onClick={() => setSegmentFilter("wholesale")} label="Mayoristas" />
+              </div>
             </div>
           </div>
 
-          {activeTab === "ranking" && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ordenar:</span>
-              <div className="relative group">
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="appearance-none bg-gray-50 border border-gray-100 text-gray-900 text-sm font-bold rounded-xl focus:ring-green-500 focus:border-green-500 block w-full pl-4 pr-10 py-2.5 cursor-pointer transition-all hover:bg-white"
-                >
-                  <option value="revenue">Por Ingresos</option>
-                  <option value="units">Por Unidades</option>
-                  <option value="margin">Por Margen (%)</option>
-                  <option value="trend">Por Tendencia</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-green-600 transition-colors" size={16} />
+          <div className="flex items-center gap-4">
+            {activeTab === "ranking" && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Ordenar:</span>
+                <div className="relative group">
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="appearance-none bg-gray-50 border border-gray-100 text-gray-900 text-sm font-bold rounded-xl focus:ring-green-500 focus:border-green-500 block w-full pl-4 pr-10 py-2.5 cursor-pointer transition-all hover:bg-white"
+                  >
+                    <option value="revenue">Por Ingresos</option>
+                    <option value="units">Por Unidades</option>
+                    <option value="margin">Por Margen (%)</option>
+                    <option value="trend">Por Tendencia</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-green-600 transition-colors" size={16} />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => data && exportBusinessToPDF(data, "Reporte de Análisis")}
-              disabled={isLoading || !data}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
-            >
-              <FileText size={18} />
-              <span className="hidden sm:inline">PDF</span>
-            </button>
-            <button
-              onClick={() => data && exportBusinessToExcel(data, "Análisis de Negocio")}
-              disabled={isLoading || !data}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 rounded-xl font-bold text-sm shadow-lg shadow-green-200 transition-all disabled:opacity-50"
-            >
-              <Download size={18} />
-              <span className="hidden sm:inline">Excel</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => data && exportBusinessToPDF(data, "Reporte de Análisis")}
+                disabled={isLoading || !data}
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+              >
+                <FileText size={18} />
+                <span className="hidden sm:inline">PDF</span>
+              </button>
+              <button
+                onClick={() => data && exportBusinessToExcel(data, "Análisis de Negocio")}
+                disabled={isLoading || !data}
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white hover:bg-green-700 rounded-xl font-bold text-sm shadow-lg shadow-green-200 transition-all disabled:opacity-50"
+              >
+                <Download size={18} />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -200,13 +215,16 @@ export default function BusinessAnalysis() {
             transition={{ duration: 0.3 }}
           >
             {activeTab === "overview" && (
-              <OverviewContent data={data} />
+              <OverviewContent data={data} segmentFilter={segmentFilter} />
+            )}
+            {activeTab === "comparison" && (
+              <ComparisonContent data={data} />
             )}
             {activeTab === "ranking" && (
-              <RankingContent ranking={sortedRanking} />
+              <RankingContent ranking={sortedRanking} segmentFilter={segmentFilter} />
             )}
             {activeTab === "bcg" && (
-              <BCGContent bcgData={data.bcgMatrix} />
+              <BCGContent bcgData={data.bcgMatrix} segmentFilter={segmentFilter} />
             )}
           </motion.div>
         )}
@@ -214,7 +232,7 @@ export default function BusinessAnalysis() {
 
       <div className="pt-8 pb-4 text-center">
         <p className="text-gray-300 text-[10px] font-mono uppercase tracking-[0.3em]">
-          Business Intelligence Engine v2.0 • Real-time Data Sync
+          Business Intelligence Engine v2.5 • Segment Analysis Active
         </p>
       </div>
     </div>
@@ -223,12 +241,17 @@ export default function BusinessAnalysis() {
 
 // --- Sub-componentes ---
 
-function OverviewContent({ data }: { data: any }) {
+function OverviewContent({ data, segmentFilter }: { data: any, segmentFilter: string }) {
+  const isRetail = segmentFilter === "retail";
+  const isWholesale = segmentFilter === "wholesale";
+  
+  const revenue = isRetail ? data.summary.retailRevenue : isWholesale ? data.summary.wholesaleRevenue : data.summary.totalRevenue;
+
   return (
     <div className="space-y-8">
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="Ingresos Brutos" value={`Bs. ${(data.summary.totalRevenue / 100).toLocaleString()}`} icon={<DollarSign size={24} />} color="emerald" footer="Total del periodo" />
+        <MetricCard title="Ingresos Brutos" value={`Bs. ${(revenue / 100).toLocaleString()}`} icon={<DollarSign size={24} />} color="emerald" footer={segmentFilter === "all" ? "Total del periodo" : `Segmento ${segmentFilter}`} />
         <MetricCard title="Utilidad Neta" value={`Bs. ${(data.summary.netIncome / 100).toLocaleString()}`} icon={<TrendingUp size={24} />} color="blue" footer="Ingresos - Gastos" />
         <MetricCard title="Transacciones" value={data.summary.totalTransactions} icon={<ShoppingCart size={24} />} color="orange" footer="Ventas + Entregas" />
         <MetricCard title="Retención" value={`${data.summary.retentionRate}%`} icon={<RefreshCw size={24} />} color="purple" footer="Clientes recurrentes" />
@@ -253,14 +276,21 @@ function OverviewContent({ data }: { data: any }) {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Perfil de Clientes" description="Distribución por género" icon={<Users className="text-blue-500" />}>
+        <ChartCard title="Canales por Segmento" description="Origen de clientes minoristas vs mayoristas" icon={<Share2 className="text-blue-500" />}>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={data.customerDemographics} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={8} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                {data.customerDemographics.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
+            <BarChart data={Object.entries(data.segmentedChannels.retail).map(([name, val]) => ({
+              name: name.charAt(0).toUpperCase() + name.slice(1),
+              retail: val,
+              wholesale: (data.segmentedChannels.wholesale as any)[name] || 0
+            }))}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="name" fontSize={11} axisLine={false} tickLine={false} />
+              <YAxis fontSize={11} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
+              <Legend verticalAlign="top" align="right" iconType="circle" />
+              <Bar dataKey="retail" name="Minoristas" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="wholesale" name="Mayoristas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
@@ -268,7 +298,98 @@ function OverviewContent({ data }: { data: any }) {
   );
 }
 
-function RankingContent({ ranking }: { ranking: any[] }) {
+function ComparisonContent({ data }: { data: any }) {
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <ChartCard title="Ingresos por Segmento" description="Comparativa de facturación bruta" icon={<DollarSign className="text-emerald-500" />}>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: "Minoristas", value: data.summary.retailRevenue / 100 },
+                  { name: "Mayoristas", value: data.summary.wholesaleRevenue / 100 },
+                ]}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={8}
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                <Cell fill="#3b82f6" />
+                <Cell fill="#f59e0b" />
+              </Pie>
+              <Tooltip formatter={(val: number) => `Bs. ${val.toLocaleString()}`} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Métricas Comparativas" description="Volumen y transacciones por grupo" icon={<BarChart className="text-blue-500" />}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data.segmentComparison}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="segment" fontSize={11} axisLine={false} tickLine={false} />
+              <YAxis fontSize={11} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }} />
+              <Legend verticalAlign="top" align="right" iconType="circle" />
+              <Bar dataKey="transactions" name="Transacciones" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="units" name="Unidades Vendidas" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      <ChartCard title="Top 10 Clientes Mixtos" description="Clientes más valiosos del periodo" icon={<Award className="text-purple-500" />}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] font-black tracking-widest">
+                <th className="py-4 px-2">Cliente</th>
+                <th className="py-4 px-2 text-center">Tipo</th>
+                <th className="py-4 px-2 text-center">Compras</th>
+                <th className="py-4 px-2 text-right">Total (Bs.)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {data.topCustomers.map((customer: any, i: number) => (
+                <tr key={i} className="group hover:bg-gray-50 transition-colors">
+                  <td className="py-4 px-2">
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold">
+                        {i + 1}
+                      </span>
+                      <span className="font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                        {customer.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-2 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      customer.type === "wholesale" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {customer.type === "wholesale" ? "Mayorista" : "Minorista"}
+                    </span>
+                  </td>
+                  <td className="py-4 px-2 text-center font-bold text-gray-600">
+                    {customer.count}
+                  </td>
+                  <td className="py-4 px-2 text-right font-black text-gray-900">
+                    Bs. {customer.value.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
+    </div>
+  );
+}
+
+function RankingContent({ ranking, segmentFilter }: { ranking: any[], segmentFilter: string }) {
+  // Nota: El ranking de productos es global, pero podríamos segmentarlo si tuviéramos orderItems vinculados a customerType
   return (
     <div className="space-y-6">
       {ranking.map((item, index) => (
@@ -322,7 +443,7 @@ function RankingContent({ ranking }: { ranking: any[] }) {
   );
 }
 
-function BCGContent({ bcgData }: { bcgData: any[] }) {
+function BCGContent({ bcgData, segmentFilter }: { bcgData: any[], segmentFilter: string }) {
   const maxUnits = Math.max(...bcgData.map(d => d.units), 1);
   const maxTrend = Math.max(...bcgData.map(d => Math.abs(d.trend)), 10);
 

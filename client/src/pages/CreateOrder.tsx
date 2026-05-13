@@ -42,6 +42,7 @@ export default function CreateOrder() {
     paymentMethod: "cash" as "qr" | "cash" | "transfer",
     deliveryPersonId: "",
     notes: "",
+    customerType: "retail" as "retail" | "wholesale",
     items: [{ productId: 0, productCode: "", quantity: 1, price: 0, pricingType: "unit" as "unit" | "wholesale" | "discount" }],
   });
 
@@ -99,9 +100,18 @@ export default function CreateOrder() {
 
   const handleAddItem = () => {
     const defaultProduct = products?.[0];
+    const pricingType = formData.customerType === "wholesale" ? "wholesale" : "unit";
+    const price = pricingType === "wholesale" ? (defaultProduct?.wholesalePrice || 0) : (defaultProduct?.salePrice || 0);
+
     setFormData({
       ...formData,
-      items: [...formData.items, { productId: defaultProduct?.id || 0, productCode: defaultProduct?.code || "COCO", quantity: 1, price: defaultProduct?.salePrice || 0, pricingType: "unit" }],
+      items: [...formData.items, { 
+        productId: defaultProduct?.id || 0, 
+        productCode: defaultProduct?.code || "COCO", 
+        quantity: 1, 
+        price: price, 
+        pricingType: pricingType 
+      }],
     });
   };
 
@@ -127,8 +137,8 @@ export default function CreateOrder() {
           productId: product.id, 
           productCode: product.code, 
           quantity: 1, 
-          price: product.salePrice || 0,
-          pricingType: "unit"
+          price: formData.customerType === "wholesale" ? (product.wholesalePrice || 0) : (product.salePrice || 0),
+          pricingType: formData.customerType === "wholesale" ? "wholesale" : "unit"
         }]
       });
     }
@@ -149,11 +159,13 @@ export default function CreateOrder() {
       paymentMethod: formData.paymentMethod,
       deliveryPersonId: formData.deliveryPersonId ? parseInt(formData.deliveryPersonId) : undefined,
       notes: formData.notes.trim() || undefined,
+      customerType: formData.customerType,
       totalPrice,
       items: formData.items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
+        pricingType: item.pricingType,
       })),
     });
   };
@@ -234,12 +246,40 @@ export default function CreateOrder() {
               clientName={formData.clientName}
               zone={formData.zone}
               sourceChannel={formData.sourceChannel}
-              onChange={(patch) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  ...patch,
-                }))
-              }
+              onChange={(patch) => {
+                const isBecomingWholesale = patch.customerType === "wholesale" && formData.customerType !== "wholesale";
+                const isBecomingRetail = patch.customerType === "retail" && formData.customerType !== "retail";
+
+                setFormData((prev) => {
+                  let newItems = [...prev.items];
+                  
+                  if (isBecomingWholesale) {
+                    newItems = newItems.map(item => {
+                      const prod = products?.find(p => p.id === item.productId);
+                      return {
+                        ...item,
+                        pricingType: "wholesale",
+                        price: prod?.wholesalePrice || item.price
+                      };
+                    });
+                  } else if (isBecomingRetail) {
+                    newItems = newItems.map(item => {
+                      const prod = products?.find(p => p.id === item.productId);
+                      return {
+                        ...item,
+                        pricingType: "unit",
+                        price: prod?.salePrice || item.price
+                      };
+                    });
+                  }
+
+                  return {
+                    ...prev,
+                    ...patch,
+                    items: newItems
+                  };
+                });
+              }}
             />
 
             <div>

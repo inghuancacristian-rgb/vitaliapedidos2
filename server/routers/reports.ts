@@ -413,11 +413,22 @@ export const reportsRouter = router({
       }> = {};
       
       const channelCounts: Record<string, number> = { facebook: 0, tiktok: 0, marketplace: 0, referral: 0, other: 0, local: 0 };
+      const segmentedChannels: Record<string, Record<string, number>> = {
+        retail: { facebook: 0, tiktok: 0, marketplace: 0, referral: 0, other: 0, local: 0 },
+        wholesale: { facebook: 0, tiktok: 0, marketplace: 0, referral: 0, other: 0, local: 0 }
+      };
+
       const zoneCounts: Record<string, number> = {};
       const genderCounts: Record<string, number> = { male: 0, female: 0, other: 0 };
       const paymentCounts: Record<string, number> = { cash: 0, qr: 0, transfer: 0 };
-      const customerSales: Record<string, { name: string, value: number, count: number }> = {};
+      const customerSales: Record<string, { name: string, value: number, count: number, type: string }> = {};
       const expenseCounts: Record<string, number> = {};
+      
+      const segmentMetrics = {
+        retail: { revenue: 0, transactions: 0, units: 0 },
+        wholesale: { revenue: 0, transactions: 0, units: 0 }
+      };
+
       let totalExpenses = 0;
       let totalRevenue = 0;
       let totalTransactions = 0;
@@ -433,7 +444,7 @@ export const reportsRouter = router({
       });
 
       // Función helper para procesar productos
-      const processItems = (items: any[], isCurrent: boolean) => {
+      const processItems = (items: any[], isCurrent: boolean, segment?: string) => {
         items.forEach(item => {
           const pId = item.product.id;
           if (!productStats[pId]) {
@@ -454,6 +465,7 @@ export const reportsRouter = router({
             productStats[pId].units += qty;
             productStats[pId].revenue += rev;
             productStats[pId].cost += cost;
+            if (segment) (segmentMetrics as any)[segment].units += qty;
           } else {
             productStats[pId].prevUnits += qty;
             productStats[pId].prevRevenue += rev;
@@ -463,19 +475,27 @@ export const reportsRouter = router({
 
       // Procesar Periodo Actual
       completedSales.forEach((sale: any) => {
+        const segment = sale.customer?.customerType || "retail";
         totalRevenue += sale.total;
         totalTransactions++;
+        segmentMetrics[segment as "retail" | "wholesale"].revenue += sale.total;
+        segmentMetrics[segment as "retail" | "wholesale"].transactions++;
+
         const date = new Date(sale.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
         paymentCounts[sale.paymentMethod || "cash"] = (paymentCounts[sale.paymentMethod || "cash"] || 0) + sale.total;
-        processItems(sale.items, true);
+        processItems(sale.items, true, segment);
 
         if (sale.customer) {
           const cId = sale.customer.id.toString();
-          if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0, count: 0 };
+          if (!customerSales[cId]) customerSales[cId] = { name: sale.customer.name, value: 0, count: 0, type: segment };
           customerSales[cId].value += sale.total;
           customerSales[cId].count += 1;
-          channelCounts[sale.customer.sourceChannel || "other"]++;
+          
+          const channel = sale.customer.sourceChannel || "other";
+          channelCounts[channel]++;
+          segmentedChannels[segment as "retail" | "wholesale"][channel]++;
+          
           if (sale.customer.zone) zoneCounts[sale.customer.zone] = (zoneCounts[sale.customer.zone] || 0) + 1;
           const g = (sale.customer.gender || "").toLowerCase();
           if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
@@ -483,23 +503,34 @@ export const reportsRouter = router({
           else genderCounts.other++;
         } else {
           channelCounts.local++;
+          segmentedChannels.retail.local++;
         }
       });
 
       deliveredOrders.forEach((order: any) => {
         if (processedOrderIds.has(order.id)) return;
+        const segment = order.customer?.customerType || "retail";
         totalTransactions++;
+        segmentMetrics[segment as "retail" | "wholesale"].transactions++;
+
         const amount = order.items.reduce((sum: any, i: any) => sum + (i.price * i.quantity), 0);
         totalRevenue += amount;
+        segmentMetrics[segment as "retail" | "wholesale"].revenue += amount;
+
         const date = new Date(order.createdAt).toISOString().split('T')[0];
         deliveriesByDay[date] = (deliveriesByDay[date] || 0) + 1;
-        processItems(order.items, true);
+        processItems(order.items, true, segment);
+        
         if (order.customer) {
           const cId = order.customer.id.toString();
-          if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0, count: 0 };
+          if (!customerSales[cId]) customerSales[cId] = { name: order.customer.name, value: 0, count: 0, type: segment };
           customerSales[cId].value += amount;
           customerSales[cId].count += 1;
-          channelCounts[order.customer.sourceChannel || "other"]++;
+          
+          const channel = order.customer.sourceChannel || "other";
+          channelCounts[channel]++;
+          segmentedChannels[segment as "retail" | "wholesale"][channel]++;
+
           if (order.customer.zone) zoneCounts[order.customer.zone] = (zoneCounts[order.customer.zone] || 0) + 1;
           const g = (order.customer.gender || "").toLowerCase();
           if (g.includes("m") || g.includes("v") || g.includes("h")) genderCounts.male++;
@@ -590,7 +621,7 @@ export const reportsRouter = router({
       const topCustomers = Object.values(customerSales)
         .sort((a, b) => b.value - a.value)
         .slice(0, 10)
-        .map(c => ({ name: c.name, value: c.value / 100, count: c.count }));
+        .map(c => ({ name: c.name, value: c.value / 100, count: c.count, type: c.type }));
 
       const expensesByCategory = Object.entries(expenseCounts)
         .map(([name, value]) => ({ 
@@ -605,17 +636,21 @@ export const reportsRouter = router({
       ].filter(v => v.value > 0);
 
       // Datos para la Matriz BCG
-      // X: Unidades (Volumen), Y: Tendencia (Crecimiento)
       const bcgMatrix = productRanking.map(p => ({
         name: p.name,
         units: p.units,
         trend: p.trend,
         revenue: p.revenue,
-        // Determinamos cuadrante
         quadrant: p.units > (productRanking[0]?.units / 3) 
           ? (p.trend > 0 ? "Estrella" : "Vaca")
           : (p.trend > 0 ? "Interrogante" : "Perro")
       }));
+
+      // Comparativa por Segmento
+      const segmentComparison = [
+        { segment: "Minoristas", revenue: segmentMetrics.retail.revenue / 100, transactions: segmentMetrics.retail.transactions, units: segmentMetrics.retail.units },
+        { segment: "Mayoristas", revenue: segmentMetrics.wholesale.revenue / 100, transactions: segmentMetrics.wholesale.transactions, units: segmentMetrics.wholesale.units }
+      ];
 
       return {
         deliveriesData,
@@ -624,11 +659,13 @@ export const reportsRouter = router({
         bcgMatrix,
         customerDemographics,
         channelsData,
+        segmentedChannels,
         zonesData,
         paymentMethods,
         topCustomers,
         expensesByCategory,
         customerRetention,
+        segmentComparison,
         summary: {
           totalTransactions,
           totalDeliveries: deliveredOrders.length,
@@ -641,6 +678,8 @@ export const reportsRouter = router({
           newCustomers,
           returningCustomers,
           retentionRate: customerIdsInPeriod.size > 0 ? Math.round((returningCustomers / customerIdsInPeriod.size) * 100) : 0,
+          retailRevenue: segmentMetrics.retail.revenue,
+          wholesaleRevenue: segmentMetrics.wholesale.revenue,
         }
       };
     }),
