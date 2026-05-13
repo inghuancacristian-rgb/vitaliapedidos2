@@ -295,9 +295,10 @@ export function ProductHistoryDialog({
                 <colgroup>
                   <col style={{width: '130px'}} />
                   <col style={{width: 'auto'}} />
-                  <col style={{width: '90px'}} />
-                  <col style={{width: '90px'}} />
-                  <col style={{width: '90px'}} />
+                  <col style={{width: '80px'}} />
+                  <col style={{width: '80px'}} />
+                  <col style={{width: '80px'}} />
+                  <col style={{width: '80px'}} />
                 </colgroup>
                 <thead className="sticky top-0 z-20 bg-slate-900 text-white">
                   <tr>
@@ -305,6 +306,7 @@ export function ProductHistoryDialog({
                     <th className="text-left text-xs font-black uppercase tracking-wider px-4 py-3 border-r border-slate-700">Concepto / Movimiento</th>
                     <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-emerald-800 border-r border-emerald-700">Entrada</th>
                     <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-red-900 border-r border-red-800">Salida</th>
+                    <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-amber-800 border-r border-amber-700">Pedido</th>
                     <th className="text-right text-xs font-black uppercase tracking-wider px-3 py-3 bg-slate-700">Saldo</th>
                   </tr>
                 </thead>
@@ -368,6 +370,11 @@ export function ProductHistoryDialog({
                       <td className="px-3 py-3 text-right align-top bg-red-50/30 border-r border-red-100">
                         {event.exit > 0 && (
                           <span className="font-black text-sm text-red-700">-{event.exit}</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right align-top bg-amber-50/30 border-r border-amber-100">
+                        {event.onOrder > 0 && (
+                          <span className="font-black text-sm text-amber-700">{event.onOrder}</span>
                         )}
                       </td>
                       <td className="px-3 py-3 text-right align-top bg-slate-50">

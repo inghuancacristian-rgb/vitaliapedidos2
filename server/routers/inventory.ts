@@ -622,9 +622,12 @@ export const inventoryRouter = router({
       );
 
       let runningBalance = 0;
+      let runningOnOrder = 0;
       const timelineWithKardex = timeline.map((event: any) => {
         let entry = 0;
         let exit = 0;
+        let reserved = 0;   // unidades que entran a pedido
+        let released = 0;   // unidades que salen de pedido (entregadas o canceladas)
 
         if (event.quantity && event.quantity > 0) {
           // Evitar doble descuento: la reserva ya resto stock. 
@@ -643,15 +646,27 @@ export const inventoryRouter = router({
               else if (EXIT_TYPES.has(event.eventType)) exit = event.quantity;
             }
           }
+
+          // Balance de pedidos activos (running)
+          if (event.eventType === "order_reservation") {
+            reserved = event.quantity;
+          } else if (
+            event.eventType === "order_delivery" ||
+            event.eventType === "order_cancellation"
+          ) {
+            released = event.quantity;
+          }
         }
 
         runningBalance += (entry - exit);
+        runningOnOrder = Math.max(0, runningOnOrder + reserved - released);
 
         return {
           ...event,
           entry,
           exit,
-          balance: runningBalance
+          balance: runningBalance,
+          onOrder: runningOnOrder,
         };
       });
 
