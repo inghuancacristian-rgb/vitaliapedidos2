@@ -24,6 +24,14 @@ import {
   Truck,
   User,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface ProductHistoryDialogProps {
   productId: number;
@@ -207,74 +215,84 @@ export function ProductHistoryDialog({
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border bg-background">
-              <div className="space-y-3 p-3 sm:p-4">
-                {data.timeline.map((event: any) => (
-                  <div
-                    key={event.id}
-                    className="rounded-lg border bg-background p-3 sm:p-4 shadow-sm"
-                  >
-                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                      <div className="space-y-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {getEventIcon(event.eventType)}
-                          <p className="font-semibold text-sm sm:text-base">{event.title}</p>
-                          {getEventBadge(event.eventType)}
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          {event.description}
+            <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-background">
+              <Table>
+                <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
+                  <TableRow>
+                    <TableHead className="w-[120px] text-[10px] sm:text-xs uppercase font-bold">Fecha</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs uppercase font-bold">Concepto / Detalle</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold text-emerald-600">Ent.</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold text-red-600">Sal.</TableHead>
+                    <TableHead className="text-right text-[10px] sm:text-xs uppercase font-bold bg-muted/20">Saldo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.timeline.map((event: any) => (
+                    <TableRow key={event.id} className="group hover:bg-muted/5">
+                      <TableCell className="py-2 align-top">
+                        <p className="text-[10px] leading-tight text-muted-foreground">
+                          {formatDateTime(event.createdAt).split(",")[0]}
                         </p>
-                        
-                        {(event.orderNumber || event.saleNumber || event.userName || event.deliveryPersonName) && (
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[10px] sm:text-xs">
-                            {event.orderNumber && (
-                              <div className="flex items-center gap-1 text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-md">
-                                <Truck className="h-3 w-3" />
-                                Pedido: {event.orderNumber}
-                                {event.orderStatus ? (
-                                  <span className={`ml-1 px-1 rounded ${event.orderStatus === 'delivered' ? 'bg-green-100 text-green-700' : event.orderStatus === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
-                                    {event.orderStatus === 'delivered' ? '✓ Entregado' : event.orderStatus === 'cancelled' ? '✗ Cancelado' : '⏳ Pendiente'}
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
-                            {event.saleNumber && (
-                              <div className="flex items-center gap-1 text-emerald-600 font-medium bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                                <ShoppingCart className="h-3 w-3" />
-                                Venta: {event.saleNumber}
-                              </div>
-                            )}
-                            {event.deliveryPersonName && (
-                              <div className="flex items-center gap-1 text-blue-600 font-medium bg-blue-50 px-1.5 py-0.5 rounded-md">
-                                <Truck className="h-3 w-3" />
-                                Repartidor: {event.deliveryPersonName}
-                              </div>
-                            )}
-                            {event.userName && !event.deliveryPersonName && (
-                              <div className="flex items-center gap-1 text-slate-600 font-medium bg-slate-100 px-1.5 py-0.5 rounded-md">
-                                <User className="h-3 w-3" />
-                                {event.userName} {event.userRole && <span className="text-[9px] sm:text-[10px] opacity-70">({event.userRole === 'admin' ? 'Admin' : 'Repartidor'})</span>}
-                              </div>
-                            )}
+                        <p className="text-[9px] text-muted-foreground opacity-70">
+                          {formatDateTime(event.createdAt).split(",")[1]}
+                        </p>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="shrink-0">{getEventIcon(event.eventType)}</span>
+                            <span className="font-semibold text-xs sm:text-sm">{event.title}</span>
+                            <span className="scale-75 origin-left">{getEventBadge(event.eventType)}</span>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-0.5 text-xs sm:text-sm mt-2 md:mt-0 md:text-right">
-                        <p className="font-bold">{getQuantityLabel(event)}</p>
-                        <p className="text-muted-foreground">
-                          {formatDateTime(event.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {data.timeline.length === 0 && (
-                  <p className="text-center text-sm text-muted-foreground py-6">
-                    No hay eventos registrados
-                  </p>
-                )}
-              </div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                            {event.description}
+                          </p>
+                          
+                          {(event.orderNumber || event.saleNumber || event.userName || event.deliveryPersonName) && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-1 pt-1 text-[9px] sm:text-[10px]">
+                              {event.orderNumber && (
+                                <span className="flex items-center gap-1 text-blue-600 font-medium bg-blue-50 px-1 py-0.5 rounded">
+                                  #Ord: {event.orderNumber}
+                                  {event.orderStatus && (
+                                    <span className={`ml-0.5 px-1 rounded-full text-[8px] ${event.orderStatus === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                      {event.orderStatus === 'delivered' ? '✓' : '⏳'}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {event.saleNumber && (
+                                <span className="flex items-center gap-1 text-emerald-600 font-medium bg-emerald-50 px-1 py-0.5 rounded">
+                                  #Venta: {event.saleNumber}
+                                </span>
+                              )}
+                              {event.userName && (
+                                <span className="flex items-center gap-0.5 text-slate-500">
+                                  <User className="h-2.5 w-2.5" />
+                                  {event.userName.split(" ")[0]}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2 text-right font-medium text-emerald-600 align-top">
+                        {event.entry > 0 ? `+${event.entry}` : ""}
+                      </TableCell>
+                      <TableCell className="py-2 text-right font-medium text-red-600 align-top">
+                        {event.exit > 0 ? `-${event.exit}` : ""}
+                      </TableCell>
+                      <TableCell className="py-2 text-right font-bold bg-muted/5 align-top">
+                        {event.balance}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {data.timeline.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-10">
+                  No hay movimientos registrados
+                </p>
+              )}
             </div>
             
             <div className="shrink-0 mt-2">

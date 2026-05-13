@@ -488,7 +488,7 @@ export const inventoryRouter = router({
         (movement.reason || "").toLowerCase().includes("producto creado")
       );
 
-      const timeline = movements.map((movement: any) => {
+      let timeline: any[] = movements.map((movement: any) => {
         const classification = classifyHistoryEvent(movement);
         return {
           id: `movement-${movement.id}`,
@@ -500,6 +500,8 @@ export const inventoryRouter = router({
           userRole: movement.userRole,
           orderNumber: movement.orderNumber,
           saleNumber: movement.saleNumber,
+          orderStatus: movement.orderStatus,
+          deliveryPersonName: movement.deliveryPersonName,
           ...classification,
         };
       });
@@ -532,16 +534,52 @@ export const inventoryRouter = router({
 
       timeline.push(...purchaseTimeline);
 
+      // Calcular Kardex (Saldo acumulado)
+      // Ordenar ascendente para el cálculo
       timeline.sort(
+        (a: any, b: any) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+
+      let runningBalance = 0;
+      const timelineWithKardex = timeline.map((event) => {
+        let entry = 0;
+        let exit = 0;
+
+        // Lógica de Kardex:
+        // Evitamos doble descuento: order_reservation ya descuenta el stock físico.
+        // order_delivery es solo un cambio de estado del stock ya reservado.
+        const isActuallyDeducted = event.eventType !== "order_delivery";
+
+        if (isActuallyDeducted) {
+          if (event.movementType === "entry") {
+            entry = event.quantity || 0;
+          } else if (event.movementType === "exit") {
+            exit = event.quantity || 0;
+          }
+        }
+
+        runningBalance += (entry - exit);
+
+        return {
+          ...event,
+          entry,
+          exit,
+          balance: runningBalance
+        };
+      });
+
+      // Ordenar descendente para la UI
+      timelineWithKardex.sort(
         (a: any, b: any) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
 
-      const totalSoldUnits = timeline
+      const totalSoldUnits = timelineWithKardex
         .filter((event: any) => event.eventType === "sale")
         .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
 
-      const totalPurchasedUnits = timeline
+      const totalPurchasedUnits = timelineWithKardex
         .filter((event: any) => event.eventType === "purchase")
         .reduce((sum: number, event: any) => sum + (event.quantity || 0), 0);
 
@@ -549,12 +587,12 @@ export const inventoryRouter = router({
         product,
         stock,
         summary: {
-          totalEvents: timeline.length,
+          totalEvents: timelineWithKardex.length,
           totalSoldUnits,
           totalPurchasedUnits,
           currentStatus: product.status,
         },
-        timeline,
+        timeline: timelineWithKardex,
       };
     }),
 
