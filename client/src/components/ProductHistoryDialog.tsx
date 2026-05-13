@@ -162,12 +162,16 @@ export function ProductHistoryDialog({
           Historial
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] w-[95vw] flex flex-col p-4 sm:p-6 overflow-hidden">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>Seguimiento del producto</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Historial completo de {productName}.
-          </p>
+        <DialogHeader className="shrink-0 pb-2 border-b bg-muted/5">
+          <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-primary">Kardex de Inventario</DialogTitle>
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="outline" className="font-mono text-[10px] sm:text-xs bg-background/50 backdrop-blur-sm px-2 py-0">
+              {productName}
+            </Badge>
+            <span className="text-[10px] sm:text-xs text-muted-foreground italic">
+              Control de auditoría de movimientos
+            </span>
+          </div>
         </DialogHeader>
 
         {isLoading ? (
@@ -179,71 +183,71 @@ export function ProductHistoryDialog({
             No se pudo cargar el historial.
           </div>
         ) : (
-          <div className="flex flex-col gap-3 overflow-hidden flex-1 min-h-0">
-            {/* Filtros de Fecha */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-muted/10 shrink-0">
+          <div className="flex flex-col gap-4 overflow-hidden flex-1 min-h-0">
+            {/* Filtros de Fecha - Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-xl border bg-gradient-to-br from-muted/50 to-background shadow-inner shrink-0">
               <div className="space-y-1.5">
-                <Label htmlFor="start-date" className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Inicio</Label>
+                <Label htmlFor="start-date" className="text-[10px] uppercase font-black text-muted-foreground/80 flex items-center gap-1.5 px-1">
+                  <Clock3 className="h-3 w-3" /> Fecha de Inicio
+                </Label>
                 <Input
                   id="start-date"
                   type="date"
-                  size="sm"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-9 text-xs sm:text-sm rounded-lg border-muted-foreground/20 focus:ring-primary/20"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="end-date" className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Fin</Label>
+                <Label htmlFor="end-date" className="text-[10px] uppercase font-black text-muted-foreground/80 flex items-center gap-1.5 px-1">
+                  <Eye className="h-3 w-3" /> Fecha de Fin
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="end-date"
                     type="date"
-                    size="sm"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-9 text-xs sm:text-sm rounded-lg border-muted-foreground/20 focus:ring-primary/20"
                   />
                   {(startDate || endDate) && (
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="sm" 
-                      className="h-8 px-2 text-[10px]" 
+                      className="h-9 px-3 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50" 
                       onClick={() => { setStartDate(""); setEndDate(""); }}
                     >
-                      Limpiar
+                      Reset
                     </Button>
                   )}
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 shrink-0">
-              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Código</p>
-                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.product.code}</p>
+
+            {/* Dashboard de Resumen - Adaptable */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 shrink-0">
+              <div className="rounded-xl border bg-background p-2.5 shadow-sm hover:shadow-md transition-shadow">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase leading-tight">Código</p>
+                <p className="font-mono font-bold text-sm sm:text-lg text-primary truncate mt-0.5">{data.product.code}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Stock actual</p>
-                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.stock?.quantity ?? 0} uds.</p>
+              <div className="rounded-xl border bg-primary/5 p-2.5 shadow-sm border-primary/20">
+                <p className="text-[10px] text-primary/70 font-bold uppercase leading-tight">Stock Actual</p>
+                <p className="font-black text-sm sm:text-xl text-primary mt-0.5">{data.stock?.quantity ?? 0}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Compradas</p>
-                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.summary.totalPurchasedUnits}</p>
+              <div className="rounded-xl border bg-sky-50 p-2.5 shadow-sm border-sky-100">
+                <p className="text-[10px] text-sky-700 font-bold uppercase leading-tight">Ingresos</p>
+                <p className="font-black text-sm sm:text-lg text-sky-800 mt-0.5">{data.summary.totalPurchasedUnits}</p>
               </div>
-              <div className="rounded-lg border bg-muted/30 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Vendidas</p>
-                <p className="font-semibold text-sm sm:text-base leading-tight mt-0.5">{data.summary.totalSoldUnits}</p>
-              </div>
-              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border border-emerald-200 bg-emerald-50/50 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-emerald-700 font-bold leading-tight">Saldo Final</p>
-                <p className="font-bold text-sm sm:text-base text-emerald-800 leading-tight mt-0.5">
-                  {data.summary.finalBalance} uds.
+              <div className="col-span-1 rounded-xl border border-emerald-200 bg-emerald-50/50 p-2.5 shadow-sm group">
+                <p className="text-[10px] text-emerald-700 font-black uppercase leading-tight">Saldo Final</p>
+                <p className="font-black text-sm sm:text-xl text-emerald-800 mt-0.5 group-hover:scale-105 transition-transform origin-left">
+                  {data.summary.finalBalance}
                 </p>
               </div>
-              <div className="col-span-2 sm:col-span-1 md:col-span-1 rounded-lg border border-slate-200 bg-slate-50/50 p-2 sm:p-3">
-                <p className="text-[10px] sm:text-xs text-slate-600 font-bold leading-tight">Saldo Inicial</p>
-                <p className="font-bold text-sm sm:text-base text-slate-800 leading-tight mt-0.5">
-                  {data.summary.initialBalance} uds.
+              <div className="col-span-1 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 shadow-sm">
+                <p className="text-[10px] text-slate-600 font-black uppercase leading-tight">Saldo Inicial</p>
+                <p className="font-black text-sm sm:text-lg text-slate-800 mt-0.5">
+                  {data.summary.initialBalance}
                 </p>
               </div>
             </div>
@@ -263,58 +267,60 @@ export function ProductHistoryDialog({
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-auto rounded-lg border bg-background">
-              <Table>
-                <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
-                  <TableRow>
-                    <TableHead className="w-[110px] text-[10px] uppercase font-bold">Fecha / Hora</TableHead>
-                    <TableHead className="text-[10px] uppercase font-bold">Concepto / Detalle de Movimiento</TableHead>
-                    <TableHead className="text-right text-[10px] uppercase font-bold text-emerald-600 bg-emerald-50/30">Entrada</TableHead>
-                    <TableHead className="text-right text-[10px] uppercase font-bold text-red-600 bg-red-50/30">Salida</TableHead>
-                    <TableHead className="text-right text-[10px] uppercase font-bold bg-muted/50 border-l">Saldo</TableHead>
+            <div className="flex-1 min-h-0 overflow-auto rounded-xl border shadow-inner bg-background/50">
+              <Table className="relative">
+                <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-md z-10 shadow-sm">
+                  <TableRow className="hover:bg-transparent border-b-2">
+                    <TableHead className="w-[100px] sm:w-[120px] text-[10px] uppercase font-black text-muted-foreground px-4 py-3">Fecha / Hora</TableHead>
+                    <TableHead className="text-[10px] uppercase font-black text-muted-foreground px-2">Concepto / Detalle</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-black text-emerald-700 bg-emerald-500/5 px-4">Entrada</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-black text-red-700 bg-red-500/5 px-4">Salida</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase font-black bg-muted/30 px-4 border-l">Saldo</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.timeline.map((event: any) => (
-                    <TableRow key={event.id} className="group hover:bg-muted/5">
-                      <TableCell className="py-2 align-top">
-                        <p className="text-[10px] leading-tight text-muted-foreground">
+                    <TableRow key={event.id} className="group hover:bg-muted/10 transition-colors border-b last:border-0">
+                      <TableCell className="py-3 px-4 align-top whitespace-nowrap">
+                        <p className="text-xs font-bold text-slate-700">
                           {formatDateTime(event.createdAt).split(",")[0]}
                         </p>
-                        <p className="text-[9px] text-muted-foreground opacity-70">
+                        <p className="text-[10px] text-muted-foreground font-mono">
                           {formatDateTime(event.createdAt).split(",")[1]}
                         </p>
                       </TableCell>
-                      <TableCell className="py-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="shrink-0">{getEventIcon(event.eventType)}</span>
-                            <span className="font-semibold text-xs sm:text-sm">{event.title}</span>
-                            <span className="scale-75 origin-left">{getEventBadge(event.eventType)}</span>
+                      <TableCell className="py-3 px-2 min-w-[200px]">
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="shrink-0 p-1 rounded-md bg-muted/50 group-hover:bg-background shadow-sm transition-colors">
+                              {getEventIcon(event.eventType)}
+                            </span>
+                            <span className="font-bold text-xs sm:text-sm tracking-tight">{event.title}</span>
+                            <span className="scale-90 origin-left">{getEventBadge(event.eventType)}</span>
                           </div>
-                          <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                          <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
                             {event.description}
                           </p>
                           
                           {(event.orderNumber || event.saleNumber || event.userName || event.deliveryPersonName) && (
-                            <div className="flex flex-wrap gap-x-2 gap-y-1 pt-1 text-[9px] sm:text-[10px]">
+                            <div className="flex flex-wrap gap-x-2 gap-y-1 pt-1">
                               {event.orderNumber && (
-                                <span className="flex items-center gap-1 text-blue-600 font-medium bg-blue-50 px-1 py-0.5 rounded">
-                                  #Ord: {event.orderNumber}
+                                <span className="flex items-center gap-1 text-[10px] text-blue-700 font-bold bg-blue-100/50 px-2 py-0.5 rounded-full border border-blue-200">
+                                  #O: {event.orderNumber}
                                   {event.orderStatus && (
-                                    <span className={`ml-0.5 px-1 rounded-full text-[8px] ${event.orderStatus === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                                      {event.orderStatus === 'delivered' ? '✓' : '⏳'}
+                                    <span className={`ml-1 font-black ${event.orderStatus === 'delivered' ? 'text-green-600' : 'text-orange-600'}`}>
+                                      {event.orderStatus === 'delivered' ? '✓' : '⧗'}
                                     </span>
                                   )}
                                 </span>
                               )}
                               {event.saleNumber && (
-                                <span className="flex items-center gap-1 text-emerald-600 font-medium bg-emerald-50 px-1 py-0.5 rounded">
-                                  #Venta: {event.saleNumber}
+                                <span className="flex items-center gap-1 text-[10px] text-emerald-700 font-bold bg-emerald-100/50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                  #V: {event.saleNumber}
                                 </span>
                               )}
                               {event.userName && (
-                                <span className="flex items-center gap-0.5 text-slate-500">
+                                <span className="flex items-center gap-1 text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
                                   <User className="h-2.5 w-2.5" />
                                   {event.userName.split(" ")[0]}
                                 </span>
@@ -323,13 +329,13 @@ export function ProductHistoryDialog({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2 text-right font-bold text-emerald-700 bg-emerald-50/10 align-top">
+                      <TableCell className="py-3 px-4 text-right font-black text-xs sm:text-sm text-emerald-700 bg-emerald-500/5 align-top">
                         {event.entry > 0 ? `+${event.entry}` : ""}
                       </TableCell>
-                      <TableCell className="py-2 text-right font-bold text-red-700 bg-red-50/10 align-top">
+                      <TableCell className="py-3 px-4 text-right font-black text-xs sm:text-sm text-red-700 bg-red-500/5 align-top">
                         {event.exit > 0 ? `-${event.exit}` : ""}
                       </TableCell>
-                      <TableCell className="py-2 text-right font-black bg-muted/30 border-l align-top text-slate-900">
+                      <TableCell className="py-3 px-4 text-right font-black text-xs sm:text-sm bg-muted/20 border-l align-top text-slate-950">
                         {event.balance}
                       </TableCell>
                     </TableRow>
@@ -337,9 +343,10 @@ export function ProductHistoryDialog({
                 </TableBody>
               </Table>
               {data.timeline.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-10">
-                  No hay movimientos registrados
-                </p>
+                <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                  <Clock3 className="h-12 w-12 mb-2" />
+                  <p className="text-sm font-bold uppercase tracking-widest">Sin movimientos</p>
+                </div>
               )}
             </div>
             
