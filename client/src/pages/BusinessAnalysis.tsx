@@ -250,19 +250,29 @@ function OverviewContent({ data, segmentFilter }: { data: any, segmentFilter: st
   const isWholesale = segmentFilter === "wholesale";
   
   const revenue = isRetail ? data.summary.retailRevenue : isWholesale ? data.summary.wholesaleRevenue : data.summary.totalRevenue;
+  const transactions = isRetail ? data.summary.totalSales : isWholesale ? (data.summary.totalTransactions - data.summary.totalSales) : data.summary.totalTransactions;
+  const ticketPromedio = transactions > 0 ? (revenue / transactions) : 0;
 
   return (
     <div className="space-y-8">
-      {/* Metric Cards */}
+      {/* Metric Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard title="Ingresos Brutos" value={`Bs. ${(revenue / 100).toLocaleString()}`} icon={<DollarSign size={24} />} color="emerald" footer={segmentFilter === "all" ? "Total del periodo" : `Segmento ${segmentFilter}`} />
         <MetricCard title="Utilidad Neta" value={`Bs. ${(data.summary.netIncome / 100).toLocaleString()}`} icon={<TrendingUp size={24} />} color="blue" footer="Ingresos - Gastos" />
-        <MetricCard title="Transacciones" value={data.summary.totalTransactions} icon={<ShoppingCart size={24} />} color="orange" footer="Ventas + Entregas" />
+        <MetricCard title="Ticket Promedio" value={`Bs. ${(ticketPromedio / 100).toLocaleString()}`} icon={<Award size={24} />} color="orange" footer="Promedio por operación" />
         <MetricCard title="Retención" value={`${data.summary.retentionRate}%`} icon={<RefreshCw size={24} />} color="purple" footer="Clientes recurrentes" />
       </div>
 
+      {/* Metric Cards - Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard title="Transacciones" value={transactions} icon={<ShoppingCart size={24} />} color="blue" footer="Ventas + Entregas" />
+        <MetricCard title="Pedidos (Delivery)" value={data.summary.totalDeliveries} icon={<Package size={24} />} color="emerald" footer="Enviados a domicilio" />
+        <MetricCard title="Ventas Directas" value={data.summary.totalSales} icon={<Briefcase size={24} />} color="orange" footer="Realizadas en POS" />
+        <MetricCard title="Nuevos Clientes" value={data.summary.newCustomers} icon={<Users size={24} />} color="purple" footer="Primer pedido en periodo" />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ChartCard title="Tendencia de Ventas" description="Actividad diaria del negocio" icon={<Calendar className="text-emerald-500" />}>
+        <ChartCard title="Tendencia de Actividad" description="Pedidos y ventas diarias" icon={<Calendar className="text-emerald-500" />}>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data.deliveriesData}>
               <defs>
@@ -309,6 +319,110 @@ function OverviewContent({ data, segmentFilter }: { data: any, segmentFilter: st
           </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* Row 2 de Gráficos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <ChartCard title="Métodos de Pago" description="Preferencias de cobro" icon={<DollarSign className="text-orange-500" />}>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie 
+                data={data.paymentMethods} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={60} 
+                outerRadius={80} 
+                paddingAngle={5} 
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {data.paymentMethods.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Retención" description="Nuevos vs Recurrentes" icon={<RefreshCw className="text-purple-500" />}>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie 
+                data={data.customerRetention} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={60} 
+                outerRadius={80} 
+                paddingAngle={5} 
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {data.customerRetention.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Zonas de Entrega" description="Saturación por barrio" icon={<MapPin className="text-red-500" />}>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie 
+                data={data.zonesData} 
+                cx="50%" 
+                cy="50%" 
+                innerRadius={60} 
+                outerRadius={80} 
+                paddingAngle={5} 
+                dataKey="value"
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+              >
+                {data.zonesData.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      {/* Top 10 Clientes (Tabla Restaurada) */}
+      <ChartCard title="Top 10 Clientes" description="Clientes con mayor valor de compra" icon={<Users className="text-indigo-500" />}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
+              <tr>
+                <th className="pb-4">Cliente</th>
+                <th className="pb-4 text-center">Tipo</th>
+                <th className="pb-4 text-center">Órdenes</th>
+                <th className="pb-4 text-right">Total Bs.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {data.topCustomers.map((customer: any, i: number) => (
+                <tr key={i} className="group hover:bg-gray-50/50 transition-colors">
+                  <td className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-xs text-gray-500">
+                        {i + 1}
+                      </div>
+                      <span className="font-bold text-gray-900">{customer.name}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 text-center">
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
+                      customer.type === "wholesale" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {customer.type === "wholesale" ? "Mayorista" : "Minorista"}
+                    </span>
+                  </td>
+                  <td className="py-4 text-center font-bold text-gray-600">{customer.count}</td>
+                  <td className="py-4 text-right font-black text-green-600">
+                    Bs. {(customer.value / 100).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </ChartCard>
     </div>
   );
 }
