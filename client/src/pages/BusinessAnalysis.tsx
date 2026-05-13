@@ -136,8 +136,27 @@ export default function BusinessAnalysis() {
                 <PeriodButton active={period === "month"} onClick={() => setPeriod("month")} label="Este Mes" />
                 <PeriodButton active={period === "quarter"} onClick={() => setPeriod("quarter")} label="Trimestre" />
                 <PeriodButton active={period === "year"} onClick={() => setPeriod("year")} label="Año" />
+                <PeriodButton active={period === "custom"} onClick={() => setPeriod("custom")} label="Personalizado" />
               </div>
             </div>
+
+            {period === "custom" && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 border-l border-gray-100 pl-6">
+                <input 
+                  type="date" 
+                  value={customDates.start}
+                  onChange={(e) => setCustomDates(prev => ({ ...prev, start: e.target.value }))}
+                  className="bg-gray-50 border border-gray-100 text-xs font-bold rounded-xl px-3 py-2 focus:ring-green-500 focus:border-green-500"
+                />
+                <span className="text-gray-400 font-bold text-xs">a</span>
+                <input 
+                  type="date" 
+                  value={customDates.end}
+                  onChange={(e) => setCustomDates(prev => ({ ...prev, end: e.target.value }))}
+                  className="bg-gray-50 border border-gray-100 text-xs font-bold rounded-xl px-3 py-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+            )}
 
             <div className="flex items-center gap-3 border-l border-gray-100 pl-6">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Segmento:</span>
