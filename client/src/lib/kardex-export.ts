@@ -14,7 +14,6 @@ export const exportKardexToExcel = (data: any) => {
     "Usuario": event.userName || "N/A",
     "Entrada (+)": event.entry || 0,
     "Salida (-)": event.exit || 0,
-    "En Pedido": event.onOrder || 0,
     "Saldo Acumulado": event.balance || 0,
   }));
 
