@@ -127,3 +127,6 @@ client/public/__manus__/
 
 # Uploads (se gestionan en Railway con volúmenes o S3)
 uploads/
+
+# Scratch files
+scratch/
