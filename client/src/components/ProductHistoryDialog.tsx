@@ -232,30 +232,40 @@ export function ProductHistoryDialog({
             {/* Dashboard de Resumen - Adaptable */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shrink-0">
               <div className="rounded-2xl border bg-background p-4 shadow-sm hover:shadow-md transition-all group">
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1">Código</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mb-1">Codigo</p>
                 <p className="font-mono font-black text-lg text-primary truncate group-hover:text-primary/80 transition-colors">{data.product.code}</p>
               </div>
-              <div className="rounded-2xl border bg-primary/5 p-4 shadow-sm border-primary/20 group">
-                <p className="text-[10px] text-primary/70 font-bold uppercase tracking-wider mb-1">Stock Físico</p>
-                <p className="font-black text-2xl text-primary group-hover:scale-105 transition-transform origin-left">{data.stock?.quantity ?? 0}</p>
+              <div className="rounded-2xl border bg-primary p-4 shadow-sm group">
+                <p className="text-[10px] text-primary-foreground/70 font-bold uppercase tracking-wider mb-1">Stock Actual</p>
+                <p className="font-black text-2xl text-primary-foreground">{data.stock?.quantity ?? 0}</p>
               </div>
               <div className="rounded-2xl border bg-sky-50 p-4 shadow-sm border-sky-100 group">
                 <p className="text-[10px] text-sky-700 font-bold uppercase tracking-wider mb-1">Total Ingresos</p>
                 <p className="font-black text-2xl text-sky-800 group-hover:scale-105 transition-transform origin-left">{data.summary.totalPurchasedUnits}</p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm group">
-                <p className="text-[10px] text-emerald-700 font-black uppercase tracking-wider mb-1">Saldo Final</p>
-                <p className="font-black text-2xl text-emerald-800 group-hover:scale-110 transition-transform origin-left">
-                  {data.summary.finalBalance}
-                </p>
+              <div className="rounded-2xl border bg-rose-50 p-4 shadow-sm border-rose-100 group">
+                <p className="text-[10px] text-rose-700 font-bold uppercase tracking-wider mb-1">Total Salidas</p>
+                <p className="font-black text-2xl text-rose-800 group-hover:scale-105 transition-transform origin-left">{data.summary.totalSoldUnits}</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm group">
-                <p className="text-[10px] text-slate-600 font-black uppercase tracking-wider mb-1">Saldo Inicial</p>
-                <p className="font-black text-2xl text-slate-800 group-hover:scale-105 transition-transform origin-left">
-                  {data.summary.initialBalance}
-                </p>
+                <p className="text-[10px] text-slate-600 font-black uppercase tracking-wider mb-1">Total Eventos</p>
+                <p className="font-black text-2xl text-slate-800">{data.summary.totalEvents}</p>
               </div>
             </div>
+
+            {/* Alerta si el Kardex no cuadra con el stock fisico */}
+            {data.summary.finalBalance !== (data.stock?.quantity ?? 0) && (
+              <div className="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 flex items-start gap-3">
+                <span className="text-amber-500 text-lg font-black shrink-0 mt-0.5">!</span>
+                <div>
+                  <p className="text-xs font-black text-amber-800 uppercase tracking-wide">Diferencia detectada en el Kardex</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    El calculo del Kardex arroja <strong>{data.summary.finalBalance}</strong> unidades, pero el Stock Fisico registrado es <strong>{data.stock?.quantity ?? 0}</strong>.
+                    Esto indica que algunos movimientos no fueron registrados en el historial. El valor correcto es siempre el <strong>Stock Actual</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-lg border bg-muted/10 px-4 py-2 shrink-0 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span className="font-bold text-sm text-slate-800">{data.product.name}</span>
