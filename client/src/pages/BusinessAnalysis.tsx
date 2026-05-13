@@ -61,6 +61,10 @@ export default function BusinessAnalysis() {
     end: format(new Date(), "yyyy-MM-dd")
   });
 
+  const formatCurrency = (val: number) => {
+    return Number(val).toFixed(2);
+  };
+
   const getDateRange = () => {
     const now = new Date();
     switch (period) {
@@ -257,9 +261,9 @@ function OverviewContent({ data, segmentFilter }: { data: any, segmentFilter: st
     <div className="space-y-8">
       {/* Metric Cards - Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="Ingresos Brutos" value={`Bs. ${(revenue / 100).toLocaleString()}`} icon={<DollarSign size={24} />} color="emerald" footer={segmentFilter === "all" ? "Total del periodo" : `Segmento ${segmentFilter}`} />
-        <MetricCard title="Utilidad Neta" value={`Bs. ${(data.summary.netIncome / 100).toLocaleString()}`} icon={<TrendingUp size={24} />} color="blue" footer="Ingresos - Gastos" />
-        <MetricCard title="Ticket Promedio" value={`Bs. ${(ticketPromedio / 100).toLocaleString()}`} icon={<Award size={24} />} color="orange" footer="Promedio por operación" />
+        <MetricCard title="Ingresos Brutos" value={`Bs. ${formatCurrency(revenue / 100)}`} icon={<DollarSign size={24} />} color="emerald" footer={segmentFilter === "all" ? "Total del periodo" : `Segmento ${segmentFilter}`} />
+        <MetricCard title="Utilidad Neta" value={`Bs. ${formatCurrency(data.summary.netIncome / 100)}`} icon={<TrendingUp size={24} />} color="blue" footer="Ingresos - Gastos" />
+        <MetricCard title="Ticket Promedio" value={`Bs. ${formatCurrency(ticketPromedio / 100)}`} icon={<Award size={24} />} color="orange" footer="Promedio por operación" />
         <MetricCard title="Retención" value={`${data.summary.retentionRate}%`} icon={<RefreshCw size={24} />} color="purple" footer="Clientes recurrentes" />
       </div>
 
@@ -415,7 +419,7 @@ function OverviewContent({ data, segmentFilter }: { data: any, segmentFilter: st
                   </td>
                   <td className="py-4 text-center font-bold text-gray-600">{customer.count}</td>
                   <td className="py-4 text-right font-black text-green-600">
-                    Bs. {(customer.value / 100).toLocaleString()}
+                    Bs. {Number(customer.value).toFixed(2)}
                   </td>
                 </tr>
               ))}
@@ -450,7 +454,7 @@ function ComparisonContent({ data }: { data: any }) {
                 <Cell fill="#3b82f6" />
                 <Cell fill="#f59e0b" />
               </Pie>
-              <Tooltip formatter={(val: number) => `Bs. ${val.toLocaleString()}`} />
+              <Tooltip formatter={(val: number) => `Bs. ${formatCurrency(val)}`} />
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -505,7 +509,7 @@ function ComparisonContent({ data }: { data: any }) {
                     {customer.count}
                   </td>
                   <td className="py-4 px-2 text-right font-black text-gray-900">
-                    Bs. {customer.value.toLocaleString()}
+                    Bs. {formatCurrency(customer.value)}
                   </td>
                 </tr>
               ))}
@@ -552,7 +556,7 @@ function RankingContent({ ranking, segmentFilter }: { ranking: any[], segmentFil
             </div>
 
             <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-              <RankingStat label="Ingresos" value={`Bs. ${item.revenue.toLocaleString()}`} color="green" />
+              <RankingStat label="Ingresos" value={`Bs. ${formatCurrency(item.revenue)}`} color="green" />
               <RankingStat label="Unidades" value={item.units} color="blue" />
               <RankingStat label="Margen" value={`${item.margin}%`} color="orange" />
               <RankingStat label="Previo" value={item.prevUnits} color="gray" />
@@ -625,7 +629,7 @@ function BCGContent({ bcgData, segmentFilter }: { bcgData: any[], segmentFilter:
                       <div className="text-xs space-y-1">
                         <p className="flex justify-between gap-4"><span>Volumen:</span> <span className="font-bold">{data.units} un.</span></p>
                         <p className="flex justify-between gap-4"><span>Tendencia:</span> <span className={`font-bold ${data.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>{data.trend}%</span></p>
-                        <p className="flex justify-between gap-4"><span>Ingresos:</span> <span className="font-bold">Bs. {data.revenue.toLocaleString()}</span></p>
+                        <p className="flex justify-between gap-4"><span>Ingresos:</span> <span className="font-bold">Bs. {formatCurrency(data.revenue)}</span></p>
                         <div className="mt-2 pt-2 border-t border-gray-50">
                           <span className="px-2 py-0.5 rounded-full bg-gray-900 text-white text-[8px] font-black uppercase">Cuadrante {data.quadrant}</span>
                         </div>
