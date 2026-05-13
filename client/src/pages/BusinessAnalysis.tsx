@@ -50,6 +50,10 @@ import { exportBusinessToPDF, exportBusinessToExcel } from "../lib/business-expo
 // Colores para los gráficos
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#06b6d4"];
 
+const formatCurrency = (val: number) => {
+  return Number(val).toFixed(2);
+};
+
 export default function BusinessAnalysis() {
   const [activeTab, setActiveTab] = useState<"overview" | "ranking" | "bcg" | "comparison">("overview");
   const [period, setPeriod] = useState<"7d" | "30d" | "month" | "quarter" | "year" | "custom">("30d");
@@ -60,10 +64,6 @@ export default function BusinessAnalysis() {
     start: format(subDays(new Date(), 30), "yyyy-MM-dd"),
     end: format(new Date(), "yyyy-MM-dd")
   });
-
-  const formatCurrency = (val: number) => {
-    return Number(val).toFixed(2);
-  };
 
   const getDateRange = () => {
     const now = new Date();
