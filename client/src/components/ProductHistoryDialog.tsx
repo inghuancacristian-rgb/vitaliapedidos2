@@ -314,7 +314,7 @@ export function ProductHistoryDialog({
                                   #PEDIDO: {event.orderNumber}
                                   {event.orderStatus && (
                                     <span className={`ml-1 font-black ${event.orderStatus === 'delivered' ? 'text-green-600' : 'text-orange-600'}`}>
-                                      {event.orderStatus === 'delivered' ? '✓' : '⧗'}
+                                      {event.orderStatus === 'delivered' ? 'OK' : '...'}
                                     </span>
                                   )}
                                 </span>

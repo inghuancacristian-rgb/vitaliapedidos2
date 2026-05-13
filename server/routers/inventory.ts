@@ -106,7 +106,7 @@ function classifyHistoryEvent(movement: any) {
     };
   }
 
-  if (notes.includes("auto-registrado") || reason.includes("compra rÃ¡pida")) {
+  if (notes.includes("auto-registrado") || reason.includes("compra rapida")) {
     return {
       eventType: "purchase",
       title: "Compra registrada (Rápida)",
@@ -395,16 +395,16 @@ export const inventoryRouter = router({
         });
       }
 
-      // Actualizar precio si es necesario (solo si se enviÃ³)
+      // Actualizar precio si es necesario (solo si se envio)
       if (input.price !== undefined) {
         await updateProductPrice(input.productId, input.price);
       }
 
-      // Compra rÃ¡pida: registrar como compra (finanzas + historial)
+      // Compra rapida: registrar como compra (finanzas + historial)
       if (input.registerPurchase && input.quantity > 0) {
         const effectivePrice = input.price ?? product?.price;
         if (!effectivePrice || effectivePrice <= 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Para compra rÃ¡pida debes indicar el precio de compra." });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Para compra rapida debes indicar el precio de compra." });
         }
 
         await recordInventoryEntryAsPurchase(
@@ -522,7 +522,7 @@ export const inventoryRouter = router({
         .filter((purchase: any) => {
           const isCancelled = purchase.purchaseStatus === "cancelled";
           const isAutoRegistered = (purchase.notes || "").toLowerCase().includes("auto-registrado");
-          // Si es auto-registrado, ya estÃ¡ en 'movements', por lo que no lo agregamos de nuevo
+          // Si es auto-registrado, ya esta en 'movements', por lo que no lo agregamos de nuevo
           return !isCancelled && !isAutoRegistered;
         })
         .map((purchase: any) => ({
