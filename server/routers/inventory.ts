@@ -485,11 +485,10 @@ export const inventoryRouter = router({
       endDate: z.string().optional(),
     }))
     .query(async ({ input }) => {
-      const [product, stock, movements, purchases] = await Promise.all([
+      const [product, stock, movements] = await Promise.all([
         getProductById(input.productId),
         getInventoryByProductId(input.productId),
         getInventoryMovements(input.productId),
-        getPurchasesByProductId(input.productId),
       ]);
 
       if (!product) {
@@ -500,6 +499,9 @@ export const inventoryRouter = router({
         (movement.reason || "").toLowerCase().includes("producto creado")
       );
 
+      // El UNICO libro contable es inventoryMovements.
+      // Cada compra, venta, pedido, produccion, etc. crea un movimiento en esta tabla.
+      // No mezclamos registros de la tabla 'purchases' para evitar doble conteo.
       let timeline: any[] = movements.map((movement: any) => {
         const classification = classifyHistoryEvent(movement);
         return {
@@ -518,24 +520,6 @@ export const inventoryRouter = router({
         };
       });
 
-      const purchaseTimeline = purchases
-        .filter((purchase: any) => {
-          const isCancelled = purchase.purchaseStatus === "cancelled";
-          const isAutoRegistered = (purchase.notes || "").toLowerCase().includes("auto-registrado");
-          // Si es auto-registrado, ya esta en 'movements', por lo que no lo agregamos de nuevo
-          return !isCancelled && !isAutoRegistered;
-        })
-        .map((purchase: any) => ({
-          id: `purchase-item-${purchase.id}`,
-          source: "purchase",
-          createdAt: purchase.createdAt || purchase.purchaseCreatedAt || purchase.orderDate,
-          quantity: purchase.quantity,
-          movementType: "entry",
-          eventType: "purchase",
-          title: "Compra registrada",
-          description: `Compra ${purchase.purchaseNumber} de ${purchase.supplierName || "proveedor desconocido"} por ${formatCurrencyCents(purchase.price)} por unidad.${purchase.expiryDate ? ` Vencimiento: ${purchase.expiryDate}.` : ""}`,
-        }));
-
       if (!hasCreationMovement) {
         timeline.push({
           id: `product-created-${product.id}`,
@@ -545,11 +529,9 @@ export const inventoryRouter = router({
           movementType: "adjustment",
           eventType: "created",
           title: "Producto creado",
-          description: `Se registró el producto ${product.name} con código ${product.code}.`,
+          description: `Se registro el producto ${product.name} con codigo ${product.code}.`,
         });
       }
-
-      timeline.push(...purchaseTimeline);
 
       // Calcular Kardex (Saldo acumulado)
       // Ordenar ascendente para el cálculo
