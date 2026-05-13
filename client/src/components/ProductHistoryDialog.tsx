@@ -25,7 +25,9 @@ import {
   ShoppingCart,
   Truck,
   User,
+  FileSpreadsheet,
 } from "lucide-react";
+import { exportKardexToExcel } from "@/lib/kardex-export";
 import {
   Table,
   TableBody,
@@ -176,6 +178,19 @@ export function ProductHistoryDialog({
                 </span>
               </div>
             </div>
+
+            {data && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 transition-all font-black"
+                onClick={() => exportKardexToExcel(data)}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span className="hidden sm:inline">Descargar Excel</span>
+                <span className="sm:hidden">Excel</span>
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
