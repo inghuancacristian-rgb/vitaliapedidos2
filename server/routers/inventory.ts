@@ -496,6 +496,11 @@ export const inventoryRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Producto no encontrado" });
       }
 
+      // Calcular stock físico total (suma de todos los lotes)
+      const currentStock = Array.isArray(stock)
+        ? stock.reduce((sum: number, batch: any) => sum + (batch.quantity || 0), 0)
+        : (stock?.quantity ?? 0);
+
       const hasCreationMovement = movements.some((movement: any) =>
         (movement.reason || "").toLowerCase().includes("producto creado")
       );
