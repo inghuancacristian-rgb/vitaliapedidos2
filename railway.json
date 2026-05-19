@@ -5,7 +5,7 @@
     "buildCommand": "pnpm run build"
   },
   "deploy": {
-    "startCommand": "pnpm start",
+    "startCommand": "pnpm exec drizzle-kit migrate && pnpm start",
     "healthcheckPath": "/api/version",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
