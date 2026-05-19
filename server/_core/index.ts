@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcrypt";
 import fs from "fs/promises";
 import { createServer } from "http";
 import net from "net";
@@ -61,8 +62,46 @@ async function runDatabaseMigrations() {
   }
 }
 
+async function seedDefaultAdmin() {
+  if (!process.env.DATABASE_URL) {
+    return;
+  }
+
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+  if (!username || !password) {
+    console.log("[Seed] ADMIN_USERNAME or ADMIN_PASSWORD not configured; skipping admin seed");
+    return;
+  }
+
+  const name = process.env.ADMIN_NAME || "Administrador";
+  const email = process.env.ADMIN_EMAIL || "admin@vitalia.local";
+  const passwordHash = await bcrypt.hash(password, 10);
+  const connection = await mysql.createConnection(process.env.DATABASE_URL);
+
+  try {
+    await connection.query(
+      `INSERT INTO users
+        (openId, username, passwordHash, name, email, loginMethod, role, createdAt, updatedAt, lastSignedIn)
+       VALUES (?, ?, ?, ?, ?, 'traditional', 'admin', NOW(), NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+        passwordHash = VALUES(passwordHash),
+        name = VALUES(name),
+        email = VALUES(email),
+        loginMethod = VALUES(loginMethod),
+        role = VALUES(role),
+        updatedAt = NOW()`,
+      [`local_${username}`, username, passwordHash, name, email],
+    );
+    console.log(`[Seed] Admin user ready: ${username}`);
+  } finally {
+    await connection.end();
+  }
+}
+
 async function startServer() {
   await runDatabaseMigrations();
+  await seedDefaultAdmin();
 
   const app = express();
   const server = createServer(app);
