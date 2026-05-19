@@ -15,4 +15,4 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm exec drizzle-kit migrate && pnpm start"]
+CMD ["pnpm", "start"]
