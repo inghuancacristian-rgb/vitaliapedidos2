@@ -13,6 +13,9 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed-admin": "tsx scripts/seed_railway_admin.ts",
+    "railway:predeploy": "pnpm run db:migrate && pnpm run db:seed-admin",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {

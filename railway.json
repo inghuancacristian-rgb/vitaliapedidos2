@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
+    "preDeployCommand": "pnpm run railway:predeploy",
     "startCommand": "pnpm start",
     "healthcheckPath": "/api/version",
     "healthcheckTimeout": 300,
