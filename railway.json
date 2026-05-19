@@ -2,11 +2,11 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm run build"
+    "buildCommand": "pnpm run build"
   },
   "deploy": {
-    "startCommand": "npx tsx server/scripts/fix-database.ts && npx tsx server/_core/index.ts",
-    "healthcheckPath": "/",
+    "startCommand": "pnpm start",
+    "healthcheckPath": "/api/version",
     "healthcheckTimeout": 60,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
