@@ -3,13 +3,17 @@ import fs from "fs/promises";
 import { createServer } from "http";
 import net from "net";
 import multer from "multer";
+import mysql from "mysql2/promise";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
 import superjson from "superjson";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import * as schema from "../../drizzle/schema";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,7 +42,28 @@ async function saveUploadedFileLocally(fileName: string, buffer: Buffer) {
   return `/uploads/${fileName}`;
 }
 
+async function runDatabaseMigrations() {
+  if (!process.env.DATABASE_URL) {
+    console.log("[Database] DATABASE_URL not configured; skipping migrations");
+    return;
+  }
+
+  const migrationsFolder = path.resolve(process.cwd(), "drizzle");
+  const pool = mysql.createPool(process.env.DATABASE_URL);
+  const db = drizzle(pool, { schema, mode: "default" });
+
+  try {
+    console.log("[Database] Running migrations...");
+    await migrate(db, { migrationsFolder });
+    console.log("[Database] Migrations completed");
+  } finally {
+    await pool.end();
+  }
+}
+
 async function startServer() {
+  await runDatabaseMigrations();
+
   const app = express();
   const server = createServer(app);
   const uploadsDir = path.resolve(process.cwd(), "uploads");
