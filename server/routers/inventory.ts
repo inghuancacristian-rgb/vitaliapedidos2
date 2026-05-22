@@ -167,6 +167,15 @@ export const inventoryRouter = router({
         discountPrice: z.number().optional(),
         imageUrl: z.string().optional(),
         status: z.enum(["active", "inactive"]).optional(),
+        unit: z.string().optional(),
+        presentationQuantity: z.number().optional(),
+        presentationUnit: z.string().optional(),
+        presentationVolumeMl: z.number().optional(),
+        presentationWeightGr: z.number().optional(),
+        productionRole: z.enum(["none", "milk", "sugar", "culture", "bottle", "cap", "label", "packaging", "finished_good", "other"]).optional(),
+        storageLocation: z.string().optional(),
+        supplierName: z.string().optional(),
+        productionNotes: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -184,6 +193,15 @@ export const inventoryRouter = router({
         discountPrice: Math.round((input.discountPrice || 0) * 100),
         imageUrl: input.imageUrl,
         status: (input.status || "active") as "active" | "inactive",
+        unit: input.unit || "unidad",
+        presentationQuantity: input.presentationQuantity || 1,
+        presentationUnit: input.presentationUnit || input.unit || "unidad",
+        presentationVolumeMl: input.presentationVolumeMl || 0,
+        presentationWeightGr: input.presentationWeightGr || 0,
+        productionRole: input.productionRole || "none",
+        storageLocation: input.storageLocation || null,
+        supplierName: input.supplierName || null,
+        productionNotes: input.productionNotes || null,
       });
 
       let productId = 0;
@@ -221,6 +239,15 @@ export const inventoryRouter = router({
         discountPrice: z.number().optional(),
         imageUrl: z.string().optional(),
         status: z.enum(["active", "inactive"]).optional(),
+        unit: z.string().optional(),
+        presentationQuantity: z.number().optional(),
+        presentationUnit: z.string().optional(),
+        presentationVolumeMl: z.number().optional(),
+        presentationWeightGr: z.number().optional(),
+        productionRole: z.enum(["none", "milk", "sugar", "culture", "bottle", "cap", "label", "packaging", "finished_good", "other"]).optional(),
+        storageLocation: z.string().optional().nullable(),
+        supplierName: z.string().optional().nullable(),
+        productionNotes: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {

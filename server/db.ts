@@ -2061,6 +2061,7 @@ export async function getCashOpeningByUserIdAndDateMethod(userId: number, openin
     // Buscar si existe alguna apertura 'open' para este usuario y método
     return MOCK_CASH_OPENINGS.find((opening) => 
       opening.responsibleUserId === userId && 
+      opening.openingDate === openingDate &&
       (opening.paymentMethod === paymentMethod || (!opening.paymentMethod && paymentMethod === "cash")) &&
       opening.status === "open"
     );
@@ -2069,7 +2070,7 @@ export async function getCashOpeningByUserIdAndDateMethod(userId: number, openin
   const result = await db
     .select()
     .from(cashOpenings)
-    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND (${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash')) AND ${cashOpenings.status} = 'open'`)
+    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND ${cashOpenings.openingDate} = ${openingDate} AND (${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash')) AND ${cashOpenings.status} = 'open'`)
     .limit(1);
 
   return result.length > 0 ? result[0] : undefined;

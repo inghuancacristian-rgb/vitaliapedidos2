@@ -39,6 +39,15 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
     discountPrice: "",
     imageUrl: "",
     status: "active",
+    unit: "unidad",
+    presentationQuantity: "1",
+    presentationUnit: "unidad",
+    presentationVolumeMl: "",
+    presentationWeightGr: "",
+    productionRole: "none",
+    storageLocation: "",
+    supplierName: "",
+    productionNotes: "",
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -55,6 +64,15 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
         discountPrice: product.discountPrice ? (product.discountPrice / 100).toString() : "",
         imageUrl: product.imageUrl || "",
         status: product.status || "active",
+        unit: product.unit || "unidad",
+        presentationQuantity: product.presentationQuantity ? product.presentationQuantity.toString() : "1",
+        presentationUnit: product.presentationUnit || "unidad",
+        presentationVolumeMl: product.presentationVolumeMl ? product.presentationVolumeMl.toString() : "",
+        presentationWeightGr: product.presentationWeightGr ? product.presentationWeightGr.toString() : "",
+        productionRole: product.productionRole || "none",
+        storageLocation: product.storageLocation || "",
+        supplierName: product.supplierName || "",
+        productionNotes: product.productionNotes || "",
       });
       setImagePreview(product.imageUrl || "");
       setSelectedFile(null);
@@ -175,6 +193,15 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
       discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : 0,
       imageUrl: formData.imageUrl || "",
       status: formData.status as "active" | "inactive",
+      unit: formData.unit,
+      presentationQuantity: formData.presentationQuantity ? parseInt(formData.presentationQuantity, 10) : 1,
+      presentationUnit: formData.presentationUnit,
+      presentationVolumeMl: formData.presentationVolumeMl ? parseInt(formData.presentationVolumeMl, 10) : 0,
+      presentationWeightGr: formData.presentationWeightGr ? parseInt(formData.presentationWeightGr, 10) : 0,
+      productionRole: formData.productionRole as any,
+      storageLocation: formData.storageLocation || null,
+      supplierName: formData.supplierName || null,
+      productionNotes: formData.productionNotes || null,
     });
   };
 
@@ -327,6 +354,130 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
                   <SelectItem value="inactive">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+            <div>
+              <Label className="text-base font-semibold text-slate-800">Datos tecnicos para produccion</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Estos campos conectan compras, inventario y produccion con la misma ficha de insumo.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`unit-${product.id}`}>Unidad operativa</Label>
+                <Select value={formData.unit} onValueChange={(value) => setFormData((prev) => ({ ...prev, unit: value }))}>
+                  <SelectTrigger id={`unit-${product.id}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                    <SelectItem value="L">Litro</SelectItem>
+                    <SelectItem value="ml">Mililitro</SelectItem>
+                    <SelectItem value="kg">Kilogramo</SelectItem>
+                    <SelectItem value="g">Gramo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`presentationQuantity-${product.id}`}>Cantidad por presentacion</Label>
+                <Input
+                  id={`presentationQuantity-${product.id}`}
+                  type="number"
+                  min="1"
+                  value={formData.presentationQuantity}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationQuantity: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`presentationUnit-${product.id}`}>Unidad de compra</Label>
+                <Input
+                  id={`presentationUnit-${product.id}`}
+                  placeholder="Ej: bolsa, botella, paquete"
+                  value={formData.presentationUnit}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationUnit: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`productionRole-${product.id}`}>Rol en produccion</Label>
+                <Select value={formData.productionRole} onValueChange={(value) => setFormData((prev) => ({ ...prev, productionRole: value }))}>
+                  <SelectTrigger id={`productionRole-${product.id}`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin rol productivo</SelectItem>
+                    <SelectItem value="milk">Leche / base liquida</SelectItem>
+                    <SelectItem value="sugar">Azucar / endulzante</SelectItem>
+                    <SelectItem value="culture">Nodulo / cultivo</SelectItem>
+                    <SelectItem value="bottle">Envase / botella</SelectItem>
+                    <SelectItem value="cap">Tapa</SelectItem>
+                    <SelectItem value="label">Etiqueta</SelectItem>
+                    <SelectItem value="packaging">Empaque</SelectItem>
+                    <SelectItem value="finished_good">Producto terminado</SelectItem>
+                    <SelectItem value="other">Otro insumo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`presentationVolumeMl-${product.id}`}>Volumen por presentacion (ml)</Label>
+                <Input
+                  id={`presentationVolumeMl-${product.id}`}
+                  type="number"
+                  placeholder="Ej: 800"
+                  value={formData.presentationVolumeMl}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationVolumeMl: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`presentationWeightGr-${product.id}`}>Peso por presentacion (g)</Label>
+                <Input
+                  id={`presentationWeightGr-${product.id}`}
+                  type="number"
+                  placeholder="Ej: 1000"
+                  value={formData.presentationWeightGr}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationWeightGr: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor={`storageLocation-${product.id}`}>Ubicacion / almacenamiento</Label>
+                <Input
+                  id={`storageLocation-${product.id}`}
+                  placeholder="Ej: Camara fria, estante A"
+                  value={formData.storageLocation}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, storageLocation: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`supplierName-${product.id}`}>Proveedor habitual</Label>
+                <Input
+                  id={`supplierName-${product.id}`}
+                  placeholder="Ej: Proveedor leche"
+                  value={formData.supplierName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, supplierName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`productionNotes-${product.id}`}>Notas de uso en produccion</Label>
+              <Input
+                id={`productionNotes-${product.id}`}
+                placeholder="Ej: usar primero lotes abiertos, mantener refrigerado"
+                value={formData.productionNotes}
+                onChange={(e) => setFormData((prev) => ({ ...prev, productionNotes: e.target.value }))}
+              />
             </div>
           </div>
 

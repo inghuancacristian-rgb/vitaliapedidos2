@@ -38,6 +38,15 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
     discountPrice: "",
     imageUrl: "",
     status: "active",
+    unit: "unidad",
+    presentationQuantity: "1",
+    presentationUnit: "unidad",
+    presentationVolumeMl: "",
+    presentationWeightGr: "",
+    productionRole: "none",
+    storageLocation: "",
+    supplierName: "",
+    productionNotes: "",
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -56,6 +65,15 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
         discountPrice: "",
         imageUrl: "",
         status: "active",
+        unit: "unidad",
+        presentationQuantity: "1",
+        presentationUnit: "unidad",
+        presentationVolumeMl: "",
+        presentationWeightGr: "",
+        productionRole: "none",
+        storageLocation: "",
+        supplierName: "",
+        productionNotes: "",
       });
       setImagePreview("");
       setSelectedFile(null);
@@ -165,6 +183,15 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
       discountPrice: formData.discountPrice ? parseFloat(formData.discountPrice) : 0,
       imageUrl: formData.imageUrl || undefined,
       status: formData.status as "active" | "inactive",
+      unit: formData.unit,
+      presentationQuantity: formData.presentationQuantity ? parseInt(formData.presentationQuantity, 10) : 1,
+      presentationUnit: formData.presentationUnit,
+      presentationVolumeMl: formData.presentationVolumeMl ? parseInt(formData.presentationVolumeMl, 10) : 0,
+      presentationWeightGr: formData.presentationWeightGr ? parseInt(formData.presentationWeightGr, 10) : 0,
+      productionRole: formData.productionRole as any,
+      storageLocation: formData.storageLocation || undefined,
+      supplierName: formData.supplierName || undefined,
+      productionNotes: formData.productionNotes || undefined,
     });
   };
 
@@ -317,6 +344,130 @@ export function AddProductDialog({ onProductAdded }: AddProductDialogProps) {
                   <SelectItem value="inactive">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
+            <div>
+              <Label className="text-base font-semibold text-slate-800">Datos tecnicos para produccion</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Estos campos conectan compras, inventario y produccion con la misma ficha de insumo.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unit">Unidad operativa</Label>
+                <Select value={formData.unit} onValueChange={(value) => setFormData((prev) => ({ ...prev, unit: value, presentationUnit: prev.presentationUnit || value }))}>
+                  <SelectTrigger id="unit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                    <SelectItem value="L">Litro</SelectItem>
+                    <SelectItem value="ml">Mililitro</SelectItem>
+                    <SelectItem value="kg">Kilogramo</SelectItem>
+                    <SelectItem value="g">Gramo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="presentationQuantity">Cantidad por presentacion</Label>
+                <Input
+                  id="presentationQuantity"
+                  type="number"
+                  min="1"
+                  value={formData.presentationQuantity}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationQuantity: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="presentationUnit">Unidad de compra</Label>
+                <Input
+                  id="presentationUnit"
+                  placeholder="Ej: bolsa, botella, paquete"
+                  value={formData.presentationUnit}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationUnit: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="productionRole">Rol en produccion</Label>
+                <Select value={formData.productionRole} onValueChange={(value) => setFormData((prev) => ({ ...prev, productionRole: value }))}>
+                  <SelectTrigger id="productionRole">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin rol productivo</SelectItem>
+                    <SelectItem value="milk">Leche / base liquida</SelectItem>
+                    <SelectItem value="sugar">Azucar / endulzante</SelectItem>
+                    <SelectItem value="culture">Nodulo / cultivo</SelectItem>
+                    <SelectItem value="bottle">Envase / botella</SelectItem>
+                    <SelectItem value="cap">Tapa</SelectItem>
+                    <SelectItem value="label">Etiqueta</SelectItem>
+                    <SelectItem value="packaging">Empaque</SelectItem>
+                    <SelectItem value="finished_good">Producto terminado</SelectItem>
+                    <SelectItem value="other">Otro insumo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="presentationVolumeMl">Volumen por presentacion (ml)</Label>
+                <Input
+                  id="presentationVolumeMl"
+                  type="number"
+                  placeholder="Ej: 800"
+                  value={formData.presentationVolumeMl}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationVolumeMl: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="presentationWeightGr">Peso por presentacion (g)</Label>
+                <Input
+                  id="presentationWeightGr"
+                  type="number"
+                  placeholder="Ej: 1000"
+                  value={formData.presentationWeightGr}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationWeightGr: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="storageLocation">Ubicacion / almacenamiento</Label>
+                <Input
+                  id="storageLocation"
+                  placeholder="Ej: Camara fria, estante A"
+                  value={formData.storageLocation}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, storageLocation: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplierName">Proveedor habitual</Label>
+                <Input
+                  id="supplierName"
+                  placeholder="Ej: Proveedor leche"
+                  value={formData.supplierName}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, supplierName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="productionNotes">Notas de uso en produccion</Label>
+              <Input
+                id="productionNotes"
+                placeholder="Ej: usar primero lotes abiertos, mantener refrigerado"
+                value={formData.productionNotes}
+                onChange={(e) => setFormData((prev) => ({ ...prev, productionNotes: e.target.value }))}
+              />
             </div>
           </div>
 

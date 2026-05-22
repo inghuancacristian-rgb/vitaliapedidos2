@@ -51,6 +51,33 @@ function getExpiryTone(value?: string | Date | null) {
   return new Date(value) < new Date() ? "text-red-600 font-semibold" : "text-orange-600";
 }
 
+function getProductionRoleLabel(role?: string | null) {
+  const labels: Record<string, string> = {
+    none: "Sin rol",
+    milk: "Leche/base",
+    sugar: "Azucar",
+    culture: "Cultivo/nodulo",
+    bottle: "Envase",
+    cap: "Tapa",
+    label: "Etiqueta",
+    packaging: "Empaque",
+    finished_good: "Terminado",
+    other: "Otro",
+  };
+  return labels[role || "none"] || "Sin rol";
+}
+
+function getPresentationLabel(product?: any) {
+  if (!product) return "Sin presentacion";
+  const qty = product.presentationQuantity || 1;
+  const unit = product.presentationUnit || product.unit || "unidad";
+  const details = [
+    product.presentationVolumeMl ? `${product.presentationVolumeMl} ml` : null,
+    product.presentationWeightGr ? `${product.presentationWeightGr} g` : null,
+  ].filter(Boolean);
+  return `${qty} ${unit}${details.length ? ` (${details.join(" / ")})` : ""}`;
+}
+
 function ProductThumb({ item }: { item: any }) {
   if (item.product?.imageUrl) {
     return (
@@ -1046,6 +1073,14 @@ function InventoryCard({
               <div className="space-y-1">
                 <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">{item.product?.name}</h3>
                 <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{item.product?.code}</p>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <Badge variant="secondary" className="rounded-full bg-blue-50 text-blue-700">
+                    {getProductionRoleLabel(item.product?.productionRole)}
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full">
+                    {item.product?.unit || "unidad"}
+                  </Badge>
+                </div>
               </div>
             </div>
             {item.isLowStock && (
@@ -1084,6 +1119,20 @@ function InventoryCard({
             <div className="p-3 rounded-2xl border border-violet-100 bg-violet-50/30">
               <p className="text-[9px] font-black text-violet-600 uppercase tracking-widest mb-1">Mayorista</p>
               <p className="text-sm font-black text-violet-900">{item.product?.wholesalePrice != null ? formatCurrency(item.product.wholesalePrice) : "-"}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="p-3 rounded-2xl border border-blue-100 bg-blue-50/40">
+              <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Presentacion</p>
+              <p className="text-xs font-bold text-slate-800">{getPresentationLabel(item.product)}</p>
+            </div>
+            <div className="p-3 rounded-2xl border border-slate-100 bg-slate-50/70">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ubicacion / proveedor</p>
+              <p className="text-xs font-bold text-slate-800">
+                {item.product?.storageLocation || "Sin ubicacion"}
+                {item.product?.supplierName ? ` - ${item.product.supplierName}` : ""}
+              </p>
             </div>
           </div>
 
@@ -1160,6 +1209,14 @@ function InventoryRow({
           <span className="font-bold text-slate-900">{item.product?.name}</span>
           {item.isLowStock && <Badge variant="destructive" className="h-4 w-4 rounded-full p-0 flex items-center justify-center" title="Stock Bajo" />}
         </div>
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          <Badge variant="secondary" className="rounded-full bg-blue-50 text-[10px] text-blue-700">
+            {getProductionRoleLabel(item.product?.productionRole)}
+          </Badge>
+          <Badge variant="outline" className="rounded-full text-[10px]">
+            {item.product?.unit || "unidad"}
+          </Badge>
+        </div>
       </td>
       <td className="px-6 py-4 text-slate-400 font-medium">{item.product?.code}</td>
       <td className="px-6 py-4 text-right font-black text-sky-700">
@@ -1179,7 +1236,10 @@ function InventoryRow({
         </div>
       </td>
       <td className={`px-6 py-4 text-center font-bold text-xs ${getExpiryTone(item.expiryDate)}`}>
-        {item.expiryDate ? formatExpiryDate(item.expiryDate) : "-"}
+        <div className="flex flex-col gap-1">
+          <span>{item.expiryDate ? formatExpiryDate(item.expiryDate) : "-"}</span>
+          <span className="text-[10px] font-semibold text-slate-400">{getPresentationLabel(item.product)}</span>
+        </div>
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

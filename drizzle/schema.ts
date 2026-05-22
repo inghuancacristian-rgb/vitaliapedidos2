@@ -82,6 +82,15 @@ export const products = mysqlTable("products", {
   discountPrice: int("discountPrice").notNull().default(0), // Precio de Venta con Descuento en centavos
   wholesaleDiscountType: mysqlEnum("wholesaleDiscountType", ["percentage", "fixed"]).default("percentage"), // Tipo de descuento por mayor
   wholesaleDiscountValue: int("wholesaleDiscountValue").notNull().default(0), // Valor del descuento por mayor (% o centavos)
+  unit: varchar("unit", { length: 20 }).notNull().default("unidad"), // Unidad operativa: L, ml, kg, g, unidad
+  presentationQuantity: int("presentationQuantity").notNull().default(1), // Cantidad por presentacion en la unidad operativa
+  presentationUnit: varchar("presentationUnit", { length: 20 }).notNull().default("unidad"), // Unidad de compra/presentacion
+  presentationVolumeMl: int("presentationVolumeMl").notNull().default(0), // Volumen por envase/bolsa para balance de masa
+  presentationWeightGr: int("presentationWeightGr").notNull().default(0), // Peso por envase/paquete para balance de masa
+  productionRole: mysqlEnum("productionRole", ["none", "milk", "sugar", "culture", "bottle", "cap", "label", "packaging", "finished_good", "other"]).notNull().default("none"),
+  storageLocation: varchar("storageLocation", { length: 100 }),
+  supplierName: varchar("supplierName", { length: 255 }),
+  productionNotes: text("productionNotes"),
   status: mysqlEnum("status", ["active", "inactive"]).notNull().default("active"),
   imageUrl: varchar("imageUrl", { length: 500 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

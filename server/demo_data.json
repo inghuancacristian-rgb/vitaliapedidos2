@@ -10,7 +10,7 @@
       "openId": "demo_admin",
       "createdAt": "2026-05-05T06:13:29.383Z",
       "updatedAt": "2026-05-05T06:13:29.383Z",
-      "lastSignedIn": "2026-05-05T06:13:29.383Z",
+      "lastSignedIn": "2026-05-19T22:31:05.582Z",
       "email": "admin@demo.com",
       "loginMethod": "traditional"
     },
@@ -68,6 +68,28 @@
       "id": 4,
       "createdAt": "2026-05-05T06:13:29.392Z",
       "updatedAt": "2026-05-05T06:13:29.392Z"
+    },
+    {
+      "code": "leche kream",
+      "name": "leche kream",
+      "category": "raw_material",
+      "price": 730,
+      "salePrice": 0,
+      "wholesalePrice": 0,
+      "discountPrice": 0,
+      "status": "active",
+      "unit": "unidad",
+      "presentationQuantity": 50,
+      "presentationUnit": "unidad",
+      "presentationVolumeMl": 800,
+      "presentationWeightGr": 0,
+      "productionRole": "milk",
+      "storageLocation": "almacen",
+      "supplierName": "kream",
+      "productionNotes": null,
+      "id": 5,
+      "createdAt": "2026-05-19T22:28:58.280Z",
+      "updatedAt": "2026-05-19T22:28:58.280Z"
     }
   ],
   "MOCK_INVENTORY": [
@@ -98,6 +120,14 @@
       "quantity": 2,
       "minStock": 10,
       "lastUpdated": "2026-05-05T06:18:07.535Z"
+    },
+    {
+      "id": 5,
+      "productId": 5,
+      "quantity": 10,
+      "minStock": 10,
+      "lastUpdated": "2026-05-19T22:31:05.588Z",
+      "expiryDate": "2026-06-27"
     }
   ],
   "MOCK_ORDERS": [
@@ -118,16 +148,93 @@
   ],
   "MOCK_ORDER_ITEMS": [],
   "MOCK_PAYMENTS": [],
-  "MOCK_MOVEMENTS": [],
+  "MOCK_MOVEMENTS": [
+    {
+      "productId": 5,
+      "userId": 999,
+      "type": "adjustment",
+      "quantity": 0,
+      "reason": "Producto creado",
+      "notes": "Creado por Administrador (Modo Demo) con precio compra Bs. 7.30, venta unitaria Bs. 0.00, mayorista Bs. 0.00 y descuento Bs. 0.00. Estado inicial: activo.",
+      "id": 1,
+      "createdAt": "2026-05-19T22:28:58.287Z"
+    }
+  ],
   "MOCK_SUPPLIERS": [],
-  "MOCK_PURCHASES": [],
-  "MOCK_PURCHASE_ITEMS": [],
+  "MOCK_PURCHASES": [
+    {
+      "purchaseNumber": "COM-3117",
+      "totalAmount": 7300,
+      "status": "received",
+      "paymentStatus": "pending",
+      "paymentMethod": "cash",
+      "isCredit": 0,
+      "id": 1,
+      "createdAt": "2026-05-19T22:31:05.587Z",
+      "updatedAt": "2026-05-19T22:31:05.587Z"
+    }
+  ],
+  "MOCK_PURCHASE_ITEMS": [
+    {
+      "productId": 5,
+      "quantity": 10,
+      "price": 730,
+      "expiryDate": "2026-06-27",
+      "id": 1,
+      "purchaseId": 1,
+      "createdAt": "2026-05-19T22:31:05.587Z"
+    }
+  ],
   "MOCK_ACCOUNTS_PAYABLE": [],
   "MOCK_DELIVERY_EXPENSES": [],
   "MOCK_OPERATIONAL_EXPENSES": [],
-  "MOCK_FINANCIAL_TRANSACTIONS": [],
+  "MOCK_FINANCIAL_TRANSACTIONS": [
+    {
+      "id": 1,
+      "type": "expense",
+      "category": "purchase",
+      "amount": 7300,
+      "referenceId": 1,
+      "notes": "Compra COM-3117",
+      "paymentMethod": "cash",
+      "createdAt": "2026-05-19T22:31:05.588Z"
+    }
+  ],
   "MOCK_CASH_CLOSURES": [],
-  "MOCK_CASH_OPENINGS": [],
+  "MOCK_CASH_OPENINGS": [
+    {
+      "openingAmount": 100000,
+      "paymentMethod": "cash",
+      "openingDate": "2026-05-19",
+      "responsibleUserId": 999,
+      "openedByUserId": 999,
+      "status": "open",
+      "id": 1,
+      "createdAt": "2026-05-19T22:30:24.274Z"
+    },
+    {
+      "openingAmount": 0,
+      "paymentMethod": "qr",
+      "openingDate": "2026-05-19",
+      "responsibleUserId": 999,
+      "openedByUserId": 999,
+      "notes": "Apertura automática (CASH)",
+      "status": "open",
+      "id": 2,
+      "createdAt": "2026-05-19T22:30:24.407Z"
+    },
+    {
+      "openingAmount": 0,
+      "paymentMethod": "transfer",
+      "openingDate": "2026-05-19",
+      "responsibleUserId": 999,
+      "openedByUserId": 999,
+      "notes": "Apertura automática (CASH)",
+      "status": "open",
+      "id": 3,
+      "createdAt": "2026-05-19T22:30:24.408Z"
+    }
+  ],
   "MOCK_SALES": [],
   "MOCK_SALE_ITEMS": [],
   "MOCK_QUOTATIONS": [],
