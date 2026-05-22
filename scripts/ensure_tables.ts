@@ -1,8 +1,9 @@
+import "dotenv/config";
 import mysql from "mysql2/promise";
 
 const databaseUrl = process.env.DATABASE_URL;
 
-async function ensureTables() {
+export async function ensureTables() {
   if (!databaseUrl) {
     throw new Error("DATABASE_URL is required");
   }
@@ -626,6 +627,9 @@ async function ensureTables() {
     await runSQL("products.discountPrice", `ALTER TABLE products ADD COLUMN discountPrice INT NOT NULL DEFAULT 0 AFTER wholesalePrice`);
     await runSQL("products.wholesaleDiscountType", `ALTER TABLE products ADD COLUMN wholesaleDiscountType enum('percentage','fixed') DEFAULT 'percentage' AFTER discountPrice`);
     await runSQL("products.wholesaleDiscountValue", `ALTER TABLE products ADD COLUMN wholesaleDiscountValue INT NOT NULL DEFAULT 0 AFTER wholesaleDiscountType`);
+    await runSQL("products.unit", `ALTER TABLE products ADD COLUMN unit varchar(20) NOT NULL DEFAULT 'unidad' AFTER wholesaleDiscountValue`);
+    await runSQL("products.presentationQuantity", `ALTER TABLE products ADD COLUMN presentationQuantity int NOT NULL DEFAULT 1 AFTER unit`);
+    await runSQL("products.presentationUnit", `ALTER TABLE products ADD COLUMN presentationUnit varchar(20) NOT NULL DEFAULT 'unidad' AFTER presentationQuantity`);
     await runSQL("products.presentationVolumeMl", `ALTER TABLE products ADD COLUMN presentationVolumeMl INT NOT NULL DEFAULT 0 AFTER presentationUnit`);
     await runSQL("products.presentationWeightGr", `ALTER TABLE products ADD COLUMN presentationWeightGr INT NOT NULL DEFAULT 0 AFTER presentationVolumeMl`);
     await runSQL("products.productionRole", `ALTER TABLE products ADD COLUMN productionRole enum('none','milk','sugar','culture','bottle','cap','label','packaging','finished_good','other') NOT NULL DEFAULT 'none' AFTER presentationWeightGr`);
@@ -640,7 +644,9 @@ async function ensureTables() {
   }
 }
 
-ensureTables().catch((error) => {
-  console.error("[EnsureTables] Failed:", error);
-  process.exit(1);
-});
+if (process.argv[1] && process.argv[1].includes("ensure_tables.ts")) {
+  ensureTables().catch((error) => {
+    console.error("[EnsureTables] Failed:", error);
+    process.exit(1);
+  });
+}

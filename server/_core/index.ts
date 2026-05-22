@@ -15,6 +15,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import * as schema from "../../drizzle/schema";
+import { ensureTables } from "../../scripts/ensure_tables";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -101,6 +102,7 @@ async function seedDefaultAdmin() {
 
 async function startServer() {
   await runDatabaseMigrations();
+  await ensureTables().catch(err => console.error("[StartServer] ensureTables failed:", err));
   await seedDefaultAdmin();
 
   const app = express();
