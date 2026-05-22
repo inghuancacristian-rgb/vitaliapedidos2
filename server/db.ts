@@ -488,7 +488,15 @@ export async function updateProduct(productId: number, data: Partial<InsertProdu
     }
     return;
   }
-  return await db.update(products).set(data).where(eq(products.id, productId));
+  // Limpiar valores undefined para evitar desajuste de parametros SQL
+  const cleanData: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleanData[key] = value;
+    }
+  }
+
+  return await db.update(products).set(cleanData).where(eq(products.id, productId));
 }
 
 export async function getProductById(productId: number) {
@@ -530,10 +538,17 @@ export async function createProduct(data: InsertProduct) {
   }
 
   try {
-    console.log("[DB] Creating product with data:", JSON.stringify(data, null, 2));
+    // Limpiar valores undefined para evitar desajuste de parametros SQL
+    const cleanData: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleanData[key] = value;
+      }
+    }
+    console.log("[DB] Creating product with data:", JSON.stringify(cleanData, null, 2));
 
     // Crear el producto
-    const result = await db.insert(products).values(data);
+    const result = await db.insert(products).values(cleanData as typeof data);
 
     // Obtener el ID del producto creado
     let productId = getInsertId(result);
