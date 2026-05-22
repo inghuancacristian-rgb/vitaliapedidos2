@@ -182,7 +182,7 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
-      transformer: superjson,
+      // transformer: superjson,
     })
   );
   // development mode uses Vite, production mode uses static files

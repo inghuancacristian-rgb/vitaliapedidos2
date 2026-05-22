@@ -67,7 +67,7 @@ export const getTableOptions = (startY: number) => ({
     textColor: [40, 40, 40],
   },
   alternateRowStyles: {
-    fillColor: [245, 245, 245],
+    fillColor: [245, 245, 245] as [number, number, number],
   },
   margin: { top: 10, left: 20, right: 20 },
 });
@@ -110,7 +110,7 @@ export const generateOrdersPDF = (orders: any[], filters: any) => {
     order.paymentStatus || "pendiente",
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Nº Pedido", "Cliente", "Celular", "Fecha", "Estado", "Total", "Pago"]],
     body: tableData,
@@ -169,7 +169,7 @@ export const generateSalesPDF = (sales: any[], filters: any) => {
     formatBs(sale.total),
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Nº Venta", "Cliente", "Fecha", "Canal", "Método Pago", "Total"]],
     body: tableData,
@@ -227,7 +227,7 @@ export const generateInventoryPDF = (products: any[], inventory: any[]) => {
     ];
   });
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Código", "Producto", "Categoría", "Stock", "Mín.", "Estado", "Precio"]],
     body: tableData,
@@ -312,7 +312,7 @@ export const generateFinancePDF = (transactions: any[], cashClosures: any[]) => 
     t.notes || "-",
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Fecha", "Categoría", "Tipo", "Método", "Monto", "Notas"]],
     body: tableData,
@@ -338,7 +338,7 @@ export const generateFinancePDF = (transactions: any[], cashClosures: any[]) => 
     c.status,
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     startY: finalY + 5,
     head: [["Fecha", "Inicial", "Efectivo", "Digital", "Estado"]],
     body: closureTable,
@@ -375,7 +375,7 @@ export const generateCustomersPDF = (customers: any[]) => {
     c.address ? c.address.substring(0, 30) + (c.address.length > 30 ? "..." : "") : "-",
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Código", "Nombre", "Celular", "Zona", "Dirección"]],
     body: tableData,
@@ -422,7 +422,7 @@ export const generateInventoryMovementsPDF = (movements: any[], products: any[])
     ];
   });
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Fecha", "Producto", "Tipo", "Cantidad", "Razón"]],
     body: tableData,
@@ -466,7 +466,7 @@ export const generateAuditPDF = (logs: any[]) => {
     l.description || "-",
   ]);
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Fecha", "Entidad", "Acción", "ID", "Usuario", "Descripción"]],
     body: tableData,
@@ -501,7 +501,7 @@ export const generateArqueoPDF = (data: any) => {
 
   y += 25;
 
-  autoTable(doc, {
+  (autoTable as any)(doc, {
     ...getTableOptions(y),
     head: [["Concepto", "Esperado (Sistema)", "Reportado (Físico)", "Diferencia"]],
     body: [

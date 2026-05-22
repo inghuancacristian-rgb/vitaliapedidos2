@@ -849,7 +849,7 @@ export async function deductInventoryForOrder(orderId: number, orderNumber: stri
         if (remainingToDeduct <= 0) break;
         const deduct = Math.min(batch.quantity, remainingToDeduct);
         if (deduct > 0) {
-          await tx.update(inventory)
+          await (tx as any).update(inventory)
             .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
             .where(eq(inventory.id, batch.id));
           
@@ -871,7 +871,7 @@ export async function deductInventoryForOrder(orderId: number, orderNumber: stri
       // Si falta stock (sobre-venta), restamos del primer lote el excedente
       if (remainingToDeduct > 0 && batches.length > 0) {
         const firstBatch = batches[0];
-        await tx.update(inventory)
+        await (tx as any).update(inventory)
           .set({ quantity: firstBatch.quantity - remainingToDeduct, lastUpdated: new Date() })
           .where(eq(inventory.id, firstBatch.id));
         
@@ -918,7 +918,7 @@ export async function restoreInventoryForOrder(orderId: number, orderNumber: str
       const invRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
       const inv = invRows[0];
       if (inv) {
-        await tx.update(inventory).set({ quantity: inv.quantity + item.quantity, lastUpdated: new Date() })
+        await (tx as any).update(inventory).set({ quantity: inv.quantity + item.quantity, lastUpdated: new Date() })
           .where(eq(inventory.productId, item.productId));
       }
       await tx.insert(inventoryMovements).values({
@@ -1503,7 +1503,7 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
       if (purchaseData.status === "received") {
         const existing = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
         if (existing.length > 0) {
-          await tx.update(inventory).set({
+          await (tx as any).update(inventory).set({
             quantity: existing[0].quantity + Number(item.quantity),
             expiryDate: item.expiryDate ? new Date(item.expiryDate) : existing[0].expiryDate,
             lastUpdated: new Date()
@@ -1558,7 +1558,7 @@ export async function updatePurchase(purchaseId: number, purchaseData: any, item
       for (const item of oldItems) {
         const inv = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
         if (inv.length > 0) {
-          await tx.update(inventory).set({
+          await (tx as any).update(inventory).set({
             quantity: Math.max(0, inv[0].quantity - Number(item.quantity)),
             lastUpdated: new Date()
           }).where(eq(inventory.productId, item.productId));
@@ -1604,7 +1604,7 @@ export async function updatePurchase(purchaseId: number, purchaseData: any, item
       if (purchaseData.status === "received") {
         const existing = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
         if (existing.length > 0) {
-          await tx.update(inventory).set({
+          await (tx as any).update(inventory).set({
             quantity: existing[0].quantity + Number(item.quantity),
             expiryDate: item.expiryDate ? new Date(item.expiryDate) : existing[0].expiryDate,
             lastUpdated: new Date()
@@ -2809,7 +2809,7 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
           if (remaining <= 0) break;
           const deduct = Math.min(batch.quantity, remaining);
           if (deduct > 0) {
-            await tx.update(inventory)
+            await (tx as any).update(inventory)
               .set({ quantity: batch.quantity - deduct, lastUpdated: new Date() })
               .where(eq(inventory.id, batch.id));
             
@@ -2832,7 +2832,7 @@ export async function createSaleWithItems(payload: SaleCreatePayload) {
         if (remaining > 0) {
           const defaultInvRows = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
           if (defaultInvRows.length > 0) {
-             await tx.update(inventory)
+             await (tx as any).update(inventory)
                .set({ quantity: defaultInvRows[0].quantity - remaining, lastUpdated: new Date() })
                .where(eq(inventory.id, defaultInvRows[0].id));
           } else {
@@ -3001,7 +3001,7 @@ export async function cancelSaleRecord(saleId: number, cancelledByUserId: number
       const inventoryItem = inventoryRows[0];
       const currentStock = inventoryItem?.quantity || 0;
 
-      await tx.update(inventory).set({
+      await (tx as any).update(inventory).set({
         quantity: currentStock + item.quantity,
         lastUpdated: new Date(),
       }).where(eq(inventory.productId, item.productId));
@@ -3367,7 +3367,7 @@ export async function assignDeliveryExtraLoad(data: InsertDeliveryExtraLoad) {
     }
 
     // Descontar
-    await tx.update(inventory).set({ 
+    await (tx as any).update(inventory).set({ 
       quantity: inv[0].quantity - quantity,
       lastUpdated: new Date() 
     }).where(eq(inventory.productId, productId));
@@ -3450,7 +3450,7 @@ export async function updateDeliveryExtraLoadStatus(id: number, status: "loaded"
     if (status === "returned" && item.status !== "returned") {
       const inv = await tx.select().from(inventory).where(eq(inventory.productId, item.productId)).limit(1);
       if (inv[0]) {
-        await tx.update(inventory).set({ 
+        await (tx as any).update(inventory).set({ 
           quantity: inv[0].quantity + item.quantity,
           lastUpdated: new Date() 
         }).where(eq(inventory.productId, item.productId));
