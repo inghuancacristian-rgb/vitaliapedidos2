@@ -10,9 +10,15 @@ interface CustomerLookupProps {
   clientNumber: string;
   clientName: string;
   zone: string;
-  sourceChannel?: string;
-  customerType?: string;
-  onChange: (patch: { clientNumber?: string; clientName?: string; zone?: string; sourceChannel?: string; customerType?: string }) => void;
+  sourceChannel?: "facebook" | "tiktok" | "marketplace" | "referral" | "other";
+  customerType?: "retail" | "wholesale";
+  onChange: (patch: { 
+    clientNumber?: string; 
+    clientName?: string; 
+    zone?: string; 
+    sourceChannel?: "facebook" | "tiktok" | "marketplace" | "referral" | "other"; 
+    customerType?: "retail" | "wholesale" 
+  }) => void;
 }
 
 export function CustomerLookup({
@@ -37,7 +43,13 @@ export function CustomerLookup({
   useEffect(() => {
     if (!exactCustomer) return;
 
-    const patch: { clientNumber?: string; clientName?: string; zone?: string; sourceChannel?: string } = {};
+    const patch: { 
+      clientNumber?: string; 
+      clientName?: string; 
+      zone?: string; 
+      sourceChannel?: "facebook" | "tiktok" | "marketplace" | "referral" | "other"; 
+      customerType?: "retail" | "wholesale" 
+    } = {};
 
     if (exactCustomer.clientNumber !== clientNumber) {
       patch.clientNumber = exactCustomer.clientNumber;
@@ -49,10 +61,10 @@ export function CustomerLookup({
       patch.zone = exactCustomer.zone;
     }
     if (exactCustomer.sourceChannel && exactCustomer.sourceChannel !== sourceChannel) {
-      patch.sourceChannel = exactCustomer.sourceChannel;
+      patch.sourceChannel = exactCustomer.sourceChannel as any;
     }
     if (exactCustomer.customerType && exactCustomer.customerType !== (patch.customerType || "")) {
-      patch.customerType = exactCustomer.customerType;
+      patch.customerType = exactCustomer.customerType as any;
     }
 
     if (Object.keys(patch).length > 0) {

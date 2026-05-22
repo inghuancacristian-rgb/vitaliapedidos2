@@ -39,7 +39,7 @@ export const reportsRouter = router({
         conditions.push(lte(orders.createdAt, new Date(input.endDate + " 23:59:59")));
       }
       if (input?.status) {
-        conditions.push(eq(orders.status, input.status));
+        conditions.push(eq(orders.status, input.status as any));
       }
       if (input?.customerId) {
         conditions.push(eq(orders.customerId, input.customerId));
@@ -83,7 +83,7 @@ export const reportsRouter = router({
         conditions.push(lte(sales.createdAt, new Date(input.endDate + " 23:59:59")));
       }
       if (input?.paymentMethod) {
-        conditions.push(eq(sales.paymentMethod, input.paymentMethod));
+        conditions.push(eq(sales.paymentMethod, input.paymentMethod as any));
       }
 
       const result = await db.query.sales.findMany({
@@ -113,7 +113,7 @@ export const reportsRouter = router({
 
       let productConditions: any[] = [];
       if (input?.category) {
-        productConditions.push(eq(products.category, input.category));
+        productConditions.push(eq(products.category, input.category as any));
       }
 
       const allProducts = await db.query.products.findMany({
@@ -398,8 +398,8 @@ export const reportsRouter = router({
       });
 
       // Evitar duplicados de IDs de órdenes procesadas en ventas
-      const processedOrderIds = new Set(completedSales.map(s => s.orderId).filter(Boolean));
-      const prevProcessedOrderIds = new Set(prevCompletedSales.map(s => s.orderId).filter(Boolean));
+      const processedOrderIds = new Set(completedSales.map((s: any) => s.orderId).filter(Boolean));
+      const prevProcessedOrderIds = new Set(prevCompletedSales.map((s: any) => s.orderId).filter(Boolean));
       
       // Métricas y Contadores
       const deliveriesByDay: Record<string, number> = {};
@@ -440,7 +440,7 @@ export const reportsRouter = router({
       const expensesData = await db.query.operationalExpenses.findMany({
         where: and(eq(operationalExpenses.status, "paid"), dateFilterExpenses)
       });
-      expensesData.forEach(exp => {
+      expensesData.forEach((exp: any) => {
         totalExpenses += exp.amount;
         expenseCounts[exp.category] = (expenseCounts[exp.category] || 0) + exp.amount;
       });
@@ -558,8 +558,8 @@ export const reportsRouter = router({
 
       // Retención
       const customerTransactionCount: Record<number, number> = {};
-      completedSales.forEach(s => s.customer?.id && (customerTransactionCount[s.customer.id] = (customerTransactionCount[s.customer.id] || 0) + 1));
-      deliveredOrders.forEach(o => o.customer?.id && (customerTransactionCount[o.customer.id] = (customerTransactionCount[o.customer.id] || 0) + 1));
+      completedSales.forEach((s: any) => s.customer?.id && (customerTransactionCount[s.customer.id] = (customerTransactionCount[s.customer.id] || 0) + 1));
+      deliveredOrders.forEach((o: any) => o.customer?.id && (customerTransactionCount[o.customer.id] = (customerTransactionCount[o.customer.id] || 0) + 1));
       const customerIdsInPeriod = new Set<number>(Object.keys(customerTransactionCount).map(Number));
       let newCustomers = 0;
       let returningCustomers = 0;

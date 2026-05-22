@@ -170,7 +170,7 @@ export const salesRouter = router({
           paymentMethod: input.paymentMethod,
           paymentStatus: input.paymentStatus,
           notes: input.notes,
-          items: normalizedItems,
+          items: normalizedItems as any,
         });
 
         return { success: true, saleId: (result as any).insertId, saleNumber };

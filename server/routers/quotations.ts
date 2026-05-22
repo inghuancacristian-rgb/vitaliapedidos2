@@ -142,7 +142,7 @@ export const quotationsRouter = router({
           notes: input.notes,
           termsAndConditions: input.termsAndConditions,
           createdBy: ctx.user!.id,
-          items: normalizedItems,
+          items: normalizedItems as any,
         });
 
         return { success: true, quotationId: (result as any).insertId, quotationNumber: result.quotationNumber };

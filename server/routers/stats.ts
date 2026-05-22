@@ -29,17 +29,17 @@ export const statsRouter = router({
 
     const stats = {
       totalOrders: orders.length,
-      pendingOrders: orders.filter((o) => o.status === "pending").length,
-      assignedOrders: orders.filter((o) => o.status === "assigned").length,
-      inTransitOrders: orders.filter((o) => o.status === "in_transit").length,
-      deliveredOrders: orders.filter((o) => o.status === "delivered").length,
-      cancelledOrders: orders.filter((o) => o.status === "cancelled").length,
+      pendingOrders: orders.filter((o: any) => o.status === "pending").length,
+      assignedOrders: orders.filter((o: any) => o.status === "assigned").length,
+      inTransitOrders: orders.filter((o: any) => o.status === "in_transit").length,
+      deliveredOrders: orders.filter((o: any) => o.status === "delivered").length,
+      cancelledOrders: orders.filter((o: any) => o.status === "cancelled").length,
       totalRevenue: revenueByMethod.cash + revenueByMethod.qr + revenueByMethod.transfer,
       revenueByMethod,
-      lowStockProducts: inventory.filter((inv) => inv.quantity <= inv.minStock).length,
+      lowStockProducts: inventory.filter((inv: any) => inv.quantity <= inv.minStock).length,
       totalProducts: products.length,
-      totalInventoryValue: inventory.reduce((sum, inv) => {
-        const product = products.find((p) => p.id === inv.productId);
+      totalInventoryValue: inventory.reduce((sum: any, inv: any) => {
+        const product = products.find((p: any) => p.id === inv.productId);
         return sum + (product ? product.price * inv.quantity : 0);
       }, 0),
     };
