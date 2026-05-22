@@ -10,219 +10,631 @@ async function ensureTables() {
   console.log("[EnsureTables] Connecting to database...");
   const connection = await mysql.createConnection(databaseUrl);
 
+  async function runSQL(label: string, sql: string) {
+    try {
+      await connection.query(sql);
+      console.log(`[EnsureTables] ✓ ${label}`);
+    } catch (err: any) {
+      if (err.message.includes("Duplicate column") || err.message.includes("already exists")) {
+        console.log(`[EnsureTables] ⊘ ${label} (already exists)`);
+      } else {
+        console.log(`[EnsureTables] ✗ ${label}: ${err.message}`);
+      }
+    }
+  }
+
   try {
-    // ---- cash_openings table ----
-    console.log("[EnsureTables] Checking cash_openings table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS cash_openings (
-          id int AUTO_INCREMENT NOT NULL,
-          openingDate varchar(10) NOT NULL,
-          openingAmount int NOT NULL DEFAULT 0,
-          paymentMethod enum('cash','qr','transfer') DEFAULT 'cash',
-          responsibleUserId int NOT NULL,
-          openedByUserId int NOT NULL,
-          status enum('open','closed') NOT NULL DEFAULT 'open',
-          notes text,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT cash_openings_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] cash_openings table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] cash_openings create:", err.message);
-    }
+    // ============================================================
+    // 1. USERS
+    // ============================================================
+    await runSQL("users table", `
+      CREATE TABLE IF NOT EXISTS users (
+        id int AUTO_INCREMENT NOT NULL,
+        openId varchar(64) NOT NULL DEFAULT '',
+        username varchar(100),
+        passwordHash text,
+        name text,
+        email varchar(320),
+        loginMethod varchar(64),
+        role enum('user','admin') NOT NULL DEFAULT 'user',
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        lastSignedIn timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT users_id PRIMARY KEY(id),
+        CONSTRAINT users_openId_unique UNIQUE(openId),
+        CONSTRAINT users_username_unique UNIQUE(username)
+      )
+    `);
 
-    // Add paymentMethod column if it doesn't exist (for existing tables)
-    try {
-      await connection.query(`
-        ALTER TABLE cash_openings ADD COLUMN paymentMethod enum('cash','qr','transfer') DEFAULT 'cash' AFTER openingAmount
-      `);
-      console.log("[EnsureTables] Added paymentMethod column to cash_openings");
-    } catch (err: any) {
-      if (err.message.includes("Duplicate column")) {
-        console.log("[EnsureTables] cash_openings.paymentMethod already exists");
-      } else {
-        console.log("[EnsureTables] cash_openings.paymentMethod:", err.message);
-      }
-    }
+    // ============================================================
+    // 2. SESSIONS
+    // ============================================================
+    await runSQL("sessions table", `
+      CREATE TABLE IF NOT EXISTS sessions (
+        id varchar(255) NOT NULL,
+        userId int NOT NULL,
+        expiresAt timestamp NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT sessions_id PRIMARY KEY(id)
+      )
+    `);
 
-    // Add foreign keys if they don't exist
-    try {
-      await connection.query(`
-        ALTER TABLE cash_openings
-          ADD CONSTRAINT cash_openings_responsibleUserId_users_id_fk
-          FOREIGN KEY (responsibleUserId) REFERENCES users(id)
-          ON DELETE no action ON UPDATE no action
-      `);
-      console.log("[EnsureTables] Added responsibleUserId FK");
-    } catch (err: any) {
-      if (err.message.includes("Duplicate") || err.message.includes("already exists")) {
-        console.log("[EnsureTables] responsibleUserId FK already exists");
-      } else {
-        console.log("[EnsureTables] responsibleUserId FK:", err.message);
-      }
-    }
+    // ============================================================
+    // 3. CUSTOMERS
+    // ============================================================
+    await runSQL("customers table", `
+      CREATE TABLE IF NOT EXISTS customers (
+        id int AUTO_INCREMENT NOT NULL,
+        clientNumber varchar(50) NOT NULL,
+        name varchar(255) NOT NULL,
+        phone varchar(20),
+        whatsapp varchar(20),
+        zone varchar(100),
+        address text,
+        latitude varchar(50),
+        longitude varchar(50),
+        age int,
+        gender varchar(30),
+        socioeconomicLevel varchar(50),
+        sourceChannel enum('facebook','tiktok','marketplace','referral','other') DEFAULT 'other',
+        customerType enum('retail','wholesale') NOT NULL DEFAULT 'retail',
+        interestHealthFitness int NOT NULL DEFAULT 0,
+        interestNaturalFood int NOT NULL DEFAULT 0,
+        interestDigestiveIssues int NOT NULL DEFAULT 0,
+        lifestyleGym int NOT NULL DEFAULT 0,
+        lifestyleVegan int NOT NULL DEFAULT 0,
+        lifestyleBiohacking int NOT NULL DEFAULT 0,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT customers_id PRIMARY KEY(id),
+        CONSTRAINT customers_clientNumber_unique UNIQUE(clientNumber)
+      )
+    `);
 
-    try {
-      await connection.query(`
-        ALTER TABLE cash_openings
-          ADD CONSTRAINT cash_openings_openedByUserId_users_id_fk
-          FOREIGN KEY (openedByUserId) REFERENCES users(id)
-          ON DELETE no action ON UPDATE no action
-      `);
-      console.log("[EnsureTables] Added openedByUserId FK");
-    } catch (err: any) {
-      if (err.message.includes("Duplicate") || err.message.includes("already exists")) {
-        console.log("[EnsureTables] openedByUserId FK already exists");
-      } else {
-        console.log("[EnsureTables] openedByUserId FK:", err.message);
-      }
-    }
+    // ============================================================
+    // 4. PRODUCTS
+    // ============================================================
+    await runSQL("products table", `
+      CREATE TABLE IF NOT EXISTS products (
+        id int AUTO_INCREMENT NOT NULL,
+        code varchar(50) NOT NULL,
+        name varchar(255) NOT NULL,
+        category enum('finished_product','raw_material','supplies') NOT NULL DEFAULT 'finished_product',
+        price int NOT NULL,
+        salePrice int NOT NULL DEFAULT 0,
+        wholesalePrice int NOT NULL DEFAULT 0,
+        discountPrice int NOT NULL DEFAULT 0,
+        wholesaleDiscountType enum('percentage','fixed') DEFAULT 'percentage',
+        wholesaleDiscountValue int NOT NULL DEFAULT 0,
+        unit varchar(20) NOT NULL DEFAULT 'unidad',
+        presentationQuantity int NOT NULL DEFAULT 1,
+        presentationUnit varchar(20) NOT NULL DEFAULT 'unidad',
+        presentationVolumeMl int NOT NULL DEFAULT 0,
+        presentationWeightGr int NOT NULL DEFAULT 0,
+        productionRole enum('none','milk','sugar','culture','bottle','cap','label','packaging','finished_good','other') NOT NULL DEFAULT 'none',
+        storageLocation varchar(100),
+        supplierName varchar(255),
+        productionNotes text,
+        status enum('active','inactive') NOT NULL DEFAULT 'active',
+        imageUrl varchar(500),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT products_id PRIMARY KEY(id),
+        CONSTRAINT products_code_unique UNIQUE(code)
+      )
+    `);
 
-    // ---- auditLog table ----
-    console.log("[EnsureTables] Checking auditLog table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS auditLog (
-          id int AUTO_INCREMENT NOT NULL,
-          entityType varchar(100) NOT NULL,
-          entityId int NOT NULL,
-          action enum('CREATE','UPDATE','DELETE') NOT NULL,
-          userId int,
-          oldValues text,
-          newValues text,
-          description text,
-          ipAddress varchar(45),
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT auditLog_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] auditLog table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] auditLog create:", err.message);
-    }
+    // ============================================================
+    // 5. INVENTORY
+    // ============================================================
+    await runSQL("inventory table", `
+      CREATE TABLE IF NOT EXISTS inventory (
+        id int AUTO_INCREMENT NOT NULL,
+        productId int NOT NULL,
+        batchNumber varchar(50),
+        quantity int NOT NULL DEFAULT 0,
+        minStock int NOT NULL DEFAULT 10,
+        expiryDate varchar(10),
+        lastUpdated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT inventory_id PRIMARY KEY(id)
+      )
+    `);
 
-    // ---- delivery_extra_load table ----
-    console.log("[EnsureTables] Checking delivery_extra_load table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS delivery_extra_load (
-          id int AUTO_INCREMENT NOT NULL,
-          deliveryPersonId int NOT NULL,
-          productId int NOT NULL,
-          quantity int NOT NULL,
-          type enum('sale','sample') NOT NULL DEFAULT 'sale',
-          status enum('loaded','sold','used','returned') NOT NULL DEFAULT 'loaded',
-          date varchar(10) NOT NULL,
-          notes text,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          CONSTRAINT delivery_extra_load_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] delivery_extra_load table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] delivery_extra_load create:", err.message);
-    }
+    // ============================================================
+    // 6. INVENTORY MOVEMENTS
+    // ============================================================
+    await runSQL("inventoryMovements table", `
+      CREATE TABLE IF NOT EXISTS inventoryMovements (
+        id int AUTO_INCREMENT NOT NULL,
+        productId int NOT NULL,
+        type enum('entry','exit','adjustment') NOT NULL,
+        quantity int NOT NULL,
+        reason varchar(255),
+        notes text,
+        userId int,
+        orderId int,
+        saleId int,
+        batchNumber varchar(50),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT inventoryMovements_id PRIMARY KEY(id)
+      )
+    `);
 
-    // ---- production_batches table ----
-    console.log("[EnsureTables] Checking production_batches table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS production_batches (
-          id int AUTO_INCREMENT NOT NULL,
-          batchNumber varchar(50) NOT NULL UNIQUE,
-          type enum('kefir_production','nodule_washing','maintenance') NOT NULL,
-          status enum('in_progress','completed','cancelled') NOT NULL DEFAULT 'in_progress',
-          startDate timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          endDate timestamp NULL,
-          registeredBy int NOT NULL,
-          notes text,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          CONSTRAINT production_batches_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] production_batches table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] production_batches create:", err.message);
-    }
+    // ============================================================
+    // 7. ORDERS
+    // ============================================================
+    await runSQL("orders table", `
+      CREATE TABLE IF NOT EXISTS orders (
+        id int AUTO_INCREMENT NOT NULL,
+        orderNumber varchar(50) NOT NULL,
+        customerId int NOT NULL,
+        deliveryPersonId int,
+        zone varchar(100),
+        status enum('pending','assigned','in_transit','delivered','cancelled','rescheduled') NOT NULL DEFAULT 'pending',
+        totalPrice int NOT NULL,
+        paymentMethod enum('qr','cash','transfer'),
+        paymentStatus enum('pending','completed','failed') NOT NULL DEFAULT 'pending',
+        notes text,
+        sourceChannel enum('facebook','tiktok','marketplace','referral','other') DEFAULT 'other',
+        cancelledBy enum('client','company','system'),
+        cancelReason text,
+        rescheduleReason text,
+        deliveryDate varchar(10),
+        deliveryTime varchar(5),
+        rescheduleRequested int DEFAULT 0,
+        requestedDate varchar(10),
+        requestedTime varchar(5),
+        cancellationRequested int DEFAULT 0,
+        cancellationReason text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        deliveredAt timestamp NULL,
+        CONSTRAINT orders_id PRIMARY KEY(id),
+        CONSTRAINT orders_orderNumber_unique UNIQUE(orderNumber)
+      )
+    `);
 
-    // ---- production_outputs table ----
-    console.log("[EnsureTables] Checking production_outputs table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS production_outputs (
-          id int AUTO_INCREMENT NOT NULL,
-          batchId int NOT NULL,
-          productId int NOT NULL,
-          quantity int NOT NULL,
-          expectedQuantity int,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT production_outputs_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] production_outputs table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] production_outputs create:", err.message);
-    }
+    // ============================================================
+    // 8. ORDER ITEMS
+    // ============================================================
+    await runSQL("orderItems table", `
+      CREATE TABLE IF NOT EXISTS orderItems (
+        id int AUTO_INCREMENT NOT NULL,
+        orderId int NOT NULL,
+        productId int NOT NULL,
+        pricingType enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit',
+        quantity int NOT NULL,
+        price int NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT orderItems_id PRIMARY KEY(id)
+      )
+    `);
 
-    // ---- quotations table ----
-    console.log("[EnsureTables] Checking quotations table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS quotations (
-          id int AUTO_INCREMENT NOT NULL,
-          quotationNumber varchar(50) NOT NULL UNIQUE,
-          customerId int,
-          customerName varchar(255),
-          status enum('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
-          subtotal int NOT NULL,
-          discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
-          discountValue int NOT NULL DEFAULT 0,
-          discountAmount int NOT NULL DEFAULT 0,
-          total int NOT NULL,
-          validUntil timestamp NULL,
-          notes text,
-          termsAndConditions text,
-          createdBy int NOT NULL,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          CONSTRAINT quotations_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] quotations table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] quotations create:", err.message);
-    }
+    // ============================================================
+    // 9. PAYMENTS
+    // ============================================================
+    await runSQL("payments table", `
+      CREATE TABLE IF NOT EXISTS payments (
+        id int AUTO_INCREMENT NOT NULL,
+        orderId int NOT NULL,
+        amount int NOT NULL,
+        method enum('qr','cash','transfer') NOT NULL,
+        status enum('pending','completed','failed') NOT NULL DEFAULT 'pending',
+        reference varchar(255),
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT payments_id PRIMARY KEY(id)
+      )
+    `);
 
-    // ---- quotationItems table ----
-    console.log("[EnsureTables] Checking quotationItems table...");
-    try {
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS quotationItems (
-          id int AUTO_INCREMENT NOT NULL,
-          quotationId int NOT NULL,
-          productId int NOT NULL,
-          pricingType enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit',
-          quantity int NOT NULL,
-          basePrice int NOT NULL,
-          discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
-          discountValue int NOT NULL DEFAULT 0,
-          discountAmount int NOT NULL DEFAULT 0,
-          finalUnitPrice int NOT NULL DEFAULT 0,
-          subtotal int NOT NULL,
-          createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          CONSTRAINT quotationItems_id PRIMARY KEY(id)
-        )
-      `);
-      console.log("[EnsureTables] quotationItems table OK");
-    } catch (err: any) {
-      console.log("[EnsureTables] quotationItems create:", err.message);
-    }
+    // ============================================================
+    // 10. SUPPLIERS
+    // ============================================================
+    await runSQL("suppliers table", `
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id int AUTO_INCREMENT NOT NULL,
+        name varchar(255) NOT NULL,
+        contactName varchar(255),
+        phone varchar(20),
+        taxId varchar(50),
+        address text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT suppliers_id PRIMARY KEY(id)
+      )
+    `);
 
-    console.log("[EnsureTables] All tables verified successfully!");
+    // ============================================================
+    // 11. PURCHASES
+    // ============================================================
+    await runSQL("purchases table", `
+      CREATE TABLE IF NOT EXISTS purchases (
+        id int AUTO_INCREMENT NOT NULL,
+        supplierId int NOT NULL,
+        purchaseNumber varchar(50) NOT NULL,
+        orderDate timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        totalAmount int NOT NULL,
+        status enum('pending','received','cancelled') NOT NULL DEFAULT 'pending',
+        paymentStatus enum('pending','paid') NOT NULL DEFAULT 'pending',
+        paymentMethod enum('cash','qr','transfer') DEFAULT 'cash',
+        isCredit int DEFAULT 0,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT purchases_id PRIMARY KEY(id),
+        CONSTRAINT purchases_purchaseNumber_unique UNIQUE(purchaseNumber)
+      )
+    `);
+
+    // ============================================================
+    // 12. PURCHASE ITEMS
+    // ============================================================
+    await runSQL("purchaseItems table", `
+      CREATE TABLE IF NOT EXISTS purchaseItems (
+        id int AUTO_INCREMENT NOT NULL,
+        purchaseId int NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL,
+        price int NOT NULL,
+        batchNumber varchar(50),
+        expiryDate varchar(10),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT purchaseItems_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 13. ACCOUNTS PAYABLE
+    // ============================================================
+    await runSQL("accountsPayable table", `
+      CREATE TABLE IF NOT EXISTS accountsPayable (
+        id int AUTO_INCREMENT NOT NULL,
+        purchaseId int NOT NULL,
+        amount int NOT NULL,
+        dueDate timestamp NULL,
+        status enum('unpaid','partially_paid','paid') NOT NULL DEFAULT 'unpaid',
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT accountsPayable_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 14. DELIVERY EXPENSES
+    // ============================================================
+    await runSQL("deliveryExpenses table", `
+      CREATE TABLE IF NOT EXISTS deliveryExpenses (
+        id int AUTO_INCREMENT NOT NULL,
+        deliveryPersonId int NOT NULL,
+        orderId int,
+        amount int NOT NULL,
+        type enum('fuel','subsistence','other') NOT NULL,
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT deliveryExpenses_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 15. OPERATIONAL EXPENSES
+    // ============================================================
+    await runSQL("operationalExpenses table", `
+      CREATE TABLE IF NOT EXISTS operationalExpenses (
+        id int AUTO_INCREMENT NOT NULL,
+        description varchar(255) NOT NULL,
+        category enum('facebook_ads','google_ads','electricity','water','internet','telephone','rent','salaries','maintenance','supplies','taxes','insurance','bank_fees','other') NOT NULL,
+        amount int NOT NULL,
+        paymentMethod enum('cash','qr','transfer') NOT NULL,
+        expenseDate timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        dueDate timestamp NULL,
+        status enum('pending','paid') NOT NULL DEFAULT 'pending',
+        supplierName varchar(255),
+        invoiceNumber varchar(100),
+        notes text,
+        userId int,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT operationalExpenses_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 16. FINANCIAL TRANSACTIONS
+    // ============================================================
+    await runSQL("financialTransactions table", `
+      CREATE TABLE IF NOT EXISTS financialTransactions (
+        id int AUTO_INCREMENT NOT NULL,
+        type enum('income','expense') NOT NULL,
+        category varchar(100) NOT NULL,
+        paymentMethod enum('cash','qr','transfer') DEFAULT 'cash',
+        amount int NOT NULL,
+        userId int,
+        referenceId int,
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT financialTransactions_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 17. GPS TRACKING
+    // ============================================================
+    await runSQL("gpsTracking table", `
+      CREATE TABLE IF NOT EXISTS gpsTracking (
+        id int AUTO_INCREMENT NOT NULL,
+        orderId int NOT NULL,
+        deliveryPersonId int NOT NULL,
+        latitude varchar(50) NOT NULL,
+        longitude varchar(50) NOT NULL,
+        accuracy int,
+        timestamp timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT gpsTracking_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 18. CASH CLOSURES
+    // ============================================================
+    await runSQL("cash_closures table", `
+      CREATE TABLE IF NOT EXISTS cash_closures (
+        id int AUTO_INCREMENT NOT NULL,
+        userId int NOT NULL,
+        date varchar(10) NOT NULL,
+        initialCash int DEFAULT 0,
+        reportedCash int DEFAULT 0,
+        reportedQr int DEFAULT 0,
+        reportedTransfer int DEFAULT 0,
+        expectedCash int DEFAULT 0,
+        expectedQr int DEFAULT 0,
+        expectedTransfer int DEFAULT 0,
+        expenses int DEFAULT 0,
+        pendingOrders int DEFAULT 0,
+        status enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+        adminNotes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT cash_closures_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 19. CASH OPENINGS
+    // ============================================================
+    await runSQL("cash_openings table", `
+      CREATE TABLE IF NOT EXISTS cash_openings (
+        id int AUTO_INCREMENT NOT NULL,
+        openingDate varchar(10) NOT NULL,
+        openingAmount int NOT NULL DEFAULT 0,
+        paymentMethod enum('cash','qr','transfer') DEFAULT 'cash',
+        responsibleUserId int NOT NULL,
+        openedByUserId int NOT NULL,
+        status enum('open','closed') NOT NULL DEFAULT 'open',
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT cash_openings_id PRIMARY KEY(id)
+      )
+    `);
+
+    // Add paymentMethod column if table already existed without it
+    await runSQL("cash_openings.paymentMethod column", `
+      ALTER TABLE cash_openings ADD COLUMN paymentMethod enum('cash','qr','transfer') DEFAULT 'cash' AFTER openingAmount
+    `);
+
+    // ============================================================
+    // 20. SALES
+    // ============================================================
+    await runSQL("sales table", `
+      CREATE TABLE IF NOT EXISTS sales (
+        id int AUTO_INCREMENT NOT NULL,
+        saleNumber varchar(50) NOT NULL,
+        customerId int,
+        customerName varchar(255),
+        saleChannel enum('local','delivery') NOT NULL DEFAULT 'local',
+        status enum('completed','cancelled') NOT NULL DEFAULT 'completed',
+        orderId int,
+        soldBy int NOT NULL,
+        subtotal int NOT NULL,
+        discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
+        discountValue int NOT NULL DEFAULT 0,
+        discountAmount int NOT NULL DEFAULT 0,
+        total int NOT NULL,
+        paymentMethod enum('cash','qr','transfer') NOT NULL,
+        paymentStatus enum('pending','completed') NOT NULL DEFAULT 'completed',
+        notes text,
+        cancelReason text,
+        cancelledAt timestamp NULL,
+        cancelledBy int,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT sales_id PRIMARY KEY(id),
+        CONSTRAINT sales_saleNumber_unique UNIQUE(saleNumber)
+      )
+    `);
+
+    // ============================================================
+    // 21. SALE ITEMS
+    // ============================================================
+    await runSQL("saleItems table", `
+      CREATE TABLE IF NOT EXISTS saleItems (
+        id int AUTO_INCREMENT NOT NULL,
+        saleId int NOT NULL,
+        productId int NOT NULL,
+        pricingType enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit',
+        quantity int NOT NULL,
+        basePrice int NOT NULL,
+        discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
+        discountValue int NOT NULL DEFAULT 0,
+        discountAmount int NOT NULL DEFAULT 0,
+        finalUnitPrice int NOT NULL DEFAULT 0,
+        subtotal int NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT saleItems_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 22. AUDIT LOG
+    // ============================================================
+    await runSQL("auditLog table", `
+      CREATE TABLE IF NOT EXISTS auditLog (
+        id int AUTO_INCREMENT NOT NULL,
+        entityType varchar(100) NOT NULL,
+        entityId int NOT NULL,
+        action enum('CREATE','UPDATE','DELETE') NOT NULL,
+        userId int,
+        oldValues text,
+        newValues text,
+        description text,
+        ipAddress varchar(45),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT auditLog_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 23. QUOTATIONS
+    // ============================================================
+    await runSQL("quotations table", `
+      CREATE TABLE IF NOT EXISTS quotations (
+        id int AUTO_INCREMENT NOT NULL,
+        quotationNumber varchar(50) NOT NULL,
+        customerId int,
+        customerName varchar(255),
+        status enum('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+        subtotal int NOT NULL,
+        discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
+        discountValue int NOT NULL DEFAULT 0,
+        discountAmount int NOT NULL DEFAULT 0,
+        total int NOT NULL,
+        validUntil timestamp NULL,
+        notes text,
+        termsAndConditions text,
+        createdBy int NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT quotations_id PRIMARY KEY(id),
+        CONSTRAINT quotations_quotationNumber_unique UNIQUE(quotationNumber)
+      )
+    `);
+
+    // ============================================================
+    // 24. QUOTATION ITEMS
+    // ============================================================
+    await runSQL("quotationItems table", `
+      CREATE TABLE IF NOT EXISTS quotationItems (
+        id int AUTO_INCREMENT NOT NULL,
+        quotationId int NOT NULL,
+        productId int NOT NULL,
+        pricingType enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit',
+        quantity int NOT NULL,
+        basePrice int NOT NULL,
+        discountType enum('none','percentage','fixed') NOT NULL DEFAULT 'none',
+        discountValue int NOT NULL DEFAULT 0,
+        discountAmount int NOT NULL DEFAULT 0,
+        finalUnitPrice int NOT NULL DEFAULT 0,
+        subtotal int NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT quotationItems_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 25. DELIVERY EXTRA LOAD
+    // ============================================================
+    await runSQL("delivery_extra_load table", `
+      CREATE TABLE IF NOT EXISTS delivery_extra_load (
+        id int AUTO_INCREMENT NOT NULL,
+        deliveryPersonId int NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL,
+        type enum('sale','sample') NOT NULL DEFAULT 'sale',
+        status enum('loaded','sold','used','returned') NOT NULL DEFAULT 'loaded',
+        date varchar(10) NOT NULL,
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT delivery_extra_load_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 26. PRODUCTION BATCHES
+    // ============================================================
+    await runSQL("production_batches table", `
+      CREATE TABLE IF NOT EXISTS production_batches (
+        id int AUTO_INCREMENT NOT NULL,
+        batchNumber varchar(50) NOT NULL,
+        type enum('kefir_production','nodule_washing','maintenance') NOT NULL,
+        status enum('in_progress','completed','cancelled') NOT NULL DEFAULT 'in_progress',
+        startDate timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        endDate timestamp NULL,
+        registeredBy int NOT NULL,
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT production_batches_id PRIMARY KEY(id),
+        CONSTRAINT production_batches_batchNumber_unique UNIQUE(batchNumber)
+      )
+    `);
+
+    // ============================================================
+    // 27. PRODUCTION OUTPUTS
+    // ============================================================
+    await runSQL("production_outputs table", `
+      CREATE TABLE IF NOT EXISTS production_outputs (
+        id int AUTO_INCREMENT NOT NULL,
+        batchId int NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL,
+        expectedQuantity int,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT production_outputs_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // ENSURE MISSING COLUMNS ON EXISTING TABLES
+    // (for tables that were created by old migrations without these columns)
+    // ============================================================
+    console.log("\n[EnsureTables] Checking for missing columns on existing tables...");
+
+    // inventory columns
+    await runSQL("inventory.batchNumber", `ALTER TABLE inventory ADD COLUMN batchNumber VARCHAR(50) AFTER productId`);
+    await runSQL("inventory.expiryDate", `ALTER TABLE inventory ADD COLUMN expiryDate VARCHAR(10) AFTER minStock`);
+
+    // inventoryMovements columns
+    await runSQL("inventoryMovements.userId", `ALTER TABLE inventoryMovements ADD COLUMN userId INT AFTER notes`);
+    await runSQL("inventoryMovements.orderId", `ALTER TABLE inventoryMovements ADD COLUMN orderId INT AFTER userId`);
+    await runSQL("inventoryMovements.saleId", `ALTER TABLE inventoryMovements ADD COLUMN saleId INT AFTER orderId`);
+    await runSQL("inventoryMovements.batchNumber", `ALTER TABLE inventoryMovements ADD COLUMN batchNumber VARCHAR(50) AFTER saleId`);
+
+    // purchaseItems columns
+    await runSQL("purchaseItems.batchNumber", `ALTER TABLE purchaseItems ADD COLUMN batchNumber VARCHAR(50) AFTER price`);
+    await runSQL("purchaseItems.expiryDate", `ALTER TABLE purchaseItems ADD COLUMN expiryDate VARCHAR(10) AFTER batchNumber`);
+
+    // customers profile columns
+    await runSQL("customers.age", `ALTER TABLE customers ADD COLUMN age INT AFTER longitude`);
+    await runSQL("customers.gender", `ALTER TABLE customers ADD COLUMN gender VARCHAR(30) AFTER age`);
+    await runSQL("customers.socioeconomicLevel", `ALTER TABLE customers ADD COLUMN socioeconomicLevel VARCHAR(50) AFTER gender`);
+    await runSQL("customers.customerType", `ALTER TABLE customers ADD COLUMN customerType enum('retail','wholesale') NOT NULL DEFAULT 'retail' AFTER sourceChannel`);
+    await runSQL("customers.interestHealthFitness", `ALTER TABLE customers ADD COLUMN interestHealthFitness INT NOT NULL DEFAULT 0 AFTER customerType`);
+    await runSQL("customers.interestNaturalFood", `ALTER TABLE customers ADD COLUMN interestNaturalFood INT NOT NULL DEFAULT 0 AFTER interestHealthFitness`);
+    await runSQL("customers.interestDigestiveIssues", `ALTER TABLE customers ADD COLUMN interestDigestiveIssues INT NOT NULL DEFAULT 0 AFTER interestNaturalFood`);
+    await runSQL("customers.lifestyleGym", `ALTER TABLE customers ADD COLUMN lifestyleGym INT NOT NULL DEFAULT 0 AFTER interestDigestiveIssues`);
+    await runSQL("customers.lifestyleVegan", `ALTER TABLE customers ADD COLUMN lifestyleVegan INT NOT NULL DEFAULT 0 AFTER lifestyleGym`);
+    await runSQL("customers.lifestyleBiohacking", `ALTER TABLE customers ADD COLUMN lifestyleBiohacking INT NOT NULL DEFAULT 0 AFTER lifestyleVegan`);
+
+    // products production columns
+    await runSQL("products.wholesalePrice", `ALTER TABLE products ADD COLUMN wholesalePrice INT NOT NULL DEFAULT 0 AFTER salePrice`);
+    await runSQL("products.discountPrice", `ALTER TABLE products ADD COLUMN discountPrice INT NOT NULL DEFAULT 0 AFTER wholesalePrice`);
+    await runSQL("products.wholesaleDiscountType", `ALTER TABLE products ADD COLUMN wholesaleDiscountType enum('percentage','fixed') DEFAULT 'percentage' AFTER discountPrice`);
+    await runSQL("products.wholesaleDiscountValue", `ALTER TABLE products ADD COLUMN wholesaleDiscountValue INT NOT NULL DEFAULT 0 AFTER wholesaleDiscountType`);
+    await runSQL("products.presentationVolumeMl", `ALTER TABLE products ADD COLUMN presentationVolumeMl INT NOT NULL DEFAULT 0 AFTER presentationUnit`);
+    await runSQL("products.presentationWeightGr", `ALTER TABLE products ADD COLUMN presentationWeightGr INT NOT NULL DEFAULT 0 AFTER presentationVolumeMl`);
+    await runSQL("products.productionRole", `ALTER TABLE products ADD COLUMN productionRole enum('none','milk','sugar','culture','bottle','cap','label','packaging','finished_good','other') NOT NULL DEFAULT 'none' AFTER presentationWeightGr`);
+    await runSQL("products.storageLocation", `ALTER TABLE products ADD COLUMN storageLocation VARCHAR(100) AFTER productionRole`);
+    await runSQL("products.supplierName", `ALTER TABLE products ADD COLUMN supplierName VARCHAR(255) AFTER storageLocation`);
+    await runSQL("products.productionNotes", `ALTER TABLE products ADD COLUMN productionNotes TEXT AFTER supplierName`);
+    await runSQL("products.imageUrl", `ALTER TABLE products ADD COLUMN imageUrl VARCHAR(500) AFTER status`);
+
+    console.log("\n[EnsureTables] ✅ All 27 tables verified and all columns ensured!");
   } finally {
     await connection.end();
   }
