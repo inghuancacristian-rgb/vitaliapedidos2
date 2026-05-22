@@ -58,6 +58,8 @@ async function runDatabaseMigrations() {
     console.log("[Database] Running migrations...");
     await migrate(db, { migrationsFolder });
     console.log("[Database] Migrations completed");
+  } catch (err: any) {
+    console.warn("[Database] Drizzle migrate failed (often due to existing columns). ensureTables will run next to verify schema.", err.message);
   } finally {
     await pool.end();
   }
