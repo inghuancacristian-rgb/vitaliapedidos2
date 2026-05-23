@@ -614,6 +614,7 @@ export async function ensureTables() {
     await runSQL("customers.age", `ALTER TABLE customers ADD COLUMN age INT AFTER longitude`);
     await runSQL("customers.gender", `ALTER TABLE customers ADD COLUMN gender VARCHAR(30) AFTER age`);
     await runSQL("customers.socioeconomicLevel", `ALTER TABLE customers ADD COLUMN socioeconomicLevel VARCHAR(50) AFTER gender`);
+    await runSQL("customers.sourceChannel", `ALTER TABLE customers ADD COLUMN sourceChannel enum('facebook','tiktok','marketplace','referral','other') DEFAULT 'other' AFTER socioeconomicLevel`);
     await runSQL("customers.customerType", `ALTER TABLE customers ADD COLUMN customerType enum('retail','wholesale') NOT NULL DEFAULT 'retail' AFTER sourceChannel`);
     await runSQL("customers.interestHealthFitness", `ALTER TABLE customers ADD COLUMN interestHealthFitness INT NOT NULL DEFAULT 0 AFTER customerType`);
     await runSQL("customers.interestNaturalFood", `ALTER TABLE customers ADD COLUMN interestNaturalFood INT NOT NULL DEFAULT 0 AFTER interestHealthFitness`);
