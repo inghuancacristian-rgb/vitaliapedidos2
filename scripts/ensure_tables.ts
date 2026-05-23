@@ -624,6 +624,7 @@ export async function ensureTables() {
 
     // products production columns
     await runSQL("products.category enum upgrade", `ALTER TABLE products MODIFY COLUMN category enum('finished_product','raw_material','supplies','insumo') NOT NULL DEFAULT 'finished_product'`);
+    await runSQL("products.salePrice", `ALTER TABLE products ADD COLUMN salePrice INT NOT NULL DEFAULT 0 AFTER price`);
     await runSQL("products.wholesalePrice", `ALTER TABLE products ADD COLUMN wholesalePrice INT NOT NULL DEFAULT 0 AFTER salePrice`);
     await runSQL("products.discountPrice", `ALTER TABLE products ADD COLUMN discountPrice INT NOT NULL DEFAULT 0 AFTER wholesalePrice`);
     await runSQL("products.wholesaleDiscountType", `ALTER TABLE products ADD COLUMN wholesaleDiscountType enum('percentage','fixed') DEFAULT 'percentage' AFTER discountPrice`);
