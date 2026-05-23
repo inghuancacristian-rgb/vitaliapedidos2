@@ -160,7 +160,7 @@ export const inventoryRouter = router({
       z.object({
         code: z.string().min(1, "El código no puede estar vacío"),
         name: z.string(),
-        category: z.enum(["finished_product", "raw_material", "supplies"]),
+        category: z.enum(["finished_product", "raw_material", "supplies", "insumo"]),
         price: z.number(),
         salePrice: z.number().optional(),
         wholesalePrice: z.number().optional(),
@@ -232,7 +232,7 @@ export const inventoryRouter = router({
         id: z.number(),
         code: z.string().optional(),
         name: z.string().optional(),
-        category: z.enum(["finished_product", "raw_material", "supplies"]).optional(),
+        category: z.enum(["finished_product", "raw_material", "supplies", "insumo"]).optional(),
         price: z.number().optional(),
         salePrice: z.number().optional(),
         wholesalePrice: z.number().optional(),

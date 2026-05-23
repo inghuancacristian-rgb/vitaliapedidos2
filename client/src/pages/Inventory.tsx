@@ -376,7 +376,11 @@ export default function Inventory() {
     () => inventory?.filter((item: any) => item.product?.category === "supplies") || [],
     [inventory]
   );
-  const allRawItems = useMemo(() => [...rawMaterials, ...supplies], [rawMaterials, supplies]);
+  const insumos = useMemo(
+    () => inventory?.filter((item: any) => item.product?.category === "insumo") || [],
+    [inventory]
+  );
+  const allRawItems = useMemo(() => [...rawMaterials, ...supplies, ...insumos], [rawMaterials, supplies, insumos]);
 
   const lowStockFinished = useMemo(
     () => finishedProducts.filter((item: any) => item.isLowStock) || [],
@@ -930,7 +934,7 @@ export default function Inventory() {
 
 function PrintInventoryContent({ inventory }: { inventory: any[] }) {
   const finishedProducts = inventory.filter((item: any) => item.product?.category === "finished_product");
-  const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material" || item.product?.category === "supplies");
+  const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material" || item.product?.category === "supplies" || item.product?.category === "insumo");
   
   const calculateTotalCost = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.price || 0) / 100)), 0);
   const calculateTotalSale = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.salePrice || 0) / 100)), 0);

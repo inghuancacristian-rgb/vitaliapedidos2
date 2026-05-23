@@ -22,11 +22,15 @@ import { Edit2, X } from "lucide-react";
 
 interface EditProductDialogProps {
   product: any;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onProductUpdated?: () => void;
 }
 
-export function EditProductDialog({ product, onProductUpdated }: EditProductDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function EditProductDialog({ product, isOpen: externalIsOpen, onOpenChange: externalOnOpenChange, onProductUpdated }: EditProductDialogProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = externalOnOpenChange || setInternalIsOpen;
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
@@ -186,7 +190,7 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
       id: product.id,
       code: formData.code,
       name: formData.name,
-      category: formData.category as "finished_product" | "raw_material" | "supplies",
+      category: formData.category as "finished_product" | "raw_material" | "supplies" | "insumo",
       price: parseFloat(formData.price),
       salePrice: formData.salePrice ? parseFloat(formData.salePrice) : 0,
       wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : 0,
@@ -206,7 +210,7 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(v) => setIsOpen(v)}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Edit2 className="h-4 w-4" />
@@ -262,6 +266,7 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
                   <SelectItem value="finished_product">Producto Terminado</SelectItem>
                   <SelectItem value="raw_material">Materia Prima</SelectItem>
                   <SelectItem value="supplies">Suministro</SelectItem>
+                  <SelectItem value="insumo">Insumo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -357,129 +362,131 @@ export function EditProductDialog({ product, onProductUpdated }: EditProductDial
             </div>
           </div>
 
-          <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-4">
-            <div>
-              <Label className="text-base font-semibold text-slate-800">Datos tecnicos para produccion</Label>
-              <p className="text-xs text-muted-foreground mt-1">
-                Estos campos conectan compras, inventario y produccion con la misma ficha de insumo.
-              </p>
+          {(formData.category === "raw_material" || formData.category === "insumo") && (
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div>
+                <Label className="text-base font-semibold text-slate-800">Datos tecnicos para produccion</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Estos campos conectan compras, inventario y produccion con la misma ficha de insumo.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`unit-${product.id}`}>Unidad operativa</Label>
+                  <Select value={formData.unit} onValueChange={(value) => setFormData((prev) => ({ ...prev, unit: value }))}>
+                    <SelectTrigger id={`unit-${product.id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unidad">Unidad</SelectItem>
+                      <SelectItem value="L">Litro</SelectItem>
+                      <SelectItem value="ml">Mililitro</SelectItem>
+                      <SelectItem value="kg">Kilogramo</SelectItem>
+                      <SelectItem value="g">Gramo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`presentationQuantity-${product.id}`}>Cantidad por presentacion</Label>
+                  <Input
+                    id={`presentationQuantity-${product.id}`}
+                    type="number"
+                    min="1"
+                    value={formData.presentationQuantity}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, presentationQuantity: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`presentationUnit-${product.id}`}>Unidad de compra</Label>
+                  <Input
+                    id={`presentationUnit-${product.id}`}
+                    placeholder="Ej: bolsa, botella, paquete"
+                    value={formData.presentationUnit}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, presentationUnit: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`productionRole-${product.id}`}>Rol en produccion</Label>
+                  <Select value={formData.productionRole} onValueChange={(value) => setFormData((prev) => ({ ...prev, productionRole: value }))}>
+                    <SelectTrigger id={`productionRole-${product.id}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin rol productivo</SelectItem>
+                      <SelectItem value="milk">Leche / base liquida</SelectItem>
+                      <SelectItem value="sugar">Azucar / endulzante</SelectItem>
+                      <SelectItem value="culture">Nodulo / cultivo</SelectItem>
+                      <SelectItem value="bottle">Envase / botella</SelectItem>
+                      <SelectItem value="cap">Tapa</SelectItem>
+                      <SelectItem value="label">Etiqueta</SelectItem>
+                      <SelectItem value="packaging">Empaque</SelectItem>
+                      <SelectItem value="finished_good">Producto terminado</SelectItem>
+                      <SelectItem value="other">Otro insumo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`presentationVolumeMl-${product.id}`}>Volumen por presentacion (ml)</Label>
+                  <Input
+                    id={`presentationVolumeMl-${product.id}`}
+                    type="number"
+                    placeholder="Ej: 800"
+                    value={formData.presentationVolumeMl}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, presentationVolumeMl: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor={`presentationWeightGr-${product.id}`}>Peso por presentacion (g)</Label>
+                  <Input
+                    id={`presentationWeightGr-${product.id}`}
+                    type="number"
+                    placeholder="Ej: 1000"
+                    value={formData.presentationWeightGr}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, presentationWeightGr: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`storageLocation-${product.id}`}>Ubicacion / almacenamiento</Label>
+                  <Input
+                    id={`storageLocation-${product.id}`}
+                    placeholder="Ej: Camara fria, estante A"
+                    value={formData.storageLocation}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, storageLocation: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`supplierName-${product.id}`}>Proveedor habitual</Label>
+                  <Input
+                    id={`supplierName-${product.id}`}
+                    placeholder="Ej: Proveedor leche"
+                    value={formData.supplierName}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, supplierName: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`productionNotes-${product.id}`}>Notas de uso en produccion</Label>
+                <Input
+                  id={`productionNotes-${product.id}`}
+                  placeholder="Ej: usar primero lotes abiertos, mantener refrigerado"
+                  value={formData.productionNotes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, productionNotes: e.target.value }))}
+                />
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`unit-${product.id}`}>Unidad operativa</Label>
-                <Select value={formData.unit} onValueChange={(value) => setFormData((prev) => ({ ...prev, unit: value }))}>
-                  <SelectTrigger id={`unit-${product.id}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unidad">Unidad</SelectItem>
-                    <SelectItem value="L">Litro</SelectItem>
-                    <SelectItem value="ml">Mililitro</SelectItem>
-                    <SelectItem value="kg">Kilogramo</SelectItem>
-                    <SelectItem value="g">Gramo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`presentationQuantity-${product.id}`}>Cantidad por presentacion</Label>
-                <Input
-                  id={`presentationQuantity-${product.id}`}
-                  type="number"
-                  min="1"
-                  value={formData.presentationQuantity}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationQuantity: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`presentationUnit-${product.id}`}>Unidad de compra</Label>
-                <Input
-                  id={`presentationUnit-${product.id}`}
-                  placeholder="Ej: bolsa, botella, paquete"
-                  value={formData.presentationUnit}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationUnit: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`productionRole-${product.id}`}>Rol en produccion</Label>
-                <Select value={formData.productionRole} onValueChange={(value) => setFormData((prev) => ({ ...prev, productionRole: value }))}>
-                  <SelectTrigger id={`productionRole-${product.id}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sin rol productivo</SelectItem>
-                    <SelectItem value="milk">Leche / base liquida</SelectItem>
-                    <SelectItem value="sugar">Azucar / endulzante</SelectItem>
-                    <SelectItem value="culture">Nodulo / cultivo</SelectItem>
-                    <SelectItem value="bottle">Envase / botella</SelectItem>
-                    <SelectItem value="cap">Tapa</SelectItem>
-                    <SelectItem value="label">Etiqueta</SelectItem>
-                    <SelectItem value="packaging">Empaque</SelectItem>
-                    <SelectItem value="finished_good">Producto terminado</SelectItem>
-                    <SelectItem value="other">Otro insumo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`presentationVolumeMl-${product.id}`}>Volumen por presentacion (ml)</Label>
-                <Input
-                  id={`presentationVolumeMl-${product.id}`}
-                  type="number"
-                  placeholder="Ej: 800"
-                  value={formData.presentationVolumeMl}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationVolumeMl: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor={`presentationWeightGr-${product.id}`}>Peso por presentacion (g)</Label>
-                <Input
-                  id={`presentationWeightGr-${product.id}`}
-                  type="number"
-                  placeholder="Ej: 1000"
-                  value={formData.presentationWeightGr}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, presentationWeightGr: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`storageLocation-${product.id}`}>Ubicacion / almacenamiento</Label>
-                <Input
-                  id={`storageLocation-${product.id}`}
-                  placeholder="Ej: Camara fria, estante A"
-                  value={formData.storageLocation}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, storageLocation: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`supplierName-${product.id}`}>Proveedor habitual</Label>
-                <Input
-                  id={`supplierName-${product.id}`}
-                  placeholder="Ej: Proveedor leche"
-                  value={formData.supplierName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, supplierName: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`productionNotes-${product.id}`}>Notas de uso en produccion</Label>
-              <Input
-                id={`productionNotes-${product.id}`}
-                placeholder="Ej: usar primero lotes abiertos, mantener refrigerado"
-                value={formData.productionNotes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, productionNotes: e.target.value }))}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
             <Label className="text-base font-semibold">Imagen del Producto (Opcional)</Label>

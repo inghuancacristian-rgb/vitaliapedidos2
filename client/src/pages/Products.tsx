@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,16 +6,61 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Package, Search, Plus, Filter, Tag, ShoppingCart } from "lucide-react";
+import { Package, Search, Plus, Filter, Tag, ShoppingCart, Edit2 } from "lucide-react";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { formatCurrency } from "@/lib/currency";
 
 export default function Products() {
   const { user } = useAuth();
-  const { data: products, isLoading, refetch } = trpc.inventory.listProducts.useQuery();
+  const { data: products, isLoading, refetch } = trpc.inventory.listProducts.useQuery(undefined, {
+    staleTime: 60_000, // 1 minuto — los productos no cambian constantemente
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    return products.filter((p: any) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           p.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, categoryFilter]);
+
+  const categories = [
+    { id: "all", label: "Todos" },
+    { id: "finished_product", label: "Prod. Terminado" },
+    { id: "raw_material", label: "Materia Prima" },
+    { id: "supplies", label: "Suministro" },
+    { id: "insumo", label: "Insumo" },
+  ];
+
+  const handleEditClick = useCallback((product: any) => {
+    setSelectedProduct(product);
+  }, []);
+
+  const handleEditClose = useCallback(() => {
+    setSelectedProduct(null);
+  }, []);
+
+  const handleProductUpdated = useCallback(() => {
+    setSelectedProduct(null);
+    refetch();
+  }, [refetch]);
+
+  const productCounts = useMemo(() => {
+    if (!products) return { total: 0, finished: 0, raw: 0, supplies: 0, insumo: 0 };
+    return {
+      total: products.length,
+      finished: products.filter((p: any) => p.category === 'finished_product').length,
+      raw: products.filter((p: any) => p.category === 'raw_material').length,
+      supplies: products.filter((p: any) => p.category === 'supplies').length,
+      insumo: products.filter((p: any) => p.category === 'insumo').length,
+    };
+  }, [products]);
 
   if (isLoading) {
     return (
@@ -24,20 +69,6 @@ export default function Products() {
       </div>
     );
   }
-
-  const filteredProducts = products?.filter((p: any) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  }) || [];
-
-  const categories = [
-    { id: "all", label: "Todos" },
-    { id: "finished_product", label: "Prod. Terminado" },
-    { id: "raw_material", label: "Materia Prima" },
-    { id: "supplies", label: "Insumos" },
-  ];
 
   return (
     <div className="min-h-full bg-background p-4 md:p-6 mb-20 md:mb-0">
@@ -90,6 +121,7 @@ export default function Products() {
                           src={product.imageUrl} 
                           alt={product.name} 
                           className="w-full h-full object-cover"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -99,7 +131,8 @@ export default function Products() {
                       <div className="absolute top-2 right-2">
                         <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
                           {product.category === 'finished_product' ? '📦 Terminado' : 
-                           product.category === 'raw_material' ? '🧪 Materia' : '🛠️ Insumo'}
+                           product.category === 'raw_material' ? '🧪 Materia' : 
+                           product.category === 'supplies' ? '🛠️ Suministro' : '⚙️ Insumo'}
                         </Badge>
                       </div>
                     </div>
@@ -129,7 +162,15 @@ export default function Products() {
                       </div>
                       <div className="pt-2">
                         {user?.role === "admin" && (
-                          <EditProductDialog product={product} onProductUpdated={() => refetch()} />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => handleEditClick(product)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                            Editar
+                          </Button>
                         )}
                       </div>
                     </CardContent>
@@ -154,21 +195,25 @@ export default function Products() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
                   <span className="text-sm text-muted-foreground">Total Productos</span>
-                  <span className="font-bold">{products?.length || 0}</span>
+                  <span className="font-bold">{productCounts.total}</span>
                 </div>
                 <div className="space-y-2 pt-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Distribución</p>
                   <div className="flex justify-between text-xs">
                     <span>Terminados</span>
-                    <span>{products?.filter((p: any) => p.category === 'finished_product').length || 0}</span>
+                    <span>{productCounts.finished}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span>Materia Prima</span>
-                    <span>{products?.filter((p: any) => p.category === 'raw_material').length || 0}</span>
+                    <span>{productCounts.raw}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span>Suministros</span>
+                    <span>{productCounts.supplies}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span>Insumos</span>
-                    <span>{products?.filter((p: any) => p.category === 'supplies').length || 0}</span>
+                    <span>{productCounts.insumo}</span>
                   </div>
                 </div>
               </CardContent>
@@ -190,6 +235,17 @@ export default function Products() {
           </div>
         </div>
       </div>
+
+      {/* Un solo diálogo de edición compartido */}
+      {selectedProduct && (
+        <EditProductDialog
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onOpenChange={(open) => { if (!open) handleEditClose(); }}
+          onProductUpdated={handleProductUpdated}
+        />
+      )}
     </div>
   );
 }
+

@@ -75,7 +75,7 @@ export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
   code: varchar("code", { length: 50 }).notNull().unique(), // Código personalizado del producto
   name: varchar("name", { length: 255 }).notNull(),
-  category: mysqlEnum("category", ["finished_product", "raw_material", "supplies"]).notNull().default("finished_product"), // Producto terminado, Materia prima, Suministro
+  category: mysqlEnum("category", ["finished_product", "raw_material", "supplies", "insumo"]).notNull().default("finished_product"), // Producto terminado, Materia prima, Suministro, Insumo
   price: int("price").notNull(), // Precio de Compra en centavos
   salePrice: int("salePrice").notNull().default(0), // Precio de Venta Unitario en centavos
   wholesalePrice: int("wholesalePrice").notNull().default(0), // Precio de Venta por Mayor en centavos
