@@ -610,6 +610,20 @@ export async function ensureTables() {
     await runSQL("purchaseItems.batchNumber", `ALTER TABLE purchaseItems ADD COLUMN batchNumber VARCHAR(50) AFTER price`);
     await runSQL("purchaseItems.expiryDate", `ALTER TABLE purchaseItems ADD COLUMN expiryDate VARCHAR(10) AFTER batchNumber`);
 
+    // orders columns
+    await runSQL("orders.sourceChannel", `ALTER TABLE orders ADD COLUMN sourceChannel enum('facebook','tiktok','marketplace','referral','other') DEFAULT 'other' AFTER notes`);
+    await runSQL("orders.cancelledBy", `ALTER TABLE orders ADD COLUMN cancelledBy enum('client','company','system') AFTER sourceChannel`);
+    await runSQL("orders.cancelReason", `ALTER TABLE orders ADD COLUMN cancelReason text AFTER cancelledBy`);
+    await runSQL("orders.rescheduleReason", `ALTER TABLE orders ADD COLUMN rescheduleReason text AFTER cancelReason`);
+    await runSQL("orders.deliveryDate", `ALTER TABLE orders ADD COLUMN deliveryDate varchar(10) AFTER rescheduleReason`);
+    await runSQL("orders.deliveryTime", `ALTER TABLE orders ADD COLUMN deliveryTime varchar(5) AFTER deliveryDate`);
+    await runSQL("orders.rescheduleRequested", `ALTER TABLE orders ADD COLUMN rescheduleRequested int DEFAULT 0 AFTER deliveryTime`);
+    await runSQL("orders.requestedDate", `ALTER TABLE orders ADD COLUMN requestedDate varchar(10) AFTER rescheduleRequested`);
+    await runSQL("orders.requestedTime", `ALTER TABLE orders ADD COLUMN requestedTime varchar(5) AFTER requestedDate`);
+    await runSQL("orders.cancellationRequested", `ALTER TABLE orders ADD COLUMN cancellationRequested int DEFAULT 0 AFTER requestedTime`);
+    await runSQL("orders.cancellationReason", `ALTER TABLE orders ADD COLUMN cancellationReason text AFTER cancellationRequested`);
+    await runSQL("orders.deliveredAt", `ALTER TABLE orders ADD COLUMN deliveredAt timestamp NULL AFTER updatedAt`);
+
     // customers profile columns
     await runSQL("customers.age", `ALTER TABLE customers ADD COLUMN age INT AFTER longitude`);
     await runSQL("customers.gender", `ALTER TABLE customers ADD COLUMN gender VARCHAR(30) AFTER age`);
