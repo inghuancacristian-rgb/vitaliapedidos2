@@ -100,7 +100,7 @@ export async function ensureTables() {
         id int AUTO_INCREMENT NOT NULL,
         code varchar(50) NOT NULL,
         name varchar(255) NOT NULL,
-        category enum('finished_product','raw_material','supplies') NOT NULL DEFAULT 'finished_product',
+        category enum('finished_product','raw_material','supplies','insumo') NOT NULL DEFAULT 'finished_product',
         price int NOT NULL,
         salePrice int NOT NULL DEFAULT 0,
         wholesalePrice int NOT NULL DEFAULT 0,
@@ -623,6 +623,7 @@ export async function ensureTables() {
     await runSQL("customers.lifestyleBiohacking", `ALTER TABLE customers ADD COLUMN lifestyleBiohacking INT NOT NULL DEFAULT 0 AFTER lifestyleVegan`);
 
     // products production columns
+    await runSQL("products.category enum upgrade", `ALTER TABLE products MODIFY COLUMN category enum('finished_product','raw_material','supplies','insumo') NOT NULL DEFAULT 'finished_product'`);
     await runSQL("products.wholesalePrice", `ALTER TABLE products ADD COLUMN wholesalePrice INT NOT NULL DEFAULT 0 AFTER salePrice`);
     await runSQL("products.discountPrice", `ALTER TABLE products ADD COLUMN discountPrice INT NOT NULL DEFAULT 0 AFTER wholesalePrice`);
     await runSQL("products.wholesaleDiscountType", `ALTER TABLE products ADD COLUMN wholesaleDiscountType enum('percentage','fixed') DEFAULT 'percentage' AFTER discountPrice`);
