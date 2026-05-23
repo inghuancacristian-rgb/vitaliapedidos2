@@ -538,35 +538,53 @@ export async function createProduct(data: InsertProduct) {
   }
 
   try {
-    // Limpiar valores undefined para evitar desajuste de parametros SQL
-    const cleanData: Record<string, any> = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined) {
-        cleanData[key] = value;
-      }
-    }
-    console.log("[DB] Creating product with data:", JSON.stringify(cleanData, null, 2));
+    // Usar SQL raw para evitar problemas con columnas DEFAULT en MySQL
+    // Drizzle genera DEFAULT para columnas no proporcionadas, pero la BD real puede no tenerlas
+    const pool = _pool!;
+    const sql = `
+      INSERT INTO products (code, name, category, price, salePrice, wholesalePrice, discountPrice,
+        wholesaleDiscountType, wholesaleDiscountValue, unit, presentationQuantity, presentationUnit,
+        presentationVolumeMl, presentationWeightGr, productionRole, storageLocation, supplierName,
+        productionNotes, status, imageUrl)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+      data.code,
+      data.name,
+      data.category || "finished_product",
+      data.price,
+      data.salePrice ?? 0,
+      data.wholesalePrice ?? 0,
+      data.discountPrice ?? 0,
+      data.wholesaleDiscountType || "percentage",
+      data.wholesaleDiscountValue ?? 0,
+      data.unit || "unidad",
+      data.presentationQuantity ?? 1,
+      data.presentationUnit || "unidad",
+      data.presentationVolumeMl ?? 0,
+      data.presentationWeightGr ?? 0,
+      data.productionRole || "none",
+      data.storageLocation || null,
+      data.supplierName || null,
+      data.productionNotes || null,
+      data.status || "active",
+      data.imageUrl || null,
+    ];
 
-    // Crear el producto
-    const result = await db.insert(products).values(cleanData as typeof data);
+    console.log("[DB] Creating product with raw SQL, params:", JSON.stringify(params));
+    const [result] = await pool.execute(sql, params) as any;
 
-    // Obtener el ID del producto creado
-    let productId = getInsertId(result);
-
-    if (!productId && data.id) {
-       productId = data.id;
-    }
+    const productId = result?.insertId;
 
     // Crear automáticamente un registro de inventario con stock inicial de 0
     if (productId) {
-      await db.insert(inventory).values({
-        productId,
-        quantity: 0,
-        minStock: 5,
-      });
+      await pool.execute(
+        `INSERT INTO inventory (productId, quantity, minStock) VALUES (?, 0, 5)`,
+        [productId]
+      );
     }
 
-    return result;
+    return { insertId: productId };
   } catch (error: any) {
     console.error("[DB] Error creating product:", error);
     throw error;
