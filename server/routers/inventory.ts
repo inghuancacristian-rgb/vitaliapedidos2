@@ -224,7 +224,7 @@ export const inventoryRouter = router({
         });
       }
 
-      return { success: true };
+      return { success: true, productId };
     }),
 
   // Actualizar un producto

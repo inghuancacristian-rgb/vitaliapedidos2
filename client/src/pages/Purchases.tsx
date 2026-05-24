@@ -33,6 +33,7 @@ function getLocalDateInputValue() {
 export default function Purchases() {
   const [open, setOpen] = useState(false);
   const [supplierId, setSupplierId] = useState<number>(0);
+  const [openNewProduct, setOpenNewProduct] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -310,12 +311,12 @@ export default function Purchases() {
                           <Package className={`h-5 w-5 ${currentItem.productId === 0 ? 'text-blue-300' : 'text-blue-500'}`} />
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 flex gap-2">
                         <Select 
                           value={currentItem.productId === 0 ? "" : currentItem.productId.toString()} 
                           onValueChange={(val) => setCurrentItem({...currentItem, productId: parseInt(val), price: 0})}
                         >
-                          <SelectTrigger className={`bg-white truncate ${currentItem.productId === 0 ? 'text-slate-500' : 'font-semibold'}`}>
+                          <SelectTrigger className={`bg-white truncate flex-1 ${currentItem.productId === 0 ? 'text-slate-500' : 'font-semibold'}`}>
                             <SelectValue placeholder="Buscar o seleccionar..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -324,6 +325,16 @@ export default function Purchases() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="shrink-0 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100" 
+                          onClick={() => setOpenNewProduct(true)}
+                          title="Nuevo Ítem de Inventario"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -615,6 +626,14 @@ export default function Purchases() {
         purchase={selectedPurchase}
         open={showEdit}
         onOpenChange={setShowEdit}
+      />
+      
+      <QuickCreateProductDialog
+        open={openNewProduct}
+        onOpenChange={setOpenNewProduct}
+        onSuccess={(newProduct) => {
+          setCurrentItem({...currentItem, productId: newProduct.id, price: newProduct.price / 100});
+        }}
       />
     </div>
   );
@@ -918,6 +937,230 @@ function EditPurchaseDialog({ purchase, open, onOpenChange }: any) {
             </Button>
           </form>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
+  const utils = trpc.useContext();
+  const [formData, setFormData] = useState({
+    name: "",
+    unit: "bolsa",
+    initialStock: 0,
+    minStock: 10,
+    volumeMl: 0,
+    weightGr: 0,
+    costPerUnit: 0,
+    paymentMethod: "cash",
+  });
+
+  const { data: openingStatus } = trpc.finance.hasActiveOpening.useQuery({ paymentMethod: formData.paymentMethod as any });
+
+  const createProductMutation = (trpc.inventory as any).createProduct.useMutation();
+  const createPurchaseMutation = (trpc.purchases as any).create.useMutation();
+
+  const isVolume = formData.unit === "bolsa" || formData.unit === "litro" || formData.unit === "botella";
+  
+  const costPerUnitCalc = formData.volumeMl > 0 
+    ? (formData.costPerUnit / formData.volumeMl) * 1000 
+    : formData.weightGr > 0 
+      ? (formData.costPerUnit / formData.weightGr) * 1000 
+      : 0;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name) {
+      toast.error("El nombre es requerido");
+      return;
+    }
+    
+    if (formData.initialStock > 0 && !openingStatus?.hasActive) {
+      toast.error("La caja seleccionada está cerrada. No se puede generar movimiento de efectivo.");
+      return;
+    }
+
+    try {
+      // 1. Create Product
+      const prodRes = await createProductMutation.mutateAsync({
+        code: `INS-${Math.floor(Math.random() * 10000)}`,
+        name: formData.name,
+        category: "raw_material",
+        price: formData.costPerUnit,
+        unit: formData.unit,
+        presentationQuantity: 1,
+        presentationUnit: formData.unit,
+        presentationVolumeMl: formData.volumeMl,
+        presentationWeightGr: formData.weightGr,
+        productionRole: formData.unit === 'botella' ? 'bottle' : 'none'
+      });
+
+      if (prodRes.success && prodRes.productId) {
+        // 2. Register Initial Stock as Purchase if > 0
+        if (formData.initialStock > 0) {
+          await createPurchaseMutation.mutateAsync({
+            purchaseNumber: `INI-${Math.floor(Math.random() * 10000)}`,
+            status: "received",
+            isCredit: 0,
+            paymentMethod: formData.paymentMethod,
+            totalAmount: formData.costPerUnit * formData.initialStock * 100, // in cents
+            supplierId: undefined,
+            items: [{
+              productId: prodRes.productId,
+              quantity: formData.initialStock,
+              price: formData.costPerUnit * 100, // in cents
+            }]
+          });
+        }
+        
+        toast.success("Ítem de inventario creado exitosamente");
+        utils.inventory.listProducts.invalidate();
+        (utils as any).inventory.listInventory.invalidate();
+        utils.purchases.list.invalidate();
+        utils.finance.getTransactions.invalidate();
+        
+        onSuccess({ id: prodRes.productId, price: formData.costPerUnit * 100 });
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al crear producto");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md bg-white border-0 shadow-2xl p-0 overflow-hidden">
+        <div className="bg-slate-50 border-b px-6 py-4 flex items-center gap-3">
+          <div className="h-10 w-10 bg-blue-100 rounded-xl flex items-center justify-center">
+            <Package className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <DialogTitle className="text-xl font-bold text-slate-800">Nuevo Ítem de Inventario</DialogTitle>
+            <p className="text-xs text-slate-500">Materia prima o insumo con movimiento de caja</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-600 uppercase">Nombre del Ítem *</Label>
+              <Input 
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                placeholder="Ej. Leche natural, Azúcar blanca..."
+                className="font-medium"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-600 uppercase">Unidad *</Label>
+                <Select value={formData.unit} onValueChange={(v) => setFormData({...formData, unit: v})}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bolsa">Bolsa</SelectItem>
+                    <SelectItem value="litro">Litro</SelectItem>
+                    <SelectItem value="kg">Kilogramo</SelectItem>
+                    <SelectItem value="botella">Botella</SelectItem>
+                    <SelectItem value="unidad">Unidad</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-600 uppercase">Stock Inicial *</Label>
+                <Input 
+                  type="number" min="0" 
+                  value={formData.initialStock}
+                  onChange={(e) => setFormData({...formData, initialStock: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-600 uppercase">Stock Mínimo (Alerta) *</Label>
+              <Input 
+                type="number" min="0" 
+                value={formData.minStock}
+                onChange={(e) => setFormData({...formData, minStock: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+
+            <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-[#38bdf8]"></div>
+              <h4 className="text-[#0284c7] text-xs font-bold flex items-center gap-2 mb-4 uppercase">
+                <span className="text-sm">📏</span> CONTROL DE MASA — PRESENTACIÓN
+              </h4>
+              
+              <p className="text-[10px] text-slate-500 mb-3 leading-relaxed">
+                Ingresa el volumen/peso de cada {formData.unit} para que el sistema calcule automáticamente cuántas unidades necesitas por lote y el sobrante.
+              </p>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-slate-600 uppercase">{isVolume ? 'Volumen por ' + formData.unit + ' (ML) *' : 'Peso por ' + formData.unit + ' (GR) *'}</Label>
+                  <Input 
+                    type="number" min="0" 
+                    placeholder={isVolume ? "Ej. 800 para bolsas de 800ml" : "Ej. 1000 para bolsa de 1kg"}
+                    value={isVolume ? (formData.volumeMl || '') : (formData.weightGr || '')}
+                    onChange={(e) => setFormData({...formData, [isVolume ? 'volumeMl' : 'weightGr']: parseFloat(e.target.value) || 0})}
+                    className="bg-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 items-center">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-slate-600 uppercase">Costo por {formData.unit} (Bs) *</Label>
+                    <Input 
+                      type="number" step="0.01" min="0" 
+                      value={formData.costPerUnit || ''}
+                      onChange={(e) => setFormData({...formData, costPerUnit: parseFloat(e.target.value) || 0})}
+                      className="bg-white font-bold"
+                    />
+                  </div>
+                  <div className="flex justify-center text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3l4 4-4 4"/><path d="M3 7h18"/><path d="M7 21l-4-4 4-4"/><path d="M21 17H3"/></svg>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold text-slate-600 uppercase">Costo por {isVolume ? 'Litro' : 'Kilo'} (Bs)</Label>
+                    <div className="h-10 bg-white border rounded-md flex items-center px-3 font-bold text-slate-500">
+                      {formatCurrency(costPerUnitCalc * 100)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {formData.initialStock > 0 && (
+              <div className="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <Label className="text-[10px] font-bold text-slate-600 uppercase">Movimiento de Caja (Pago por Stock Inicial)</Label>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-slate-500">Total a debitar:</span>
+                  <span className="font-bold text-red-600">{formatCurrency(formData.costPerUnit * formData.initialStock * 100)}</span>
+                </div>
+                <Select value={formData.paymentMethod} onValueChange={(v) => setFormData({...formData, paymentMethod: v})}>
+                  <SelectTrigger className="bg-white"><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Efectivo</SelectItem>
+                    <SelectItem value="qr">Transferencia QR</SelectItem>
+                    <SelectItem value="transfer">Cuenta Bancaria</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!openingStatus?.hasActive && (
+                  <p className="text-[10px] text-red-500 font-bold mt-1">⚠️ La caja seleccionada está cerrada</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1 bg-[#38bdf8] hover:bg-[#0284c7] text-white font-bold" disabled={createProductMutation.isPending || createPurchaseMutation.isPending}>
+              {createProductMutation.isPending ? "Procesando..." : "+ Registrar en Inventario"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
