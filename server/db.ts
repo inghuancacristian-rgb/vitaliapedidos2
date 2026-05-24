@@ -1535,6 +1535,17 @@ export async function createPurchase(purchaseData: any, items: any[], userId?: n
             lastUpdated: new Date()
           });
         }
+
+        // Crear registro en inventoryMovements
+        await tx.insert(inventoryMovements).values({
+          productId: item.productId,
+          type: "entry",
+          quantity: Number(item.quantity),
+          reason: `Compra ${purchaseToInsert.purchaseNumber}`,
+          notes: item.batchNumber ? `Lote/Marca: ${item.batchNumber}` : "",
+          batchNumber: item.batchNumber || null,
+          userId: userId || null,
+        });
       }
     }
 

@@ -330,14 +330,14 @@ export default function Purchases() {
 
                   {/* Info del producto seleccionado */}
                   {selectedProduct && (
-                    <div className="md:col-span-2 grid grid-cols-3 gap-2">
+                    <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
                       <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
                         <p className="text-[9px] font-bold uppercase text-blue-500 tracking-wide">Stock Disponible</p>
                         <p className="text-lg font-black text-blue-700">{selectedProduct.stock ?? selectedProduct.quantity ?? 0}</p>
                         <p className="text-[9px] text-blue-400">{selectedProduct.unit || 'unidades'}</p>
                       </div>
                       <div className="bg-green-50 border border-green-100 rounded-lg p-2 text-center">
-                        <p className="text-[9px] font-bold uppercase text-green-500 tracking-wide">Precio Venta</p>
+                        <p className="text-[9px] font-bold uppercase text-green-500 tracking-wide">Precio Venta Ref.</p>
                         <p className="text-lg font-black text-green-700">{formatCurrency((selectedProduct.salePrice ?? selectedProduct.price ?? 0))}</p>
                         <p className="text-[9px] text-green-400">por unidad</p>
                       </div>
@@ -346,6 +346,47 @@ export default function Purchases() {
                         <p className="text-lg font-black text-amber-700">{formatCurrency((selectedProduct.stock ?? selectedProduct.quantity ?? 0) * (selectedProduct.salePrice ?? selectedProduct.price ?? 0))}</p>
                         <p className="text-[9px] text-amber-400">valor total</p>
                       </div>
+
+                      {/* Control de Masa Visual */}
+                      {(selectedProduct.presentationVolumeMl > 0 || selectedProduct.presentationWeightGr > 0 || selectedProduct.productionRole === 'milk' || selectedProduct.productionRole === 'sugar') && (
+                        <div className="md:col-span-3 bg-[#e8f6fc] border border-[#bde4f8] rounded-xl p-4 mt-2">
+                          <h4 className="text-[#3b82f6] text-xs font-bold flex items-center gap-2 mb-3 uppercase">
+                            <span className="text-lg">📏</span> CONTROL DE MASA — PRESENTACIÓN DEL INSUMO
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase">Presentación</p>
+                              <p className="font-semibold text-slate-700">{selectedProduct.presentationQuantity || 1} {selectedProduct.presentationUnit || selectedProduct.unit}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase">
+                                {selectedProduct.presentationVolumeMl > 0 ? "Volumen (ML)" : "Peso (GR)"}
+                              </p>
+                              <p className="font-semibold text-slate-700">
+                                {selectedProduct.presentationVolumeMl > 0 
+                                  ? selectedProduct.presentationVolumeMl 
+                                  : selectedProduct.presentationWeightGr}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase">Volumen/Peso Total Ingreso</p>
+                              <p className="font-black text-blue-700">
+                                {currentItem.quantity * (selectedProduct.presentationVolumeMl || selectedProduct.presentationWeightGr || 0)} {selectedProduct.presentationVolumeMl ? 'ML' : 'GR'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-500 uppercase">
+                                Costo por {selectedProduct.presentationVolumeMl ? 'Litro' : 'Kilo'}
+                              </p>
+                              <p className="font-black text-green-700">
+                                {currentItem.price > 0 && (selectedProduct.presentationVolumeMl > 0 || selectedProduct.presentationWeightGr > 0)
+                                  ? formatCurrency((currentItem.price / (selectedProduct.presentationVolumeMl || selectedProduct.presentationWeightGr)) * 1000)
+                                  : "Bs 0.00"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="space-y-1">
