@@ -2120,6 +2120,25 @@ export async function getCashOpeningByUserIdAndDateMethod(userId: number, openin
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getActiveCashOpeningByUserIdAndMethod(userId: number, paymentMethod: string) {
+  const db = await getDb();
+  if (!db) {
+    return MOCK_CASH_OPENINGS.find((opening) => 
+      opening.responsibleUserId === userId && 
+      (opening.paymentMethod === paymentMethod || (!opening.paymentMethod && paymentMethod === "cash")) &&
+      opening.status === "open"
+    );
+  }
+
+  const result = await db
+    .select()
+    .from(cashOpenings)
+    .where(sql`${cashOpenings.responsibleUserId} = ${userId} AND (${cashOpenings.paymentMethod} = ${paymentMethod} OR (${cashOpenings.paymentMethod} IS NULL AND ${paymentMethod} = 'cash')) AND ${cashOpenings.status} = 'open'`)
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function createCashOpening(data: InsertCashOpening) {
   const db = await getDb();
   if (!db) {

@@ -12,6 +12,7 @@ import {
   createDeliveryExpense,
   getAllCashOpenings,
   getCashOpeningByUserIdAndDateMethod,
+  getActiveCashOpeningByUserIdAndMethod,
   createCashOpening,
   getAllUsers,
   getPendingOrdersTotal,
@@ -342,16 +343,13 @@ export const financeRouter = router({
     const userId = ctx.user?.id;
     if (!userId) return { hasActive: false };
     
-    const today = getLocalDateKey(new Date());
-    if (!today) return { hasActive: false };
-    
     const method = input?.paymentMethod || "cash";
-    let activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, method);
+    let activeOpening = await getActiveCashOpeningByUserIdAndMethod(userId, method);
     
     // Fallback de compatibilidad: Si pidió QR o Transferencia y no está, verificamos si la de Efectivo está abierta.
     // Esto pasa porque antes solo se abría una caja global (efectivo).
     if (!activeOpening && method !== "cash") {
-      activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, "cash");
+      activeOpening = await getActiveCashOpeningByUserIdAndMethod(userId, "cash");
     }
 
     return { 
