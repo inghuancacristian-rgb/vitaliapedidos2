@@ -21,6 +21,7 @@ export function Production() {
           quantity: item.quantity || 0,
           minStock: item.minStock || 0,
           unit: item.product?.unit || "unidad",
+          presentationVolumeMl: item.product?.presentationVolumeMl || 1000,
           costPerUnit: (item.product?.price || 0) / 100,
           category
         };
