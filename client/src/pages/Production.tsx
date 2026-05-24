@@ -1,19 +1,21 @@
-import { ExternalLink, FlaskConical, Loader2 } from "lucide-react";
+import { ExternalLink, FlaskConical, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 
 export function Production() {
   const [syncDone, setSyncDone] = useState(false);
-  const { data: inventoryData, isLoading } = trpc.inventory.listInventory.useQuery();
+  const [syncKey, setSyncKey] = useState(Date.now());
+  const { data: inventoryData, isLoading, refetch } = trpc.inventory.listInventory.useQuery();
 
   useEffect(() => {
     if (inventoryData) {
       const kefirInventory = inventoryData.map((item: any) => {
         let category = "materia";
-        if (item.product?.category === "finished_product") category = "producto";
+        if (item.product?.productionRole === "bottle" || item.product?.category === "envase") category = "envase";
+        else if (item.product?.category === "finished_product") category = "producto";
         else if (item.product?.category === "supplies" || item.product?.category === "insumo") category = "insumo";
         else if (item.product?.category === "raw_material") category = "materia";
-        else if (item.product?.category === "envase") category = "envase"; // Just in case
         
         return {
           id: item.productId,
@@ -31,6 +33,12 @@ export function Production() {
     }
   }, [inventoryData]);
 
+  const handleSync = async () => {
+    setSyncDone(false);
+    await refetch();
+    setSyncKey(Date.now());
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
       <div className="border-b bg-white px-4 py-3 sm:px-6">
@@ -45,15 +53,25 @@ export function Production() {
             </div>
           </div>
 
-          <a
-            href="/kefir-control/index.html"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Abrir en pantalla completa
-          </a>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSync}
+              variant="outline"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar Datos
+            </Button>
+            <a
+              href="/kefir-control/index.html"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Abrir en pantalla completa
+            </a>
+          </div>
         </div>
       </div>
 
@@ -64,6 +82,7 @@ export function Production() {
         </div>
       ) : (
         <iframe
+          key={syncKey}
           title="KefirControl"
           src="/kefir-control/index.html"
           className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"

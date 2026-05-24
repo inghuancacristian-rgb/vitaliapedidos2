@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { exportInventoryToPDF, exportInventoryToExcel } from "@/lib/inventory-export";
 
-type InventoryTab = "finished" | "raw";
+type InventoryTab = "all" | "finished" | "raw";
 
 function formatExpiryDate(value?: string | Date | null) {
   if (!value) return "Sin vencimiento";
@@ -303,7 +303,7 @@ export default function Inventory() {
   const isMobile = useIsMobile();
   const utils = trpc.useContext();
   const { data: inventory, isLoading, refetch } = trpc.inventory.listInventory.useQuery();
-  const [activeTab, setActiveTab] = useState<InventoryTab>("finished");
+  const [activeTab, setActiveTab] = useState<InventoryTab>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [quantity, setQuantity] = useState("");
@@ -389,7 +389,7 @@ export default function Inventory() {
   const lowStockRaw = useMemo(() => allRawItems.filter((item: any) => item.isLowStock) || [], [allRawItems]);
 
   const displayItems = useMemo(() => {
-    const baseItems = activeTab === "finished" ? finishedProducts : allRawItems;
+    const baseItems = activeTab === "all" ? [...finishedProducts, ...allRawItems] : activeTab === "finished" ? finishedProducts : allRawItems;
     let filtered = baseItems;
 
     // Filtro por término de búsqueda
@@ -442,10 +442,10 @@ export default function Inventory() {
     });
   }, [activeTab, finishedProducts, allRawItems, searchTerm, sortBy, filterStock, filterExpiry]);
 
-  const lowStockItems = activeTab === "finished" ? lowStockFinished : lowStockRaw;
+  const lowStockItems = activeTab === "all" ? [...lowStockFinished, ...lowStockRaw] : activeTab === "finished" ? lowStockFinished : lowStockRaw;
 
   const inventorySummary = useMemo(() => {
-    const currentItems = activeTab === "finished" ? finishedProducts : allRawItems;
+    const currentItems = activeTab === "all" ? [...finishedProducts, ...allRawItems] : activeTab === "finished" ? finishedProducts : allRawItems;
 
     const available = currentItems.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0);
     const reserved = currentItems.reduce((acc: number, item: any) => acc + (item.onOrder || 0), 0);
@@ -651,11 +651,14 @@ export default function Inventory() {
             <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/90 p-2">
               <div className="flex flex-col lg:flex-row items-center gap-4">
                 <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full lg:w-auto">
-                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 w-full lg:w-auto">
-                    <TabsTrigger value="finished" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 w-full lg:w-auto overflow-x-auto whitespace-nowrap flex">
+                    <TabsTrigger value="all" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                      Todos
+                    </TabsTrigger>
+                    <TabsTrigger value="finished" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
                       Terminados
                     </TabsTrigger>
-                    <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest">
+                    <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
                       Insumos
                     </TabsTrigger>
                   </TabsList>
@@ -691,11 +694,11 @@ export default function Inventory() {
                       <DropdownMenuContent align="end" className="rounded-2xl p-2 border-slate-100 shadow-xl">
                         <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exportar vista actual</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "finished" ? "Terminados" : "Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Insumos")}>
                           <div className="p-1.5 bg-red-50 text-red-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar PDF
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "finished" ? "Terminados" : "Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Insumos")}>
                           <div className="p-1.5 bg-green-50 text-green-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar Excel
                         </DropdownMenuItem>
