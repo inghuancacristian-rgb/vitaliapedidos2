@@ -1,10 +1,10 @@
 import { ExternalLink, FlaskConical, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
 
 export function Production() {
   const [syncDone, setSyncDone] = useState(false);
-  const { data: inventoryData, isLoading } = api.inventory.listInventory.useQuery();
+  const { data: inventoryData, isLoading } = trpc.inventory.listInventory.useQuery();
 
   useEffect(() => {
     if (inventoryData) {
