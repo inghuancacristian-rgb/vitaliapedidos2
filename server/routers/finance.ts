@@ -336,7 +336,6 @@ export const financeRouter = router({
     };
   }),
 
-  // Verificar si tiene una apertura de caja ACTIVA para hoy (para bloquear ventas)
   hasActiveOpening: protectedProcedure
     .input(z.object({ paymentMethod: z.enum(["cash", "qr", "transfer"]).optional() }).optional())
     .query(async ({ ctx, input }) => {
@@ -347,7 +346,14 @@ export const financeRouter = router({
     if (!today) return { hasActive: false };
     
     const method = input?.paymentMethod || "cash";
-    const activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, method);
+    let activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, method);
+    
+    // Fallback de compatibilidad: Si pidió QR o Transferencia y no está, verificamos si la de Efectivo está abierta.
+    // Esto pasa porque antes solo se abría una caja global (efectivo).
+    if (!activeOpening && method !== "cash") {
+      activeOpening = await getCashOpeningByUserIdAndDateMethod(userId, today, "cash");
+    }
+
     return { 
       hasActive: !!activeOpening && activeOpening.status === "open",
       activeOpening 
