@@ -21,17 +21,21 @@ import {
   Users,
   Wallet,
   Receipt,
+  Factory,
+  LineChart,
 } from "lucide-react";
 
 const adminModules = [
   { href: "/dashboard", title: "Dashboard", description: "Metricas y control general.", icon: LayoutGrid },
   { href: "/orders", title: "Pedidos", description: "Gestion y seguimiento del dia.", icon: ShoppingCart },
   { href: "/inventory", title: "Inventario", description: "Stock, vencimientos e historial.", icon: Package },
+  { href: "/production", title: "Producción", description: "Lotes, mermas y rendimiento.", icon: Factory },
   { href: "/suppliers", title: "Proveedores", description: "Contactos y abastecimiento.", icon: Users },
   { href: "/purchases", title: "Compras", description: "Registro de compras e ingresos.", icon: ShoppingCart },
   { href: "/sales", title: "Ventas", description: "Ventas rapidas y cobros.", icon: ShoppingBag },
   { href: "/customers", title: "Clientes", description: "Frecuencia, deuda y zonas.", icon: Users },
   { href: "/finance", title: "Finanzas", description: "Caja, ingresos y egresos.", icon: DollarSign },
+  { href: "/analysis", title: "Análisis", description: "Reportes, rentabilidad y KPIs.", icon: LineChart },
   { href: "/products", title: "Catalogo", description: "Precios, imagenes y categorias.", icon: LayoutGrid },
   { href: "/delivery-persons", title: "Repartidores", description: "Equipo, asignaciones y control.", icon: Truck },
 ];
