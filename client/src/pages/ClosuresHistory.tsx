@@ -29,7 +29,7 @@ type ClosureDetail = {
 };
 
 function formatBs(amount: number) {
-  return `Bs. ${(amount / 100).toLocaleString("es-BO", { minimumFractionDigits: 2 })}`;
+  return `Bs. ${(amount / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 }
 
 export default function ClosuresHistory() {

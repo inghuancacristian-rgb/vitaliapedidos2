@@ -4,8 +4,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 // Formatear dinero en Bs.
-export const formatBs = (cents: number) => {
-  return `Bs. ${(cents / 100).toLocaleString("es-BO", {
+export const formatBs = (cents: number | undefined | null) => {
+  if (cents === undefined || cents === null) return "Bs. 0.00";
+  return `Bs. ${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

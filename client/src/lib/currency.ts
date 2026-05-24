@@ -9,7 +9,7 @@
  */
 export function formatCurrency(amount: number): string {
   const bolivianos = amount / 100;
-  return `Bs. ${new Intl.NumberFormat("es-BO", {
+  return `Bs. ${new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(bolivianos)}`;
