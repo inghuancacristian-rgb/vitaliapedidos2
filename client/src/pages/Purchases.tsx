@@ -413,12 +413,15 @@ export default function Purchases() {
                   <div className="space-y-1">
                     <Label className="text-[10px] font-bold text-green-700 uppercase">P. Unitario Compra</Label>
                     <Input 
-                      type="number" 
-                      step="any"
+                      type="text" 
+                      inputMode="decimal"
                       onFocus={(e) => e.target.select()}
-                      value={currentItem.price} 
-                      onChange={(e) => setCurrentItem({...currentItem, price: parseFloat(e.target.value) || 0})}
-                      placeholder="0"
+                      value={currentItem.price === 0 ? "" : currentItem.price} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        setCurrentItem({...currentItem, price: val as any});
+                      }}
+                      placeholder="0.00"
                     />
                   </div>
                   <div className="md:col-span-2 space-y-1">
@@ -432,10 +435,14 @@ export default function Purchases() {
                   <div className="space-y-1 bg-slate-50 border rounded p-2 flex flex-col justify-center border-dashed">
                     <Label className="text-[8px] font-bold text-slate-500 uppercase tracking-tighter">TOTAL ITEM</Label>
                     <p className="text-sm font-black text-blue-700">
-                      {formatCurrency(Math.round(currentItem.quantity * currentItem.price * 100))}
+                      {formatCurrency(Math.round(currentItem.quantity * (Number(currentItem.price) || 0) * 100))}
                     </p>
                   </div>
-                  <Button type="button" variant="secondary" className="w-full font-bold h-10 border-2" onClick={addItem}>
+                  <Button type="button" variant="secondary" className="w-full font-bold h-10 border-2" onClick={() => {
+                    const priceNum = Number(currentItem.price) || 0;
+                    setCurrentItem({...currentItem, price: priceNum});
+                    addItem();
+                  }}>
                     Añadir Item
                   </Button>
                 </div>
@@ -951,7 +958,7 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
     minStock: 10,
     volumeMl: 0,
     weightGr: 0,
-    costPerUnit: 0,
+    costPerUnit: 0 as any,
     paymentMethod: "cash",
   });
 
@@ -962,10 +969,11 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
 
   const isVolume = formData.unit === "bolsa" || formData.unit === "litro" || formData.unit === "botella";
   
+  const costNum = Number(formData.costPerUnit) || 0;
   const costPerUnitCalc = formData.volumeMl > 0 
-    ? (formData.costPerUnit / formData.volumeMl) * 1000 
+    ? (costNum / formData.volumeMl) * 1000 
     : formData.weightGr > 0 
-      ? (formData.costPerUnit / formData.weightGr) * 1000 
+      ? (costNum / formData.weightGr) * 1000 
       : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -986,7 +994,7 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
         code: `INS-${Math.floor(Math.random() * 10000)}`,
         name: formData.name,
         category: "raw_material",
-        price: formData.costPerUnit,
+        price: costNum,
         unit: formData.unit,
         presentationQuantity: 1,
         presentationUnit: formData.unit,
@@ -1003,12 +1011,12 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
             status: "received",
             isCredit: 0,
             paymentMethod: formData.paymentMethod,
-            totalAmount: formData.costPerUnit * formData.initialStock * 100, // in cents
+            totalAmount: costNum * formData.initialStock * 100, // in cents
             supplierId: undefined,
             items: [{
               productId: prodRes.productId,
               quantity: formData.initialStock,
-              price: formData.costPerUnit * 100, // in cents
+              price: costNum * 100, // in cents
             }]
           });
         }
@@ -1019,7 +1027,7 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
         utils.purchases.list.invalidate();
         utils.finance.getTransactions.invalidate();
         
-        onSuccess({ id: prodRes.productId, price: formData.costPerUnit * 100 });
+        onSuccess({ id: prodRes.productId, price: costNum * 100 });
         onOpenChange(false);
       }
     } catch (err: any) {
@@ -1111,9 +1119,13 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
                   <div className="space-y-1">
                     <Label className="text-[10px] font-bold text-slate-600 uppercase">Costo por {formData.unit} (Bs) *</Label>
                     <Input 
-                      type="number" step="0.01" min="0" 
-                      value={formData.costPerUnit || ''}
-                      onChange={(e) => setFormData({...formData, costPerUnit: parseFloat(e.target.value) || 0})}
+                      type="text" inputMode="decimal"
+                      value={formData.costPerUnit === 0 ? '' : formData.costPerUnit}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.]/g, '');
+                        setFormData({...formData, costPerUnit: val as any});
+                      }}
+                      placeholder="0.00"
                       className="bg-white font-bold"
                     />
                   </div>
@@ -1135,7 +1147,7 @@ function QuickCreateProductDialog({ open, onOpenChange, onSuccess }: any) {
                 <Label className="text-[10px] font-bold text-slate-600 uppercase">Movimiento de Caja (Pago por Stock Inicial)</Label>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs text-slate-500">Total a debitar:</span>
-                  <span className="font-bold text-red-600">{formatCurrency(formData.costPerUnit * formData.initialStock * 100)}</span>
+                  <span className="font-bold text-red-600">{formatCurrency(costNum * formData.initialStock * 100)}</span>
                 </div>
                 <Select value={formData.paymentMethod} onValueChange={(v) => setFormData({...formData, paymentMethod: v})}>
                   <SelectTrigger className="bg-white"><SelectValue/></SelectTrigger>
