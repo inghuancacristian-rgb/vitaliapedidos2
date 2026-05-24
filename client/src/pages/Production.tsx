@@ -11,11 +11,28 @@ export function Production() {
   useEffect(() => {
     if (inventoryData) {
       const kefirInventory = inventoryData.map((item: any) => {
-        let category = "materia";
-        if (item.product?.productionRole === "bottle" || item.product?.category === "envase") category = "envase";
-        else if (item.product?.category === "finished_product") category = "producto";
-        else if (item.product?.category === "supplies" || item.product?.category === "insumo") category = "insumo";
-        else if (item.product?.category === "raw_material") category = "materia";
+        const nameLower = (item.product?.name || "").toLowerCase();
+        const role = item.product?.productionRole;
+        const dbCategory = item.product?.category;
+
+        let category = "insumo";
+
+        // Envases y botellas
+        if (role === "bottle" || dbCategory === "envase" || nameLower.includes("botella") || nameLower.includes("envase")) {
+          category = "envase";
+        }
+        // Materia prima / Leches / bases líquidas
+        else if (role === "milk" || dbCategory === "raw_material" || nameLower.includes("leche")) {
+          category = "materia";
+        }
+        // Productos terminados
+        else if (dbCategory === "finished_product" || role === "finished_good") {
+          category = "producto";
+        }
+        // Otros insumos / suministros
+        else {
+          category = "insumo";
+        }
         
         return {
           id: item.productId,
