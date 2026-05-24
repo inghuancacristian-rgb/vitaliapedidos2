@@ -8,20 +8,7 @@
     <script type="module" crossorigin src="/kefir-control/assets/index-8XlJpsEw.js"></script>
     <link rel="stylesheet" crossorigin href="/kefir-control/assets/index-B8wn4ucd.css">
   </head>
-  <script>
-    // Ocultar pestaña de inventario en KefirControl
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(() => {
-        const elements = document.querySelectorAll('button, div, span, a');
-        elements.forEach(el => {
-          if (el.textContent && el.textContent.trim() === 'Inventario') {
-            const parentButton = el.closest('button') || el.closest('div[role="button"]') || el;
-            if (parentButton) parentButton.style.display = 'none';
-          }
-        });
-      }, 1000); // Dar tiempo a que renderice
-    });
-  </script>
+
   <body>
     <div id="root"></div>
   </body>

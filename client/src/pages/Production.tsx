@@ -1,6 +1,35 @@
-import { ExternalLink, FlaskConical } from "lucide-react";
+import { ExternalLink, FlaskConical, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/trpc";
 
 export function Production() {
+  const [syncDone, setSyncDone] = useState(false);
+  const { data: inventoryData, isLoading } = api.inventory.listInventory.useQuery();
+
+  useEffect(() => {
+    if (inventoryData) {
+      const kefirInventory = inventoryData.map((item: any) => {
+        let category = "materia";
+        if (item.product?.category === "finished_product") category = "producto";
+        else if (item.product?.category === "supplies" || item.product?.category === "insumo") category = "insumo";
+        else if (item.product?.category === "raw_material") category = "materia";
+        else if (item.product?.category === "envase") category = "envase"; // Just in case
+        
+        return {
+          id: item.productId,
+          name: item.product?.name || "Desconocido",
+          quantity: item.quantity || 0,
+          minStock: item.minStock || 0,
+          unit: item.product?.unit || "unidad",
+          costPerUnit: (item.product?.price || 0) / 100,
+          category
+        };
+      });
+      localStorage.setItem("kefir_inventory_v3", JSON.stringify(kefirInventory));
+      setSyncDone(true);
+    }
+  }, [inventoryData]);
+
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
       <div className="border-b bg-white px-4 py-3 sm:px-6">
@@ -27,11 +56,18 @@ export function Production() {
         </div>
       </div>
 
-      <iframe
-        title="KefirControl"
-        src="/kefir-control/index.html"
-        className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"
-      />
+      {isLoading || !syncDone ? (
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          <span className="ml-2 text-slate-500">Sincronizando inventario...</span>
+        </div>
+      ) : (
+        <iframe
+          title="KefirControl"
+          src="/kefir-control/index.html"
+          className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"
+        />
+      )}
     </div>
   );
 }
