@@ -96,28 +96,43 @@ export function Production() {
 
       if (updates.length > 0) {
         isSyncingRef.current = true;
-        let syncPromises = updates.map(u => 
-          updateQuantityMutation.mutateAsync({
-            productId: u.id,
-            quantity: Math.abs(u.diff),
-            reason: u.diff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
-            type: u.diff > 0 ? "entry" : "exit"
-          })
-        );
-        await Promise.all(syncPromises);
+        console.log("[KefirSync] Updates to apply:", JSON.stringify(updates));
+        let successCount = 0;
+        let errors: string[] = [];
         
-        toast.success(`Sincronización: se registraron ${updates.length} movimientos de producción en el inventario.`);
+        for (const u of updates) {
+          try {
+            console.log(`[KefirSync] Updating productId=${u.id} diff=${u.diff} name=${u.name}`);
+            await updateQuantityMutation.mutateAsync({
+              productId: u.id,
+              quantity: u.diff,  // Server does existingInv.quantity + input.quantity directly
+              reason: u.diff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
+              type: u.diff > 0 ? "entry" : "exit"
+            });
+            successCount++;
+          } catch (err: any) {
+            console.error(`[KefirSync] Error updating ${u.name} (id=${u.id}):`, err);
+            errors.push(`${u.name}: ${err?.message || String(err)}`);
+          }
+        }
+        
+        if (successCount > 0) {
+          toast.success(`Sincronización: se registraron ${successCount} movimientos de producción en el inventario.`);
+        }
+        if (errors.length > 0) {
+          toast.error(`Error en ${errors.length} items: ${errors.join('; ')}`);
+        }
         await refetch();
         isSyncingRef.current = false;
-        return true;
+        return successCount > 0;
       } else if (isManual) {
         toast.info("El inventario ya se encuentra completamente sincronizado.");
       }
-    } catch(e) {
-       console.error("Error sincronizando", e);
+    } catch(e: any) {
+       console.error("[KefirSync] Fatal error:", e);
        isSyncingRef.current = false;
        if (isManual) {
-         toast.error("Error al sincronizar con el inventario general.");
+         toast.error(`Error al sincronizar: ${e?.message || String(e)}`);
        }
     }
     return false;
