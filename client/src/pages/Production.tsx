@@ -165,14 +165,6 @@ export function Production() {
           else if (nameLower.includes("agua") && nameLower.includes("jengibre") && nameLower.includes("500")) id = "PROD-008";
           else if ((nameLower.includes("queso") || nameLower.includes("labneh")) && nameLower.includes("250")) id = "PROD-009";
           else if (nameLower.includes("suero") && nameLower.includes("500")) id = "PROD-010";
-        } else if (category === "materia") {
-          if (nameLower.includes("leche") && nameLower.includes("entera")) id = "RAW-001";
-          else if (nameLower.includes("leche") && nameLower.includes("deslactosada")) id = "RAW-002";
-          else if (nameLower.includes("leche") && nameLower.includes("descremada")) id = "RAW-003";
-          else if (nameLower.includes("leche")) id = "RAW-001"; // Fallback para cualquier leche
-          else if ((nameLower.includes("azucar") || nameLower.includes("azúcar")) && nameLower.includes("morena")) id = "RAW-004";
-          else if ((nameLower.includes("azucar") || nameLower.includes("azúcar")) && nameLower.includes("blanca")) id = "RAW-005";
-          else if (nameLower.includes("azucar") || nameLower.includes("azúcar")) id = "RAW-005"; // Fallback
         } else if (role === "bottle" || category === "envase") {
           if (nameLower.includes("500")) id = 4;
           else if (nameLower.includes("labneh") || nameLower.includes("250")) id = 5;
