@@ -141,12 +141,12 @@ export function Production() {
 
         let category = "insumo";
 
-        if (role === "bottle" || dbCategory === "envase" || nameLower.includes("botella") || nameLower.includes("envase")) {
-          category = "envase";
-        } else if (role === "milk" || dbCategory === "raw_material" || nameLower.includes("leche")) {
-          category = "materia";
-        } else if (dbCategory === "finished_product" || role === "finished_good") {
+        if (dbCategory === "finished_product" || role === "finished_good") {
           category = "producto";
+        } else if (role === "bottle" || dbCategory === "envase" || nameLower.includes("botella") || nameLower.includes("envase")) {
+          category = "envase";
+        } else if (role === "milk" || dbCategory === "raw_material" || nameLower.includes("leche") || nameLower.includes("azucar") || nameLower.includes("azúcar")) {
+          category = "materia";
         } else {
           category = "insumo";
         }
