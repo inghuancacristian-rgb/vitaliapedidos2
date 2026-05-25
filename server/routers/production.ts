@@ -130,5 +130,20 @@ export const productionRouter = router({
         
       console.log(`[Production] Found ${outputs.length} outputs for batch ${input.batchId}`);
       return outputs;
+    }),
+    
+  logKefirData: publicProcedure
+    .input(z.object({
+      batches: z.any(),
+      yields: z.any(),
+      inventory: z.any()
+    }))
+    .mutation(async ({ input }) => {
+      console.log("\n\n=== KEFIR CONTROL DATA DUMP ===");
+      console.log("BATCHES:", JSON.stringify(input.batches, null, 2));
+      console.log("YIELDS:", JSON.stringify(input.yields, null, 2));
+      console.log("INVENTORY:", JSON.stringify(input.inventory, null, 2));
+      console.log("===============================\n\n");
+      return { success: true };
     })
 });

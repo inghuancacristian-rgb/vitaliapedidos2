@@ -1,4 +1,4 @@
-import { ExternalLink, FlaskConical, Loader2, CheckCircle2 } from "lucide-react";
+import { ExternalLink, FlaskConical, Loader2, CheckCircle2, RefreshCw } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -6,14 +6,28 @@ import { toast } from "sonner";
 export function Production() {
   const [syncDone, setSyncDone] = useState(false);
   const [syncKey, setSyncKey] = useState(Date.now());
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const { data: inventoryData, isLoading, refetch } = trpc.inventory.listInventory.useQuery(undefined, {
     refetchInterval: 10000 // Sincroniza desde el DB cada 10 segundos
   });
   const updateQuantityMutation = trpc.inventory.updateQuantity.useMutation();
+  const logKefirDataMutation = trpc.production.logKefirData.useMutation();
   const prevInventoryRef = useRef<any>(null);
   const isSyncingRef = useRef(false);
 
-  const checkAndSyncKefir = useCallback(async () => {
+  useEffect(() => {
+    // Debug: send localStorage data to backend for inspection
+    const bStr = localStorage.getItem("kefir_batches_v3");
+    const yStr = localStorage.getItem("kefir_yield_records_v3");
+    const iStr = localStorage.getItem("kefir_inventory_v3");
+    logKefirDataMutation.mutate({
+      batches: bStr ? JSON.parse(bStr) : null,
+      yields: yStr ? JSON.parse(yStr) : null,
+      inventory: iStr ? JSON.parse(iStr) : null
+    });
+  }, []);
+
+  const checkAndSyncKefir = useCallback(async (isManual = false) => {
     if (isSyncingRef.current || !prevInventoryRef.current) return false;
     
     const kStr = localStorage.getItem("kefir_inventory_v3");
@@ -24,10 +38,51 @@ export function Production() {
       const updates: {id: number, diff: number, name: string}[] = [];
       
       for (const kItem of kInv) {
-        const prevDbItem = prevInventoryRef.current.find((db: any) => db.productId === kItem.id);
+        // Map the iframe's item to the database's item
+        let prevDbItem = prevInventoryRef.current.find((db: any) => db.productId === kItem.id);
+        
+        // If not found directly by ID (because of iframe hardcoded IDs or custom new IDs), map by role or name
+        if (!prevDbItem) {
+          prevDbItem = prevInventoryRef.current.find((db: any) => {
+            if (!db.product) return false;
+            
+            const nameLower = (db.product.name || "").toLowerCase().trim();
+            const kNameLower = (kItem.name || "").toLowerCase().trim();
+            
+            // Exact or clean name match
+            if (nameLower === kNameLower || nameLower.replace(/k[eé]fir/g, "kefir") === kNameLower.replace(/k[eé]fir/g, "kefir")) return true;
+            
+            // Map by productionRole for packaging supplies
+            const role = db.product.productionRole;
+            if (kItem.category === "envase") {
+              if (role === "cap" && kItem.name.toLowerCase().includes("tapa")) return true;
+              if (role === "label" && kItem.name.toLowerCase().includes("etiqueta")) return true;
+              if (role === "bottle") {
+                if (kItem.name.toLowerCase().includes("500") && nameLower.includes("500")) return true;
+                if ((kItem.name.toLowerCase().includes("labneh") || kItem.name.toLowerCase().includes("250")) && (nameLower.includes("labneh") || nameLower.includes("250"))) return true;
+                if ((kItem.name.toLowerCase().includes("1l") || kItem.name.toLowerCase().includes("1 l") || kItem.name.toLowerCase().includes("1000")) && (nameLower.includes("1l") || nameLower.includes("1 l") || nameLower.includes("1000"))) return true;
+                if (kItem.name.toLowerCase().includes("750") && nameLower.includes("750")) return true;
+              }
+            }
+            
+            // Map by productionRole for raw materials (milk, sugar)
+            if (kItem.category === "materia") {
+              if (role === "milk") {
+                if (kItem.name.toLowerCase().includes("entera") && nameLower.includes("entera")) return true;
+                if (kItem.name.toLowerCase().includes("descremada") && nameLower.includes("descremada")) return true;
+              }
+              if (role === "sugar") {
+                if (kItem.name.toLowerCase().includes("morena") && nameLower.includes("morena")) return true;
+                if (kItem.name.toLowerCase().includes("blanca") && nameLower.includes("blanca")) return true;
+              }
+            }
+            return false;
+          });
+        }
+
         if (prevDbItem && prevDbItem.quantity !== kItem.quantity) {
           const diff = kItem.quantity - prevDbItem.quantity;
-          updates.push({ id: kItem.id, diff, name: kItem.name });
+          updates.push({ id: prevDbItem.productId, diff, name: prevDbItem.product?.name || kItem.name });
         }
       }
 
@@ -43,17 +98,29 @@ export function Production() {
         );
         await Promise.all(syncPromises);
         
-        toast.success(`Sincronización automática: se registraron ${updates.length} movimientos de producción en el inventario.`);
+        toast.success(`Sincronización: se registraron ${updates.length} movimientos de producción en el inventario.`);
         await refetch();
         isSyncingRef.current = false;
         return true;
+      } else if (isManual) {
+        toast.info("El inventario ya se encuentra completamente sincronizado.");
       }
     } catch(e) {
        console.error("Error sincronizando", e);
        isSyncingRef.current = false;
+       if (isManual) {
+         toast.error("Error al sincronizar con el inventario general.");
+       }
     }
     return false;
   }, [updateQuantityMutation, refetch]);
+
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    await refetch();
+    await checkAndSyncKefir(true);
+    setIsManualSyncing(false);
+  };
 
   useEffect(() => {
     if (!inventoryData) return;
@@ -76,8 +143,21 @@ export function Production() {
           category = "insumo";
         }
         
+        // Map database product to iframe's expected hardcoded ID
+        let id = item.productId;
+        if (role === "bottle") {
+          if (nameLower.includes("500")) id = 4;
+          else if (nameLower.includes("labneh") || nameLower.includes("250")) id = 5;
+          else if (nameLower.includes("1l") || nameLower.includes("1 l") || nameLower.includes("1000")) id = 11;
+          else if (nameLower.includes("750")) id = 12;
+        } else if (role === "cap" || nameLower.includes("tapa")) {
+          id = 6;
+        } else if (role === "label" || nameLower.includes("etiqueta")) {
+          id = 7;
+        }
+        
         return {
-          id: item.productId,
+          id,
           name: item.product?.name || "Desconocido",
           quantity: item.quantity || 0,
           minStock: item.minStock || 0,
@@ -129,6 +209,14 @@ export function Production() {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={handleManualSync}
+              disabled={isManualSyncing}
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isManualSyncing ? 'animate-spin' : ''}`} />
+              Sincronizar Ahora
+            </button>
             <a
               href="/kefir-control/index.html"
               target="_blank"
