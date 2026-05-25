@@ -270,6 +270,11 @@ export function Production() {
           id = 7;
         }
         
+        let type = dbCategory;
+        if (id === "PROD-009") type = "queso_directo";
+        else if (id === "PROD-010") type = "suero";
+        else if (dbCategory === "finished_product" || category === "producto") type = "producto";
+
         return {
           id,
           name: item.product?.name || "Desconocido",
@@ -278,7 +283,8 @@ export function Production() {
           unit: item.product?.unit || "unidad",
           presentationVolumeMl: item.product?.presentationVolumeMl || 1000,
           costPerUnit: (item.product?.price || 0) / 100,
-          category
+          category,
+          type
         };
       });
       localStorage.setItem("kefir_inventory_v3", JSON.stringify(kefirInventory));
