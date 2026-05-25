@@ -42,8 +42,9 @@ export function Production() {
     "PROD-010": { code: "KEF-SUERO-NAT-500", name: "Suero Detox Natural 500ml", category: "finished_product", price: 1.5, salePrice: 1.5, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
   };
 
-  const checkAndSyncKefir = useCallback(async (isManual = false) => {
-    if (isSyncingRef.current || !prevInventoryRef.current) return false;
+  const checkAndSyncKefir = useCallback(async (isManual = false, serverDataToUse: any = null) => {
+    const serverData = serverDataToUse || prevInventoryRef.current;
+    if (isSyncingRef.current || !serverData) return false;
     
     const kStr = localStorage.getItem("kefir_inventory_v3");
     if (!kStr) return false;
@@ -55,11 +56,11 @@ export function Production() {
       
       for (const kItem of kInv) {
         // Map the iframe's item to the database's item
-        let prevDbItem = prevInventoryRef.current.find((db: any) => db.productId === kItem.id);
+        let prevDbItem = serverData.find((db: any) => db.productId === kItem.id);
         
         // If not found directly by ID, map by role or name
         if (!prevDbItem) {
-          prevDbItem = prevInventoryRef.current.find((db: any) => {
+          prevDbItem = serverData.find((db: any) => {
             if (!db.product) return false;
             
             const nameLower = (db.product.name || "").toLowerCase().trim();
@@ -286,7 +287,7 @@ export function Production() {
     };
 
     // Antes de sobreescribir localStorage, verificamos si hay cambios locales de producción pendientes
-    checkAndSyncKefir().then((didSync) => {
+    checkAndSyncKefir(false, inventoryData).then((didSync) => {
       if (!didSync) {
         updateLocalStorage();
       }
