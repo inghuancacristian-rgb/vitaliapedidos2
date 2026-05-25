@@ -11,6 +11,7 @@ export function Production() {
     refetchInterval: 10000 // Sincroniza desde el DB cada 10 segundos
   });
   const updateQuantityMutation = trpc.inventory.updateQuantity.useMutation();
+  const createProductMutation = trpc.inventory.createProduct.useMutation();
   const logKefirDataMutation = trpc.production.logKefirData.useMutation();
   const prevInventoryRef = useRef<any>(null);
   const isSyncingRef = useRef(false);
@@ -27,6 +28,20 @@ export function Production() {
     });
   }, []);
 
+  // KefirControl product definitions for auto-creation
+  const KEFIR_PRODUCT_DEFS: Record<string, { code: string; name: string; category: "finished_product"; price: number; salePrice: number; unit: string; productionRole: "finished_good"; presentationVolumeMl?: number; presentationWeightGr?: number }> = {
+    "PROD-001": { code: "KEF-NAT-500", name: "Kéfir de Leche Natural 500ml", category: "finished_product", price: 3.5, salePrice: 3.5, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-002": { code: "KEF-FRU-500", name: "Kéfir de Leche Frutilla 500ml", category: "finished_product", price: 3.8, salePrice: 3.8, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-003": { code: "KEF-COC-500", name: "Kéfir de Leche Coco 500ml", category: "finished_product", price: 3.8, salePrice: 3.8, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-004": { code: "KEF-NAT-1L", name: "Kéfir de Leche Natural 1L", category: "finished_product", price: 6, salePrice: 6, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 1000 },
+    "PROD-005": { code: "KEF-FRU-750", name: "Kéfir de Leche Frutilla 750ml", category: "finished_product", price: 5, salePrice: 5, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 750 },
+    "PROD-006": { code: "KEF-AGU-NAT-500", name: "Kéfir de Agua Natural 500ml", category: "finished_product", price: 3, salePrice: 3, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-007": { code: "KEF-AGU-LIM-500", name: "Kéfir de Agua Limón 500ml", category: "finished_product", price: 3.2, salePrice: 3.2, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-008": { code: "KEF-AGU-JEN-500", name: "Kéfir de Agua Jengibre 500ml", category: "finished_product", price: 3.2, salePrice: 3.2, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+    "PROD-009": { code: "KEF-LABNEH-NAT-250", name: "Queso Labneh Natural 250g", category: "finished_product", price: 4.5, salePrice: 4.5, unit: "unidad", productionRole: "finished_good", presentationWeightGr: 250 },
+    "PROD-010": { code: "KEF-SUERO-NAT-500", name: "Suero Detox Natural 500ml", category: "finished_product", price: 1.5, salePrice: 1.5, unit: "unidad", productionRole: "finished_good", presentationVolumeMl: 500 },
+  };
+
   const checkAndSyncKefir = useCallback(async (isManual = false) => {
     if (isSyncingRef.current || !prevInventoryRef.current) return false;
     
@@ -36,12 +51,13 @@ export function Production() {
     try {
       const kInv = JSON.parse(kStr);
       const updates: {id: number, diff: number, name: string}[] = [];
+      const productsToCreate: {kItem: any, quantity: number}[] = [];
       
       for (const kItem of kInv) {
         // Map the iframe's item to the database's item
         let prevDbItem = prevInventoryRef.current.find((db: any) => db.productId === kItem.id);
         
-        // If not found directly by ID (because of iframe hardcoded IDs or custom new IDs), map by role or name
+        // If not found directly by ID, map by role or name
         if (!prevDbItem) {
           prevDbItem = prevInventoryRef.current.find((db: any) => {
             if (!db.product) return false;
@@ -53,13 +69,17 @@ export function Production() {
             if (nameLower === kNameLower || nameLower.replace(/k[eé]fir/g, "kefir") === kNameLower.replace(/k[eé]fir/g, "kefir")) return true;
             
             // Special mappings for finished products
+            const role = db.product.productionRole;
             if (kItem.category === "producto" || kItem.category === "finished_product" || role === "finished_good" || db.product.category === "finished_product") {
               if (kNameLower.includes("natural") && (kNameLower.includes("1l") || kNameLower.includes("1000")) && 
                   nameLower.includes("natural") && (nameLower.includes("1 litro") || nameLower.includes("1l"))) return true;
+              // Match queso/labneh
+              if ((kNameLower.includes("queso") || kNameLower.includes("labneh")) && (nameLower.includes("queso") || nameLower.includes("labneh"))) return true;
+              // Match suero
+              if (kNameLower.includes("suero") && nameLower.includes("suero")) return true;
             }
             
             // Map by productionRole for packaging supplies
-            const role = db.product.productionRole;
             if (kItem.category === "envase") {
               if (role === "cap" && kItem.name.toLowerCase().includes("tapa")) return true;
               if (role === "label" && kItem.name.toLowerCase().includes("etiqueta")) return true;
@@ -76,7 +96,6 @@ export function Production() {
               if (role === "milk" || nameLower.includes("leche")) {
                 if (kItem.name.toLowerCase().includes("entera") && nameLower.includes("entera")) return true;
                 if (kItem.name.toLowerCase().includes("descremada") && nameLower.includes("descremada")) return true;
-                // Fallback for general milk if specifics don't match but both say milk
                 if (kItem.name.toLowerCase().includes("leche") && nameLower.includes("leche")) return true;
               }
               if (role === "sugar" || nameLower.includes("azucar") || nameLower.includes("azúcar")) {
@@ -91,7 +110,61 @@ export function Production() {
         if (prevDbItem && prevDbItem.quantity !== kItem.quantity) {
           const diff = kItem.quantity - prevDbItem.quantity;
           updates.push({ id: prevDbItem.productId, diff, name: prevDbItem.product?.name || kItem.name });
+        } else if (!prevDbItem && kItem.category === "producto" && kItem.quantity > 0 && typeof kItem.id === "string" && kItem.id.startsWith("PROD-")) {
+          // Product doesn't exist in the main inventory — needs to be auto-created
+          console.log(`[KefirSync] Product "${kItem.name}" (${kItem.id}) not found in main inventory. Will auto-create.`);
+          productsToCreate.push({ kItem, quantity: kItem.quantity });
         }
+      }
+
+      // Auto-create missing products first
+      if (productsToCreate.length > 0) {
+        isSyncingRef.current = true;
+        console.log(`[KefirSync] Auto-creating ${productsToCreate.length} missing products...`);
+        
+        for (const { kItem, quantity } of productsToCreate) {
+          const def = KEFIR_PRODUCT_DEFS[kItem.id];
+          if (!def) {
+            console.warn(`[KefirSync] No product definition for ${kItem.id}, skipping auto-create`);
+            continue;
+          }
+          
+          try {
+            console.log(`[KefirSync] Creating product: ${def.name} (${def.code})`);
+            const result = await createProductMutation.mutateAsync({
+              code: def.code,
+              name: def.name,
+              category: def.category,
+              price: def.price,
+              salePrice: def.salePrice,
+              unit: def.unit,
+              productionRole: def.productionRole,
+              presentationVolumeMl: def.presentationVolumeMl || 0,
+              presentationWeightGr: def.presentationWeightGr || 0,
+            });
+            
+            const newProductId = result.productId;
+            if (newProductId && newProductId > 0) {
+              console.log(`[KefirSync] Created product ${def.name} with ID ${newProductId}. Setting initial stock to ${quantity}.`);
+              // Set initial quantity
+              await updateQuantityMutation.mutateAsync({
+                productId: newProductId,
+                quantity: quantity,
+                reason: "Producción inicial registrada desde KefirControl",
+                type: "entry"
+              });
+              toast.success(`Producto "${def.name}" creado automáticamente con ${quantity} unidades.`);
+            }
+          } catch (err: any) {
+            console.error(`[KefirSync] Error auto-creating ${def.name}:`, err);
+            toast.error(`Error al crear "${def.name}": ${err?.message || String(err)}`);
+          }
+        }
+        
+        // Refetch to get the new products in the inventory
+        await refetch();
+        isSyncingRef.current = false;
+        return true;
       }
 
       if (updates.length > 0) {
@@ -110,7 +183,7 @@ export function Production() {
             console.log(`[KefirSync] Updating productId=${u.id} diff=${roundedDiff} (original=${u.diff}) name=${u.name}`);
             await updateQuantityMutation.mutateAsync({
               productId: u.id,
-              quantity: roundedDiff,  // Server does existingInv.quantity + input.quantity directly
+              quantity: roundedDiff,
               reason: roundedDiff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
               type: roundedDiff > 0 ? "entry" : "exit"
             });
@@ -141,7 +214,7 @@ export function Production() {
        }
     }
     return false;
-  }, [updateQuantityMutation, refetch]);
+  }, [updateQuantityMutation, createProductMutation, refetch]);
 
   const handleManualSync = async () => {
     setIsManualSyncing(true);
