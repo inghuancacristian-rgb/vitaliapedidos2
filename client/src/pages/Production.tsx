@@ -110,7 +110,7 @@ export function Production() {
         if (prevDbItem && prevDbItem.quantity !== kItem.quantity) {
           const diff = kItem.quantity - prevDbItem.quantity;
           updates.push({ id: prevDbItem.productId, diff, name: prevDbItem.product?.name || kItem.name });
-        } else if (!prevDbItem && kItem.category === "producto" && kItem.quantity > 0 && typeof kItem.id === "string" && kItem.id.startsWith("PROD-")) {
+        } else if (!prevDbItem && kItem.quantity > 0 && typeof kItem.id === "string" && kItem.id.startsWith("PROD-")) {
           // Product doesn't exist in the main inventory — needs to be auto-created
           console.log(`[KefirSync] Product "${kItem.name}" (${kItem.id}) not found in main inventory. Will auto-create.`);
           productsToCreate.push({ kItem, quantity: kItem.quantity });
