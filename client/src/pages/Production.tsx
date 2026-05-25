@@ -99,7 +99,7 @@ export function Production() {
         let syncPromises = updates.map(u => 
           updateQuantityMutation.mutateAsync({
             productId: u.id,
-            quantity: u.diff,
+            quantity: Math.abs(u.diff),
             reason: u.diff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
             type: u.diff > 0 ? "entry" : "exit"
           })
