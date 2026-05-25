@@ -70,8 +70,10 @@ export function Production() {
             if (nameLower === kNameLower || nameLower.replace(/k[eé]fir/g, "kefir") === kNameLower.replace(/k[eé]fir/g, "kefir")) return true;
             
             // Special mappings for finished products
-            const role = db.product.productionRole;
-            if (kItem.category === "producto" || kItem.category === "finished_product" || role === "finished_good" || db.product.category === "finished_product") {
+            const isDbFinished = db.product.productionRole === "finished_good" || db.product.category === "finished_product" || db.product.category === "producto";
+            const isKFinished = kItem.category === "producto" || kItem.category === "finished_product";
+            
+            if (isKFinished && isDbFinished) {
               if (kNameLower.includes("natural") && (kNameLower.includes("1l") || kNameLower.includes("1000")) && 
                   nameLower.includes("natural") && (nameLower.includes("1 litro") || nameLower.includes("1l"))) return true;
               // Match queso/labneh
@@ -81,10 +83,12 @@ export function Production() {
             }
             
             // Map by productionRole for packaging supplies
-            if (kItem.category === "envase") {
+            const isDbEnvase = db.product.productionRole === "bottle" || db.product.productionRole === "cap" || db.product.productionRole === "label" || db.product.category === "envase";
+            if (kItem.category === "envase" && isDbEnvase) {
+              const role = db.product.productionRole;
               if (role === "cap" && kItem.name.toLowerCase().includes("tapa")) return true;
               if (role === "label" && kItem.name.toLowerCase().includes("etiqueta")) return true;
-              if (role === "bottle") {
+              if (role === "bottle" || nameLower.includes("botella")) {
                 if (kItem.name.toLowerCase().includes("500") && nameLower.includes("500")) return true;
                 if ((kItem.name.toLowerCase().includes("labneh") || kItem.name.toLowerCase().includes("250")) && (nameLower.includes("labneh") || nameLower.includes("250"))) return true;
                 if ((kItem.name.toLowerCase().includes("1l") || kItem.name.toLowerCase().includes("1 l") || kItem.name.toLowerCase().includes("1000")) && (nameLower.includes("1l") || nameLower.includes("1 l") || nameLower.includes("1000"))) return true;
@@ -93,7 +97,9 @@ export function Production() {
             }
             
             // Map by productionRole for raw materials (milk, sugar)
-            if (kItem.category === "materia") {
+            const isDbMateria = db.product.productionRole === "milk" || db.product.productionRole === "sugar" || db.product.category === "raw_material" || db.product.category === "insumo";
+            if (kItem.category === "materia" && isDbMateria) {
+              const role = db.product.productionRole;
               if (role === "milk" || nameLower.includes("leche")) {
                 if (kItem.name.toLowerCase().includes("entera") && nameLower.includes("entera")) return true;
                 if (kItem.name.toLowerCase().includes("descremada") && nameLower.includes("descremada")) return true;
@@ -184,7 +190,7 @@ export function Production() {
             console.log(`[KefirSync] Updating productId=${u.id} diff=${roundedDiff} (original=${u.diff}) name=${u.name}`);
             await updateQuantityMutation.mutateAsync({
               productId: u.id,
-              quantity: Math.abs(roundedDiff),
+              quantity: roundedDiff,
               reason: roundedDiff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
               type: roundedDiff > 0 ? "entry" : "exit"
             });

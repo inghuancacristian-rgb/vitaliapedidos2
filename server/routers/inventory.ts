@@ -396,6 +396,7 @@ export const inventoryRouter = router({
       }
 
       const newQuantity = (existingInv?.quantity || 0) + input.quantity;
+      console.log(`[SYNC TRACE] updateQuantity: productId=${input.productId}, inputQty=${input.quantity}, existingQty=${existingInv?.quantity || 0}, newQty=${newQuantity}`);
       
       const { updateInventory, createInventoryMovement, updateProductPrice, recordInventoryEntryAsPurchase } = await import("../db");
       await updateInventory(input.productId, newQuantity, input.expiryDate, input.batchNumber);
