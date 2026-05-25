@@ -36,7 +36,7 @@ export default function MobileMenu() {
     { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
     { href: "/orders", label: "Pedidos", icon: ShoppingCart },
     { href: "/sales", label: "Ventas", icon: ShoppingBag },
-    { href: "/inventory", label: "Inventario", icon: Package },
+    { href: "/inventory", label: "Inventario General", icon: Package },
     { href: "/production", label: "Producción", icon: Package },
     { href: "/products", label: "Catálogo", icon: Tag },
     { href: "/expenses", label: "Gastos", icon: Receipt },

@@ -184,7 +184,7 @@ export function Production() {
             console.log(`[KefirSync] Updating productId=${u.id} diff=${roundedDiff} (original=${u.diff}) name=${u.name}`);
             await updateQuantityMutation.mutateAsync({
               productId: u.id,
-              quantity: roundedDiff,
+              quantity: Math.abs(roundedDiff),
               reason: roundedDiff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
               type: roundedDiff > 0 ? "entry" : "exit"
             });

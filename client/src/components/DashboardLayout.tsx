@@ -126,7 +126,7 @@ function DashboardLayoutContent({
     { icon: Home, label: "Inicio", path: "/" },
     { icon: BarChart3, label: "Dashboard", path: "/dashboard" },
     { icon: ShoppingCart, label: "Pedidos", path: "/orders" },
-    { icon: Package, label: "Inventario", path: "/inventory" },
+    { icon: Package, label: "Inventario General", path: "/inventory" },
     { icon: Users, label: "Proveedores", path: "/suppliers" },
     { icon: ShoppingCart, label: "Compras", path: "/purchases" },
     { icon: DollarSign, label: "Finanzas", path: "/finance" },
