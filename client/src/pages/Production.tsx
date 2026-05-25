@@ -101,13 +101,18 @@ export function Production() {
         let errors: string[] = [];
         
         for (const u of updates) {
+          const roundedDiff = Math.round(u.diff);
+          if (roundedDiff === 0) {
+             console.log(`[KefirSync] Skipped ${u.name} because rounded diff is 0`);
+             continue;
+          }
           try {
-            console.log(`[KefirSync] Updating productId=${u.id} diff=${u.diff} name=${u.name}`);
+            console.log(`[KefirSync] Updating productId=${u.id} diff=${roundedDiff} (original=${u.diff}) name=${u.name}`);
             await updateQuantityMutation.mutateAsync({
               productId: u.id,
-              quantity: u.diff,  // Server does existingInv.quantity + input.quantity directly
-              reason: u.diff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
-              type: u.diff > 0 ? "entry" : "exit"
+              quantity: roundedDiff,  // Server does existingInv.quantity + input.quantity directly
+              reason: roundedDiff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
+              type: roundedDiff > 0 ? "entry" : "exit"
             });
             successCount++;
           } catch (err: any) {
