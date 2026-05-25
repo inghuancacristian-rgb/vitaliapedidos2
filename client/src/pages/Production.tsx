@@ -52,6 +52,12 @@ export function Production() {
             // Exact or clean name match
             if (nameLower === kNameLower || nameLower.replace(/k[eé]fir/g, "kefir") === kNameLower.replace(/k[eé]fir/g, "kefir")) return true;
             
+            // Special mappings for finished products
+            if (kItem.category === "producto" || kItem.category === "finished_product" || role === "finished_good" || db.product.category === "finished_product") {
+              if (kNameLower.includes("natural") && (kNameLower.includes("1l") || kNameLower.includes("1000")) && 
+                  nameLower.includes("natural") && (nameLower.includes("1 litro") || nameLower.includes("1l"))) return true;
+            }
+            
             // Map by productionRole for packaging supplies
             const role = db.product.productionRole;
             if (kItem.category === "envase") {
@@ -67,11 +73,13 @@ export function Production() {
             
             // Map by productionRole for raw materials (milk, sugar)
             if (kItem.category === "materia") {
-              if (role === "milk") {
+              if (role === "milk" || nameLower.includes("leche")) {
                 if (kItem.name.toLowerCase().includes("entera") && nameLower.includes("entera")) return true;
                 if (kItem.name.toLowerCase().includes("descremada") && nameLower.includes("descremada")) return true;
+                // Fallback for general milk if specifics don't match but both say milk
+                if (kItem.name.toLowerCase().includes("leche") && nameLower.includes("leche")) return true;
               }
-              if (role === "sugar") {
+              if (role === "sugar" || nameLower.includes("azucar") || nameLower.includes("azúcar")) {
                 if (kItem.name.toLowerCase().includes("morena") && nameLower.includes("morena")) return true;
                 if (kItem.name.toLowerCase().includes("blanca") && nameLower.includes("blanca")) return true;
               }
