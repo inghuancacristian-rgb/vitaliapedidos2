@@ -141,7 +141,7 @@ export function Production() {
 
         let category = "insumo";
 
-        if (dbCategory === "finished_product" || role === "finished_good") {
+        if (dbCategory === "finished_product" || dbCategory === "producto" || role === "finished_good" || nameLower.includes("kefir") || nameLower.includes("kéfir") || nameLower.includes("queso") || nameLower.includes("labneh") || nameLower.includes("suero")) {
           category = "producto";
         } else if (role === "bottle" || dbCategory === "envase" || nameLower.includes("botella") || nameLower.includes("envase")) {
           category = "envase";
@@ -152,11 +152,31 @@ export function Production() {
         }
         
         // Map database product to iframe's expected hardcoded ID
-        let id = item.productId;
-        if (role === "bottle") {
+        let id: string | number = item.productId;
+        
+        if (category === "producto") {
+          if (nameLower.includes("leche") && nameLower.includes("natural") && nameLower.includes("500")) id = "PROD-001";
+          else if (nameLower.includes("leche") && nameLower.includes("frutilla") && nameLower.includes("500")) id = "PROD-002";
+          else if (nameLower.includes("leche") && nameLower.includes("coco") && nameLower.includes("500")) id = "PROD-003";
+          else if (nameLower.includes("leche") && nameLower.includes("natural") && (nameLower.includes("1l") || nameLower.includes("1000") || nameLower.includes("1 litro"))) id = "PROD-004";
+          else if (nameLower.includes("leche") && nameLower.includes("frutilla") && nameLower.includes("750")) id = "PROD-005";
+          else if (nameLower.includes("agua") && nameLower.includes("natural") && nameLower.includes("500")) id = "PROD-006";
+          else if (nameLower.includes("agua") && (nameLower.includes("limón") || nameLower.includes("limon")) && nameLower.includes("500")) id = "PROD-007";
+          else if (nameLower.includes("agua") && nameLower.includes("jengibre") && nameLower.includes("500")) id = "PROD-008";
+          else if ((nameLower.includes("queso") || nameLower.includes("labneh")) && nameLower.includes("250")) id = "PROD-009";
+          else if (nameLower.includes("suero") && nameLower.includes("500")) id = "PROD-010";
+        } else if (category === "materia") {
+          if (nameLower.includes("leche") && nameLower.includes("entera")) id = "RAW-001";
+          else if (nameLower.includes("leche") && nameLower.includes("deslactosada")) id = "RAW-002";
+          else if (nameLower.includes("leche") && nameLower.includes("descremada")) id = "RAW-003";
+          else if (nameLower.includes("leche")) id = "RAW-001"; // Fallback para cualquier leche
+          else if ((nameLower.includes("azucar") || nameLower.includes("azúcar")) && nameLower.includes("morena")) id = "RAW-004";
+          else if ((nameLower.includes("azucar") || nameLower.includes("azúcar")) && nameLower.includes("blanca")) id = "RAW-005";
+          else if (nameLower.includes("azucar") || nameLower.includes("azúcar")) id = "RAW-005"; // Fallback
+        } else if (role === "bottle" || category === "envase") {
           if (nameLower.includes("500")) id = 4;
           else if (nameLower.includes("labneh") || nameLower.includes("250")) id = 5;
-          else if (nameLower.includes("1l") || nameLower.includes("1 l") || nameLower.includes("1000")) id = 11;
+          else if (nameLower.includes("1l") || nameLower.includes("1 l") || nameLower.includes("1000") || nameLower.includes("1 litro")) id = 11;
           else if (nameLower.includes("750")) id = 12;
         } else if (role === "cap" || nameLower.includes("tapa")) {
           id = 6;
