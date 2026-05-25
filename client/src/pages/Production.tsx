@@ -1,15 +1,64 @@
-import { ExternalLink, FlaskConical, Loader2, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ExternalLink, FlaskConical, Loader2, CheckCircle2 } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export function Production() {
   const [syncDone, setSyncDone] = useState(false);
   const [syncKey, setSyncKey] = useState(Date.now());
-  const { data: inventoryData, isLoading, refetch } = trpc.inventory.listInventory.useQuery();
+  const { data: inventoryData, isLoading, refetch } = trpc.inventory.listInventory.useQuery(undefined, {
+    refetchInterval: 10000 // Sincroniza desde el DB cada 10 segundos
+  });
+  const updateQuantityMutation = trpc.inventory.updateQuantity.useMutation();
+  const prevInventoryRef = useRef<any>(null);
+  const isSyncingRef = useRef(false);
+
+  const checkAndSyncKefir = useCallback(async () => {
+    if (isSyncingRef.current || !prevInventoryRef.current) return false;
+    
+    const kStr = localStorage.getItem("kefir_inventory_v3");
+    if (!kStr) return false;
+    
+    try {
+      const kInv = JSON.parse(kStr);
+      const updates: {id: number, diff: number, name: string}[] = [];
+      
+      for (const kItem of kInv) {
+        const prevDbItem = prevInventoryRef.current.find((db: any) => db.productId === kItem.id);
+        if (prevDbItem && prevDbItem.quantity !== kItem.quantity) {
+          const diff = kItem.quantity - prevDbItem.quantity;
+          updates.push({ id: kItem.id, diff, name: kItem.name });
+        }
+      }
+
+      if (updates.length > 0) {
+        isSyncingRef.current = true;
+        let syncPromises = updates.map(u => 
+          updateQuantityMutation.mutateAsync({
+            productId: u.id,
+            quantity: u.diff,
+            reason: u.diff > 0 ? "Producción terminada en KefirControl" : "Consumo de insumos en KefirControl",
+            type: u.diff > 0 ? "entry" : "exit"
+          })
+        );
+        await Promise.all(syncPromises);
+        
+        toast.success(`Sincronización automática: se registraron ${updates.length} movimientos de producción en el inventario.`);
+        await refetch();
+        isSyncingRef.current = false;
+        return true;
+      }
+    } catch(e) {
+       console.error("Error sincronizando", e);
+       isSyncingRef.current = false;
+    }
+    return false;
+  }, [updateQuantityMutation, refetch]);
 
   useEffect(() => {
-    if (inventoryData) {
+    if (!inventoryData) return;
+
+    const updateLocalStorage = () => {
       const kefirInventory = inventoryData.map((item: any) => {
         const nameLower = (item.product?.name || "").toLowerCase();
         const role = item.product?.productionRole;
@@ -17,20 +66,13 @@ export function Production() {
 
         let category = "insumo";
 
-        // Envases y botellas
         if (role === "bottle" || dbCategory === "envase" || nameLower.includes("botella") || nameLower.includes("envase")) {
           category = "envase";
-        }
-        // Materia prima / Leches / bases líquidas
-        else if (role === "milk" || dbCategory === "raw_material" || nameLower.includes("leche")) {
+        } else if (role === "milk" || dbCategory === "raw_material" || nameLower.includes("leche")) {
           category = "materia";
-        }
-        // Productos terminados
-        else if (dbCategory === "finished_product" || role === "finished_good") {
+        } else if (dbCategory === "finished_product" || role === "finished_good") {
           category = "producto";
-        }
-        // Otros insumos / suministros
-        else {
+        } else {
           category = "insumo";
         }
         
@@ -46,15 +88,26 @@ export function Production() {
         };
       });
       localStorage.setItem("kefir_inventory_v3", JSON.stringify(kefirInventory));
+      prevInventoryRef.current = inventoryData;
       setSyncDone(true);
-    }
-  }, [inventoryData]);
+    };
 
-  const handleSync = async () => {
-    setSyncDone(false);
-    await refetch();
-    setSyncKey(Date.now());
-  };
+    // Antes de sobreescribir localStorage, verificamos si hay cambios locales de producción pendientes
+    checkAndSyncKefir().then((didSync) => {
+      if (!didSync) {
+        updateLocalStorage();
+      }
+    });
+
+  }, [inventoryData, checkAndSyncKefir]);
+
+  // Polling rápido para detectar producción local en el iframe casi instantáneamente
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkAndSyncKefir();
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [checkAndSyncKefir]);
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
@@ -66,19 +119,16 @@ export function Production() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900">Produccion Industrial</h1>
-              <p className="text-sm text-slate-500">Modulo KefirControl integrado localmente</p>
+              <p className="text-sm text-slate-500 flex items-center gap-1">
+                Modulo KefirControl 
+                <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                  <CheckCircle2 className="h-3 w-3" /> Sincronización Automática Activa
+                </span>
+              </p>
             </div>
           </div>
 
           <div className="flex gap-2">
-            <Button
-              onClick={handleSync}
-              variant="outline"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Sincronizar Datos
-            </Button>
             <a
               href="/kefir-control/index.html"
               target="_blank"
@@ -95,7 +145,7 @@ export function Production() {
       {isLoading || !syncDone ? (
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-          <span className="ml-2 text-slate-500">Sincronizando inventario...</span>
+          <span className="ml-2 text-slate-500">Iniciando sistema de producción...</span>
         </div>
       ) : (
         <iframe
