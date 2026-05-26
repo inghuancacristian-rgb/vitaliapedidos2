@@ -43,8 +43,9 @@ export function Production() {
           }
         });
         
-        localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
-        window.dispatchEvent(new Event('storage'));
+        const newVal = JSON.stringify(kInv);
+        localStorage.setItem('kefir_inventory_v3', newVal);
+        setStorageMutation.mutate({ key: 'kefir_inventory_v3', value: newVal });
         setSyncKey(Date.now()); // Recargar iframe para que vea los cambios
       } catch (e) {
         console.error("Error updating local storage", e);
@@ -89,9 +90,19 @@ export function Production() {
 
   useEffect(() => {
     if (kefirStorageData) {
-      kefirStorageData.forEach((row) => {
-        localStorage.setItem(row.storage_key, row.storage_value);
-      });
+      if (kefirStorageData.length > 0) {
+        kefirStorageData.forEach((row) => {
+          localStorage.setItem(row.storage_key, row.storage_value);
+        });
+      } else {
+        // Cloud is empty. Seed cloud from localStorage (for the first user syncing)
+        ['kefir_inventory_v3', 'kefir_batches_v3', 'kefir_yields'].forEach(key => {
+          const val = localStorage.getItem(key);
+          if (val) {
+            setStorageMutation.mutate({ key, value: val });
+          }
+        });
+      }
       // Force iframe reload and mark as not loading
       setSyncKey(Date.now());
       setIsLoading(false);
@@ -111,8 +122,9 @@ export function Production() {
             }
           });
           if (changed) {
-            localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
-            window.dispatchEvent(new Event('storage'));
+            const newVal = JSON.stringify(kInv);
+            localStorage.setItem('kefir_inventory_v3', newVal);
+            setStorageMutation.mutate({ key: 'kefir_inventory_v3', value: newVal });
           }
         }
       } catch (e) {

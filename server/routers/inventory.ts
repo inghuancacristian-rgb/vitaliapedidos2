@@ -903,7 +903,28 @@ export const inventoryRouter = router({
         // Encontrar producto por ID o Nombre (si viene de KefirControl y no tiene el ID correcto)
         let product = productsData.find(p => p.id === item.productId);
         if (!product && item.productName) {
-          product = productsData.find(p => p.name.toLowerCase().trim() === item.productName!.toLowerCase().trim());
+          const searchName = item.productName.toLowerCase().trim();
+          product = productsData.find(p => p.name.toLowerCase().trim() === searchName);
+          
+          if (!product) {
+            // Fuzzy match: check if product is finished_product and contains the flavor name
+            product = productsData.find(p => 
+              p.category === 'finished_product' && 
+              p.name.toLowerCase().includes(searchName)
+            );
+          }
+          
+          if (!product) {
+            // Último intento: buscar cualquier producto que contenga la palabra (ej. "piña")
+            // siempre que sea finished_product
+            const parts = searchName.split(" ").filter(w => w.length > 3);
+            if (parts.length > 0) {
+              product = productsData.find(p => 
+                p.category === 'finished_product' && 
+                parts.some(part => p.name.toLowerCase().includes(part))
+              );
+            }
+          }
         }
         
         if (!product) {
