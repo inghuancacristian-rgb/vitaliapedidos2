@@ -5,6 +5,28 @@
     <link rel="icon" type="image/svg+xml" href="/kefir-control/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KéfirControl - Panel de Control Industrial</title>
+    <script>
+      try {
+        var kInvStr = localStorage.getItem('kefir_inventory_v3');
+        if (kInvStr) {
+          var kInv = JSON.parse(kInvStr);
+          var wasArray = Array.isArray(kInv);
+          kInv = wasArray ? kInv : Object.values(kInv);
+          var changed = !wasArray;
+          kInv.forEach(function(v) {
+            if (v.category === "producto" && v.name && (v.name.toLowerCase().includes("botella") || v.name.toLowerCase().includes("tapa") || v.name.toLowerCase().includes("envase") || v.name.toLowerCase().includes("etiqueta"))) {
+              v.category = "envase";
+              changed = true;
+            }
+          });
+          if (changed) {
+            localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
+          }
+        }
+      } catch (e) {
+        console.error("Auto-fix before React load failed:", e);
+      }
+    </script>
     <script type="module" crossorigin src="/kefir-control/assets/index-8XlJpsEw.js"></script>
     <link rel="stylesheet" crossorigin href="/kefir-control/assets/index-B8wn4ucd.css">
   </head>
