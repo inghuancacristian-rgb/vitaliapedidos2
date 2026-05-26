@@ -221,6 +221,20 @@ export async function getDb() {
             updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
           )
         `).catch(console.error);
+        
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS kefir_movements (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            productId VARCHAR(100) NOT NULL,
+            productName VARCHAR(255) NOT NULL,
+            category VARCHAR(50),
+            previousQuantity FLOAT NOT NULL,
+            newQuantity FLOAT NOT NULL,
+            changeAmount FLOAT NOT NULL,
+            reason VARCHAR(255),
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+          )
+        `).catch(console.error);
       }
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);

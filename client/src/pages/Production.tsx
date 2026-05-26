@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export function Production() {
   const [syncKey, setSyncKey] = useState(Date.now());
@@ -22,6 +26,7 @@ export function Production() {
     enabled: true,
     refetchOnWindowFocus: false,
   });
+  const { data: movements } = trpc.production.getKefirMovements.useQuery();
   const transferMutation = trpc.inventory.transferToGeneral.useMutation({
     onSuccess: (data) => {
       // Restar del localStorage
@@ -289,19 +294,98 @@ export function Production() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex h-[calc(100vh-8.5rem)] w-full flex-col items-center justify-center bg-white md:h-[calc(100vh-7rem)]">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
-          <p className="text-slate-500 font-medium animate-pulse">Sincronizando estado desde la nube...</p>
+      <Tabs defaultValue="panel" className="w-full">
+        <div className="border-b bg-white px-4">
+          <TabsList className="bg-transparent mb-[-1px]">
+            <TabsTrigger 
+              value="panel" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-6 py-3 font-semibold"
+            >
+              Panel de Producción
+            </TabsTrigger>
+            <TabsTrigger 
+              value="kardex" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-6 py-3 font-semibold"
+            >
+              Kárdex / Historial
+            </TabsTrigger>
+          </TabsList>
         </div>
-      ) : (
-        <iframe
-          key={syncKey}
-          title="KefirControl"
-          src="/kefir-control/index.html"
-          className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"
-        />
-      )}
+
+        <TabsContent value="panel" className="m-0 border-0 p-0">
+          {isLoading ? (
+            <div className="flex h-[calc(100vh-11rem)] w-full flex-col items-center justify-center bg-white">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+              <p className="text-slate-500 font-medium animate-pulse">Sincronizando estado desde la nube...</p>
+            </div>
+          ) : (
+            <iframe
+              key={syncKey}
+              title="KefirControl"
+              src="/kefir-control/index.html"
+              className="h-[calc(100vh-11rem)] w-full border-0 bg-white"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="kardex" className="m-0 border-0 p-6 bg-slate-50 min-h-[calc(100vh-11rem)]">
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden max-w-6xl mx-auto">
+            <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Historial de Movimientos de Producción</h2>
+                <p className="text-sm text-slate-500">Kárdex generado automáticamente a partir de los cambios detectados en la nube.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => utils.production.getKefirMovements.invalidate()}>
+                Actualizar
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead className="text-right">Movimiento</TableHead>
+                    <TableHead className="text-right">Saldo Final</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!movements || movements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-slate-500">
+                        No hay movimientos registrados. Realice cambios en el Panel de Producción para generar historial.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movements.map((mov) => (
+                      <TableRow key={mov.id}>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {format(new Date(mov.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-700">{mov.productName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{mov.category || 'N/A'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-600">{mov.reason}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={\`font-bold \${mov.changeAmount > 0 ? 'text-green-600' : 'text-red-600'}\`}>
+                            {mov.changeAmount > 0 ? '+' : ''}{mov.changeAmount}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-black text-slate-900 text-lg">
+                          {mov.newQuantity}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

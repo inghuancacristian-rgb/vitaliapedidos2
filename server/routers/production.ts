@@ -177,6 +177,44 @@ export const productionRouter = router({
       if (!pool) return { success: false };
       
       try {
+        if (input.key === 'kefir_inventory_v3') {
+          try {
+            // Get old value
+            const [rows] = await pool.execute('SELECT storage_value FROM kefir_storage WHERE storage_key = ?', [input.key]);
+            const oldValStr = rows.length > 0 ? rows[0].storage_value : "[]";
+            
+            let oldArr = JSON.parse(oldValStr || "[]");
+            let newArr = JSON.parse(input.value || "[]");
+            
+            oldArr = Array.isArray(oldArr) ? oldArr : Object.values(oldArr);
+            newArr = Array.isArray(newArr) ? newArr : Object.values(newArr);
+            
+            for (const newItem of newArr) {
+              const oldItem = oldArr.find((i: any) => i.id === newItem.id || (i.name === newItem.name && i.category === newItem.category));
+              const oldQty = oldItem ? (oldItem.stock ?? oldItem.quantity ?? 0) : 0;
+              const newQty = newItem.stock ?? newItem.quantity ?? 0;
+              
+              if (oldQty !== newQty) {
+                const diff = newQty - oldQty;
+                await pool.execute(
+                  'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                  [
+                    newItem.id || '',
+                    newItem.name || 'Desconocido',
+                    newItem.category || '',
+                    oldQty,
+                    newQty,
+                    diff,
+                    diff > 0 ? 'Ingreso/Producción' : 'Salida/Traspaso'
+                  ]
+                );
+              }
+            }
+          } catch(e) {
+            console.error("Error computing diff for Kardex:", e);
+          }
+        }
+        
         await pool.execute(
           'INSERT INTO kefir_storage (storage_key, storage_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE storage_value = ?',
           [input.key, input.value, input.value]
@@ -186,5 +224,21 @@ export const productionRouter = router({
         console.error("Error setting kefir storage:", e);
         return { success: false };
       }
-    })
+    }),
+    
+  getKefirMovements: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    
+    const pool = (db as any).session?.client || (global as any)._pool;
+    if (!pool) return [];
+    
+    try {
+      const [rows] = await pool.execute('SELECT * FROM kefir_movements ORDER BY createdAt DESC');
+      return rows as any[];
+    } catch (e) {
+      console.error("Error getting kefir movements:", e);
+      return [];
+    }
+  })
 });
