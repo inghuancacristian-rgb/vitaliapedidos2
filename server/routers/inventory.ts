@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
-import { inventory } from "../../drizzle/schema";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { inventory, inventoryTransfers, inventoryTransferItems, users } from "../../drizzle/schema";
+import { eq, and, isNull, sql, count, inArray, desc } from "drizzle-orm";
 import {
   getAllProducts,
   createProduct,
@@ -803,15 +803,18 @@ export const inventoryRouter = router({
       const { createInventoryMovement, updateInventory } = await import("../db");
       
       // 1. Generate transfer number
-      const countRes = await db.execute(sql`SELECT COUNT(*) as count FROM inventory_transfers`);
-      const nextId = (countRes[0] as any)[0].count + 1;
+      const countRes = await db.select({ value: count() }).from(inventoryTransfers);
+      const nextId = countRes[0].value + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
-      const insertRes = await db.execute(sql`
-        INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
-        VALUES (${transferNumber}, 'to_production', 'completed', ${ctx.user.id}, ${input.notes || null})
-      `);
+      const insertRes = await db.insert(inventoryTransfers).values({
+        transferNumber,
+        direction: 'to_production',
+        status: 'completed',
+        userId: ctx.user.id,
+        notes: input.notes || null
+      });
       const transferId = (insertRes[0] as any).insertId;
 
       const productsData = await getAllProducts();
@@ -824,10 +827,13 @@ export const inventoryRouter = router({
         if (!product) continue;
 
         // 3. Create Transfer Item
-        await db.execute(sql`
-          INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
-          VALUES (${transferId}, ${item.productId}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
-        `);
+        await db.insert(inventoryTransferItems).values({
+          transferId,
+          productId: item.productId,
+          quantity: item.quantity,
+          productName: product.name,
+          productUnit: product.unit || 'unidad'
+        });
 
         // 4. Update Inventory (General -> decrease)
         const currentInv = inventoryData.find(i => i.productId === item.productId);
@@ -873,15 +879,18 @@ export const inventoryRouter = router({
       const { createInventoryMovement, updateInventory } = await import("../db");
       
       // 1. Generate transfer number
-      const countRes = await db.execute(sql`SELECT COUNT(*) as count FROM inventory_transfers`);
-      const nextId = (countRes[0] as any)[0].count + 1;
+      const countRes = await db.select({ value: count() }).from(inventoryTransfers);
+      const nextId = countRes[0].value + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
-      const insertRes = await db.execute(sql`
-        INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
-        VALUES (${transferNumber}, 'to_general', 'completed', ${ctx.user.id}, ${input.notes || null})
-      `);
+      const insertRes = await db.insert(inventoryTransfers).values({
+        transferNumber,
+        direction: 'to_general',
+        status: 'completed',
+        userId: ctx.user.id,
+        notes: input.notes || null
+      });
       const transferId = (insertRes[0] as any).insertId;
 
       const productsData = await getAllProducts();
@@ -903,10 +912,13 @@ export const inventoryRouter = router({
         }
 
         // 3. Create Transfer Item
-        await db.execute(sql`
-          INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
-          VALUES (${transferId}, ${product.id}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
-        `);
+        await db.insert(inventoryTransferItems).values({
+          transferId,
+          productId: product.id,
+          quantity: item.quantity,
+          productName: product.name,
+          productUnit: product.unit || 'unidad'
+        });
 
         // 4. Update Inventory (Production -> General, so general increases)
         const currentInv = inventoryData.find(i => i.productId === product.id);
@@ -939,26 +951,32 @@ export const inventoryRouter = router({
     if (!db) return [];
     
     // Fetch transfers
-    const transfersRows = await db.execute(sql`
-      SELECT t.*, u.username, u.name as userFullName 
-      FROM inventory_transfers t
-      LEFT JOIN users u ON t.userId = u.id
-      ORDER BY t.createdAt DESC
-    `);
+    const transfersRows = await db.select({
+      id: inventoryTransfers.id,
+      transferNumber: inventoryTransfers.transferNumber,
+      direction: inventoryTransfers.direction,
+      status: inventoryTransfers.status,
+      userId: inventoryTransfers.userId,
+      notes: inventoryTransfers.notes,
+      createdAt: inventoryTransfers.createdAt,
+      username: users.username,
+      userFullName: users.name
+    })
+    .from(inventoryTransfers)
+    .leftJoin(users, eq(inventoryTransfers.userId, users.id))
+    .orderBy(desc(inventoryTransfers.createdAt));
     
-    const transfers = transfersRows[0] as any[];
+    const transfers = transfersRows;
     if (!transfers || transfers.length === 0) return [];
     
     // Fetch items
     const transferIds = transfers.map(t => t.id);
-    const inClause = sql.raw(`(${transferIds.join(',')})`);
     
-    const itemsRows = await db.execute(sql`
-      SELECT * FROM inventory_transfer_items 
-      WHERE transferId IN ${inClause}
-    `);
+    const itemsRows = await db.select()
+      .from(inventoryTransferItems)
+      .where(inArray(inventoryTransferItems.transferId, transferIds));
     
-    const items = itemsRows[0] as any[];
+    const items = itemsRows;
     
     // Assemble
     return transfers.map(t => ({

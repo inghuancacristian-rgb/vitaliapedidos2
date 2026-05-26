@@ -69,6 +69,16 @@ export function Production() {
     }
   };
 
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'OPEN_TRANSFER_DIALOG') {
+        openTransferDialog();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const handleQuantityChange = (id: string, val: string, maxQty: number) => {
     if (val === "") {
       setSelectedItems(prev => {
@@ -131,14 +141,7 @@ export function Production() {
           </div>
 
           <div className="flex gap-2">
-            <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openTransferDialog} className="bg-slate-900 hover:bg-slate-800 text-white gap-2 rounded-md">
-                  <ArrowRightLeft className="h-4 w-4" />
-                  Pasar a Inventario General
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl rounded-[2rem] border-white/70 bg-white/95">
+            <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>              <DialogContent className="max-w-3xl rounded-[2rem] border-white/70 bg-white/95">
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-black">Traspaso a Inventario General</DialogTitle>
                   <p className="text-sm text-slate-500">Mueva los productos terminados al inventario principal para su comercialización.</p>

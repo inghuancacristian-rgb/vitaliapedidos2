@@ -11,5 +11,46 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        // Only show if we are in an iframe (embedded in Production.tsx)
+        if (window !== window.parent) {
+          const btn = document.createElement('button');
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg> Pasar a Inventario General`;
+          btn.style.position = 'fixed';
+          btn.style.bottom = '24px';
+          btn.style.right = '24px';
+          btn.style.zIndex = '999999';
+          btn.style.backgroundColor = '#2563eb'; // blue-600
+          btn.style.color = 'white';
+          btn.style.padding = '12px 24px';
+          btn.style.borderRadius = '9999px';
+          btn.style.boxShadow = '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)';
+          btn.style.border = 'none';
+          btn.style.cursor = 'pointer';
+          btn.style.display = 'flex';
+          btn.style.alignItems = 'center';
+          btn.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+          btn.style.fontWeight = 'bold';
+          btn.style.fontSize = '14px';
+          btn.style.transition = 'all 0.2s';
+          
+          btn.onmouseover = () => {
+            btn.style.backgroundColor = '#1d4ed8'; // blue-700
+            btn.style.transform = 'translateY(-2px)';
+          };
+          btn.onmouseout = () => {
+            btn.style.backgroundColor = '#2563eb';
+            btn.style.transform = 'translateY(0)';
+          };
+          
+          btn.onclick = () => {
+            window.parent.postMessage({ type: 'OPEN_TRANSFER_DIALOG' }, '*');
+          };
+          
+          document.body.appendChild(btn);
+        }
+      });
+    </script>
   </body>
 </html>
