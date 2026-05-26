@@ -24,35 +24,56 @@ export function TransferToProductionDialog({
     onSuccess: (data) => {
       try {
         const kInvStr = localStorage.getItem('kefir_inventory_v3');
-        const kInv = kInvStr ? JSON.parse(kInvStr) : {};
+        let kInv: any[] = [];
+        try {
+          const parsed = JSON.parse(kInvStr || "[]");
+          kInv = Array.isArray(parsed) ? parsed : Object.values(parsed);
+        } catch(e) {
+          kInv = [];
+        }
         
         data.items.forEach((item: any) => {
           const nameLower = item.productName.toLowerCase();
-          if (!kInv[nameLower]) {
+          let existingItem = kInv.find((i: any) => i.name?.toLowerCase() === nameLower);
+          
+          if (!existingItem) {
             let kCategory = "materia";
             if (item.category === "supplies") kCategory = "envase";
             else if (item.category === "finished_product") kCategory = "producto";
 
-            kInv[nameLower] = { 
-              id: nameLower, 
+            const nextId = kInv.length > 0 ? Math.max(...kInv.map((i:any) => typeof i.id === 'number' ? i.id : 0)) + 1 : 1;
+
+            existingItem = { 
+              id: nextId, 
               name: item.productName, 
-              stock: 0, 
+              quantity: 0, 
               unit: item.unit || 'uds', 
               minStock: 0,
               category: kCategory
             };
+            kInv.push(existingItem);
           }
-          kInv[nameLower].stock = (kInv[nameLower].stock || 0) + item.quantity;
+          
+          // KefirControl uses "quantity" instead of "stock"
+          existingItem.quantity = (existingItem.quantity || existingItem.stock || 0) + item.quantity;
+          if (existingItem.stock !== undefined) delete existingItem.stock;
         });
 
-        // FIX PARA TRASPASOS ANTERIORES SIN CATEGORIA O CON CATEGORIA 'insumo'
-        Object.values(kInv).forEach((v: any) => {
+        // FIX PARA TRASPASOS ANTERIORES
+        kInv.forEach((v: any) => {
           if (!v.category || v.category === "insumo") {
             if (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta")) {
               v.category = "envase";
             } else {
               v.category = "materia";
             }
+          }
+          if (v.stock !== undefined) {
+             v.quantity = (v.quantity || 0) + v.stock;
+             delete v.stock;
+          }
+          if (typeof v.id === 'string') {
+             v.id = Math.max(1, ...kInv.map((i:any) => typeof i.id === 'number' ? i.id : 0)) + 1;
           }
         });
         

@@ -21,13 +21,19 @@ export function Production() {
       // Restar del localStorage
       try {
         const kInvStr = localStorage.getItem('kefir_inventory_v3');
-        const kInv = kInvStr ? JSON.parse(kInvStr) : {};
+        let kInv: any[] = [];
+        try {
+          const parsed = JSON.parse(kInvStr || "[]");
+          kInv = Array.isArray(parsed) ? parsed : Object.values(parsed);
+        } catch(e) {
+          kInv = [];
+        }
         
         data.items.forEach((item: any) => {
-          // El nombre del item en KefirControl puede ser el ID del objeto (en lowercase)
           const nameLower = item.productName.toLowerCase();
-          if (kInv[nameLower]) {
-            kInv[nameLower].stock = Math.max(0, (kInv[nameLower].stock || 0) - item.quantity);
+          const existingItem = kInv.find((i: any) => i.name?.toLowerCase() === nameLower);
+          if (existingItem) {
+            existingItem.quantity = Math.max(0, (existingItem.quantity || existingItem.stock || 0) - item.quantity);
           }
         });
         
@@ -53,11 +59,17 @@ export function Production() {
   const openTransferDialog = () => {
     try {
       const kInvStr = localStorage.getItem('kefir_inventory_v3');
-      const kInv = kInvStr ? JSON.parse(kInvStr) : {};
+      let kInv: any[] = [];
+      try {
+        const parsed = JSON.parse(kInvStr || "[]");
+        kInv = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      } catch(e) {
+        kInv = [];
+      }
       
-      const items = Object.values(kInv).filter((i: any) => 
-        (i.stock > 0) && 
-        (i.category === "producto" || i.category === "finished_product" || i.id.startsWith("PROD-") || i.id.includes("kefir") || i.id.includes("queso") || i.id.includes("suero"))
+      const items = kInv.filter((i: any) => 
+        ((i.quantity || i.stock || 0) > 0) && 
+        (i.category === "producto" || i.category === "finished_product" || String(i.id).startsWith("PROD-") || i.name?.toLowerCase().includes("kefir") || i.name?.toLowerCase().includes("queso") || i.name?.toLowerCase().includes("suero"))
       );
       
       setProductionItems(items);
