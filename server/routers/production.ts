@@ -145,5 +145,46 @@ export const productionRouter = router({
       console.log("INVENTORY:", JSON.stringify(input.inventory, null, 2));
       console.log("===============================\n\n");
       return { success: true };
+    }),
+
+  getKefirStorage: publicProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      
+      const pool = (db as any).session?.client || (global as any)._pool;
+      if (!pool) return [];
+      
+      try {
+        const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
+        return rows as any[];
+      } catch (e) {
+        console.error("Error getting kefir storage:", e);
+        return [];
+      }
+    }),
+
+  setKefirStorage: publicProcedure
+    .input(z.object({
+      key: z.string(),
+      value: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { success: false };
+      
+      const pool = (db as any).session?.client || (global as any)._pool;
+      if (!pool) return { success: false };
+      
+      try {
+        await pool.execute(
+          'INSERT INTO kefir_storage (storage_key, storage_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE storage_value = ?',
+          [input.key, input.value, input.value]
+        );
+        return { success: true };
+      } catch (e) {
+        console.error("Error setting kefir storage:", e);
+        return { success: false };
+      }
     })
 });

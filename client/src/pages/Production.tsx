@@ -14,8 +14,14 @@ export function Production() {
   const [productionItems, setProductionItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const utils = trpc.useContext();
+  const setStorageMutation = trpc.production.setKefirStorage.useMutation();
+  const { data: kefirStorageData } = trpc.production.getKefirStorage.useQuery(undefined, {
+    enabled: true,
+    refetchOnWindowFocus: false,
+  });
   const transferMutation = trpc.inventory.transferToGeneral.useMutation({
     onSuccess: (data) => {
       // Restar del localStorage
@@ -82,36 +88,65 @@ export function Production() {
   };
 
   useEffect(() => {
-    // FIX AUTOMÁTICO: Corregir items que se hayan categorizado erróneamente en el pasado
-    try {
-      const kInvStr = localStorage.getItem('kefir_inventory_v3');
-      if (kInvStr) {
-        let kInv = JSON.parse(kInvStr);
-        const wasArray = Array.isArray(kInv);
-        kInv = wasArray ? kInv : Object.values(kInv);
-        let changed = !wasArray;
-        kInv.forEach((v: any) => {
-          if (v.category === "producto" && (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta"))) {
-            v.category = "envase";
-            changed = true;
+    if (kefirStorageData) {
+      kefirStorageData.forEach((row) => {
+        localStorage.setItem(row.storage_key, row.storage_value);
+      });
+      // Force iframe reload and mark as not loading
+      setSyncKey(Date.now());
+      setIsLoading(false);
+      
+      // FIX AUTOMÁTICO: Corregir items que se hayan categorizado erróneamente en el pasado
+      try {
+        const kInvStr = localStorage.getItem('kefir_inventory_v3');
+        if (kInvStr) {
+          let kInv = JSON.parse(kInvStr);
+          const wasArray = Array.isArray(kInv);
+          kInv = wasArray ? kInv : Object.values(kInv);
+          let changed = !wasArray;
+          kInv.forEach((v: any) => {
+            if (v.category === "producto" && (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta"))) {
+              v.category = "envase";
+              changed = true;
+            }
+          });
+          if (changed) {
+            localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
+            window.dispatchEvent(new Event('storage'));
           }
-        });
-        if (changed) {
-          localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
-          window.dispatchEvent(new Event('storage'));
         }
+      } catch (e) {
+        console.error("Error auto-fixing inventory", e);
       }
-    } catch (e) {
-      console.error("Error auto-fixing inventory", e);
     }
+  }, [kefirStorageData]);
 
+  useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'OPEN_TRANSFER_DIALOG') {
         openTransferDialog();
       }
     };
+    
+    // Sync localStorage changes back to server
+    let timeoutId: any;
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith('kefir_') && e.newValue) {
+        // Debounce to prevent spam
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          setStorageMutation.mutate({ key: e.key!, value: e.newValue! });
+        }, 500);
+      }
+    };
+    
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      window.removeEventListener('storage', handleStorage);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const handleQuantityChange = (id: string, val: string, maxQty: number) => {
@@ -242,12 +277,19 @@ export function Production() {
         </div>
       </div>
 
-      <iframe
-        key={syncKey}
-        title="KefirControl"
-        src="/kefir-control/index.html"
-        className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"
-      />
+      {isLoading ? (
+        <div className="flex h-[calc(100vh-8.5rem)] w-full flex-col items-center justify-center bg-white md:h-[calc(100vh-7rem)]">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+          <p className="text-slate-500 font-medium animate-pulse">Sincronizando estado desde la nube...</p>
+        </div>
+      ) : (
+        <iframe
+          key={syncKey}
+          title="KefirControl"
+          src="/kefir-control/index.html"
+          className="h-[calc(100vh-8.5rem)] w-full border-0 bg-white md:h-[calc(100vh-7rem)]"
+        />
+      )}
     </div>
   );
 }

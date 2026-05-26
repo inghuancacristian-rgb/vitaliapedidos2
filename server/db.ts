@@ -213,6 +213,14 @@ export async function getDb() {
         _pool.execute(`
           ALTER TABLE inventory_transfer_items ADD COLUMN createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         `).catch(() => {}); // ignorar error si la columna ya existe
+        
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS kefir_storage (
+            storage_key VARCHAR(100) PRIMARY KEY,
+            storage_value LONGTEXT NOT NULL,
+            updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          )
+        `).catch(console.error);
       }
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);

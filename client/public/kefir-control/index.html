@@ -23,6 +23,22 @@
             localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
           }
         }
+        
+        // Interceptar setItem para sincronizar en la nube automáticamente
+        var originalSetItem = localStorage.setItem;
+        localStorage.setItem = function(key, value) {
+          originalSetItem.apply(this, arguments);
+          if (key && key.startsWith('kefir_')) {
+            try {
+              fetch('/api/trpc/production.setKefirStorage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ "0": { key: key, value: value } }) // TRPC format
+              });
+            } catch(e) {}
+          }
+        };
+        
       } catch (e) {
         console.error("Auto-fix before React load failed:", e);
       }
