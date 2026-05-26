@@ -853,6 +853,7 @@ export const inventoryRouter = router({
         transferDetails.push({
           productId: item.productId,
           productName: product.name,
+          category: product.category,
           quantity: item.quantity,
           unit: product.unit || 'unidad'
         });

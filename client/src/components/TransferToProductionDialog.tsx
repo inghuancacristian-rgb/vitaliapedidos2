@@ -29,9 +29,31 @@ export function TransferToProductionDialog({
         data.items.forEach((item: any) => {
           const nameLower = item.productName.toLowerCase();
           if (!kInv[nameLower]) {
-            kInv[nameLower] = { id: nameLower, name: item.productName, stock: 0, unit: item.unit || 'uds', minStock: 0 };
+            let kCategory = "insumo";
+            if (item.category === "supplies") kCategory = "envase";
+            else if (item.category === "finished_product") kCategory = "producto";
+
+            kInv[nameLower] = { 
+              id: nameLower, 
+              name: item.productName, 
+              stock: 0, 
+              unit: item.unit || 'uds', 
+              minStock: 0,
+              category: kCategory
+            };
           }
           kInv[nameLower].stock = (kInv[nameLower].stock || 0) + item.quantity;
+        });
+
+        // FIX PARA TRASPASOS ANTERIORES SIN CATEGORIA
+        Object.values(kInv).forEach((v: any) => {
+          if (!v.category) {
+            if (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta")) {
+              v.category = "envase";
+            } else {
+              v.category = "insumo";
+            }
+          }
         });
         
         localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
