@@ -29,7 +29,7 @@ export function TransferToProductionDialog({
         data.items.forEach((item: any) => {
           const nameLower = item.productName.toLowerCase();
           if (!kInv[nameLower]) {
-            let kCategory = "insumo";
+            let kCategory = "materia";
             if (item.category === "supplies") kCategory = "envase";
             else if (item.category === "finished_product") kCategory = "producto";
 
@@ -45,13 +45,13 @@ export function TransferToProductionDialog({
           kInv[nameLower].stock = (kInv[nameLower].stock || 0) + item.quantity;
         });
 
-        // FIX PARA TRASPASOS ANTERIORES SIN CATEGORIA
+        // FIX PARA TRASPASOS ANTERIORES SIN CATEGORIA O CON CATEGORIA 'insumo'
         Object.values(kInv).forEach((v: any) => {
-          if (!v.category) {
+          if (!v.category || v.category === "insumo") {
             if (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta")) {
               v.category = "envase";
             } else {
-              v.category = "insumo";
+              v.category = "materia";
             }
           }
         });
