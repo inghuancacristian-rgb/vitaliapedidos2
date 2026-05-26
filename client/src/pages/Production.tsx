@@ -87,8 +87,9 @@ export function Production() {
       const kInvStr = localStorage.getItem('kefir_inventory_v3');
       if (kInvStr) {
         let kInv = JSON.parse(kInvStr);
-        kInv = Array.isArray(kInv) ? kInv : Object.values(kInv);
-        let changed = false;
+        const wasArray = Array.isArray(kInv);
+        kInv = wasArray ? kInv : Object.values(kInv);
+        let changed = !wasArray;
         kInv.forEach((v: any) => {
           if (v.category === "producto" && (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta"))) {
             v.category = "envase";
