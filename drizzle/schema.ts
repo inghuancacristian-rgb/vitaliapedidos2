@@ -592,4 +592,51 @@ export const productsRelations = relations(products, ({ many }) => ({
   orderItems: many(orderItems),
   saleItems: many(saleItems),
   inventory: many(inventory),
+  inventoryTransferItems: many(inventoryTransferItems),
+}));
+
+// Tabla de Traspasos de Inventario (General <-> Producción)
+export const inventoryTransfers = mysqlTable("inventory_transfers", {
+  id: int("id").autoincrement().primaryKey(),
+  transferNumber: varchar("transferNumber", { length: 50 }).notNull().unique(),
+  direction: mysqlEnum("direction", ["to_production", "to_general"]).notNull(),
+  status: mysqlEnum("status", ["completed", "cancelled"]).default("completed").notNull(),
+  userId: int("userId").notNull().references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InventoryTransfer = typeof inventoryTransfers.$inferSelect;
+export type InsertInventoryTransfer = typeof inventoryTransfers.$inferInsert;
+
+export const inventoryTransferItems = mysqlTable("inventory_transfer_items", {
+  id: int("id").autoincrement().primaryKey(),
+  transferId: int("transferId").notNull().references(() => inventoryTransfers.id),
+  productId: int("productId").notNull().references(() => products.id),
+  quantity: int("quantity").notNull(),
+  productName: varchar("productName", { length: 255 }),
+  productUnit: varchar("productUnit", { length: 20 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InventoryTransferItem = typeof inventoryTransferItems.$inferSelect;
+export type InsertInventoryTransferItem = typeof inventoryTransferItems.$inferInsert;
+
+export const inventoryTransfersRelations = relations(inventoryTransfers, ({ one, many }) => ({
+  user: one(users, {
+    fields: [inventoryTransfers.userId],
+    references: [users.id],
+  }),
+  items: many(inventoryTransferItems),
+}));
+
+export const inventoryTransferItemsRelations = relations(inventoryTransferItems, ({ one }) => ({
+  transfer: one(inventoryTransfers, {
+    fields: [inventoryTransferItems.transferId],
+    references: [inventoryTransfers.id],
+  }),
+  product: one(products, {
+    fields: [inventoryTransferItems.productId],
+    references: [products.id],
+  }),
 }));

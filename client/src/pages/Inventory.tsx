@@ -25,6 +25,8 @@ import {
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { ProductHistoryDialog } from "@/components/ProductHistoryDialog";
+import { TransferToProductionDialog } from "@/components/TransferToProductionDialog";
+import { InventoryTransfersDialog } from "@/components/InventoryTransfersDialog";
 import { formatCurrency } from "@/lib/currency";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Package, AlertTriangle, Info, History as HistoryIcon, LayoutGrid, List, Calendar, TriangleAlert, FileDown, Filter, ChevronDown, CheckCircle2, XCircle } from "lucide-react";
@@ -577,6 +579,8 @@ export default function Inventory() {
                 <Button onClick={() => window.print()} variant="outline" className="gap-2 bg-white/80 no-print">
                   <Printer className="h-4 w-4" /> Imprimir Inventario
                 </Button>
+                <InventoryTransfersDialog />
+                <TransferToProductionDialog inventoryItems={inventory || []} onSuccess={() => refetch()} />
                 <AddProductDialog onProductAdded={() => refetch()} />
               </div>
             ) : null}
@@ -726,7 +730,11 @@ export default function Inventory() {
                   </div>
 
                   {user?.role === "admin" && (
-                    <AddProductDialog onProductAdded={() => refetch()} />
+                    <div className="flex gap-2">
+                      <InventoryTransfersDialog />
+                      <TransferToProductionDialog inventoryItems={inventory || []} onSuccess={() => refetch()} />
+                      <AddProductDialog onProductAdded={() => refetch()} />
+                    </div>
                   )}
                 </div>
               </div>

@@ -749,4 +749,221 @@ export const inventoryRouter = router({
   getSmartAlerts: protectedProcedure.query(async () => {
     return await getSmartInventoryAlerts();
   }),
+
+  // ==========================================
+  // ENDPOINTS DE TRASPASOS (GENERAL <-> PROD)
+  // ==========================================
+
+  initTransferTables: protectedProcedure.mutation(async ({ ctx }) => {
+    if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    const db = await import("../db").then(m => m.getDb());
+    if (!db) return { success: false, message: "No db connection" };
+    
+    await db.execute(require("drizzle-orm").sql`
+      CREATE TABLE IF NOT EXISTS inventory_transfers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        transferNumber VARCHAR(50) NOT NULL UNIQUE,
+        direction ENUM('to_production', 'to_general') NOT NULL,
+        status ENUM('completed', 'cancelled') NOT NULL DEFAULT 'completed',
+        userId INT NOT NULL,
+        notes TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+
+    await db.execute(require("drizzle-orm").sql`
+      CREATE TABLE IF NOT EXISTS inventory_transfer_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        transferId INT NOT NULL,
+        productId INT NOT NULL,
+        quantity INT NOT NULL,
+        productName VARCHAR(255),
+        productUnit VARCHAR(20),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+      )
+    `);
+    
+    return { success: true };
+  }),
+
+  transferToProduction: protectedProcedure
+    .input(z.object({
+      items: z.array(z.object({
+        productId: z.number(),
+        quantity: z.number().positive()
+      })),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      
+      const db = await import("../db").then(m => m.getDb());
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB Error" });
+      
+      const { createInventoryMovement, updateInventory } = await import("../db");
+      
+      // 1. Generate transfer number
+      const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
+      const nextId = (countRes[0] as any)[0].count + 1;
+      const transferNumber = \`TR-\${new Date().getFullYear()}-\${String(nextId).padStart(4, '0')}\`;
+
+      // 2. Create Transfer Record
+      const insertRes = await db.execute(require("drizzle-orm").sql`
+        INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
+        VALUES (\${transferNumber}, 'to_production', 'completed', \${ctx.user.id}, \${input.notes || null})
+      `);
+      const transferId = (insertRes[0] as any).insertId;
+
+      const productsData = await getAllProducts();
+      const inventoryData = await getAllInventory();
+
+      const transferDetails = [];
+
+      for (const item of input.items) {
+        const product = productsData.find(p => p.id === item.productId);
+        if (!product) continue;
+
+        // 3. Create Transfer Item
+        await db.execute(require("drizzle-orm").sql`
+          INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
+          VALUES (\${transferId}, \${item.productId}, \${item.quantity}, \${product.name}, \${product.unit || 'unidad'})
+        `);
+
+        // 4. Update Inventory (General -> decrease)
+        const currentInv = inventoryData.find(i => i.productId === item.productId);
+        const newQty = (currentInv?.quantity || 0) - item.quantity;
+        await updateInventory(item.productId, Math.max(0, newQty));
+
+        // 5. Create Movement
+        await createInventoryMovement({
+          productId: item.productId,
+          userId: ctx.user.id,
+          type: "exit",
+          quantity: item.quantity,
+          reason: "Traspaso a Producción",
+          notes: \`Traspaso \${transferNumber}\${input.notes ? ': ' + input.notes : ''}\`,
+        });
+
+        transferDetails.push({
+          productId: item.productId,
+          productName: product.name,
+          quantity: item.quantity,
+          unit: product.unit || 'unidad'
+        });
+      }
+
+      return { success: true, transferNumber, items: transferDetails };
+    }),
+
+  transferToGeneral: protectedProcedure
+    .input(z.object({
+      items: z.array(z.object({
+        productId: z.number(),
+        productName: z.string().optional(),
+        quantity: z.number().positive()
+      })),
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+      
+      const db = await import("../db").then(m => m.getDb());
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB Error" });
+      
+      const { createInventoryMovement, updateInventory } = await import("../db");
+      
+      // 1. Generate transfer number
+      const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
+      const nextId = (countRes[0] as any)[0].count + 1;
+      const transferNumber = \`TR-\${new Date().getFullYear()}-\${String(nextId).padStart(4, '0')}\`;
+
+      // 2. Create Transfer Record
+      const insertRes = await db.execute(require("drizzle-orm").sql`
+        INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
+        VALUES (\${transferNumber}, 'to_general', 'completed', \${ctx.user.id}, \${input.notes || null})
+      `);
+      const transferId = (insertRes[0] as any).insertId;
+
+      const productsData = await getAllProducts();
+      const inventoryData = await getAllInventory();
+
+      const transferDetails = [];
+
+      for (const item of input.items) {
+        // Encontrar producto por ID o Nombre (si viene de KefirControl y no tiene el ID correcto)
+        let product = productsData.find(p => p.id === item.productId);
+        if (!product && item.productName) {
+          product = productsData.find(p => p.name.toLowerCase().trim() === item.productName!.toLowerCase().trim());
+        }
+        
+        if (!product) {
+          // Si no existe el producto, se ignora en el DB (podriamos crearlo, pero KefirControl deberia usar productos existentes)
+          console.warn("TransferToGeneral: Product not found:", item);
+          continue;
+        }
+
+        // 3. Create Transfer Item
+        await db.execute(require("drizzle-orm").sql`
+          INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
+          VALUES (\${transferId}, \${product.id}, \${item.quantity}, \${product.name}, \${product.unit || 'unidad'})
+        `);
+
+        // 4. Update Inventory (Production -> General, so general increases)
+        const currentInv = inventoryData.find(i => i.productId === product.id);
+        const newQty = (currentInv?.quantity || 0) + item.quantity;
+        await updateInventory(product.id, newQty);
+
+        // 5. Create Movement
+        await createInventoryMovement({
+          productId: product.id,
+          userId: ctx.user.id,
+          type: "entry",
+          quantity: item.quantity,
+          reason: "Ingreso por Producción",
+          notes: \`Traspaso \${transferNumber}\${input.notes ? ': ' + input.notes : ''}\`,
+        });
+
+        transferDetails.push({
+          productId: product.id,
+          productName: product.name,
+          quantity: item.quantity,
+          unit: product.unit || 'unidad'
+        });
+      }
+
+      return { success: true, transferNumber, items: transferDetails };
+    }),
+
+  getTransfers: protectedProcedure.query(async () => {
+    const db = await import("../db").then(m => m.getDb());
+    if (!db) return [];
+    
+    // Fetch transfers
+    const transfersRows = await db.execute(require("drizzle-orm").sql`
+      SELECT t.*, u.username, u.name as userFullName 
+      FROM inventory_transfers t
+      LEFT JOIN users u ON t.userId = u.id
+      ORDER BY t.createdAt DESC
+    `);
+    
+    const transfers = transfersRows[0] as any[];
+    if (!transfers || transfers.length === 0) return [];
+    
+    // Fetch items
+    const transferIds = transfers.map(t => t.id);
+    const inClause = require("drizzle-orm").sql.raw(\`(\${transferIds.join(',')})\`);
+    
+    const itemsRows = await db.execute(require("drizzle-orm").sql\`
+      SELECT * FROM inventory_transfer_items 
+      WHERE transferId IN \${inClause}
+    \`);
+    
+    const items = itemsRows[0] as any[];
+    
+    // Assemble
+    return transfers.map(t => ({
+      ...t,
+      items: items.filter(i => i.transferId === t.id)
+    }));
+  }),
 });
