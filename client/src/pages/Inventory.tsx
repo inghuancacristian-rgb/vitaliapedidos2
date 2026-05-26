@@ -391,7 +391,13 @@ export default function Inventory() {
   const lowStockRaw = useMemo(() => allRawItems.filter((item: any) => item.isLowStock) || [], [allRawItems]);
 
   const displayItems = useMemo(() => {
-    const baseItems = activeTab === "all" ? [...finishedProducts, ...allRawItems] : activeTab === "finished" ? finishedProducts : allRawItems;
+    let baseItems = [];
+    if (activeTab === "all") baseItems = [...finishedProducts, ...allRawItems];
+    else if (activeTab === "finished") baseItems = finishedProducts;
+    else if (activeTab === "raw") baseItems = rawMaterials;
+    else if (activeTab === "insumo") baseItems = insumos;
+    else if (activeTab === "supplies") baseItems = supplies;
+    
     let filtered = baseItems;
 
     // Filtro por término de búsqueda
@@ -444,10 +450,15 @@ export default function Inventory() {
     });
   }, [activeTab, finishedProducts, allRawItems, searchTerm, sortBy, filterStock, filterExpiry]);
 
-  const lowStockItems = activeTab === "all" ? [...lowStockFinished, ...lowStockRaw] : activeTab === "finished" ? lowStockFinished : lowStockRaw;
+  const lowStockItems = activeTab === "all" ? [...lowStockFinished, ...lowStockRaw] : activeTab === "finished" ? lowStockFinished : activeTab === "raw" ? rawMaterials.filter((i:any)=>i.isLowStock) : activeTab === "insumo" ? insumos.filter((i:any)=>i.isLowStock) : supplies.filter((i:any)=>i.isLowStock);
 
   const inventorySummary = useMemo(() => {
-    const currentItems = activeTab === "all" ? [...finishedProducts, ...allRawItems] : activeTab === "finished" ? finishedProducts : allRawItems;
+    let currentItems = [];
+    if (activeTab === "all") currentItems = [...finishedProducts, ...allRawItems];
+    else if (activeTab === "finished") currentItems = finishedProducts;
+    else if (activeTab === "raw") currentItems = rawMaterials;
+    else if (activeTab === "insumo") currentItems = insumos;
+    else if (activeTab === "supplies") currentItems = supplies;
 
     const available = currentItems.reduce((acc: number, item: any) => acc + (item.quantity || 0), 0);
     const reserved = currentItems.reduce((acc: number, item: any) => acc + (item.onOrder || 0), 0);
@@ -663,7 +674,13 @@ export default function Inventory() {
                       Terminados
                     </TabsTrigger>
                     <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
-                      Materia Prima / Insumos
+                      Materia Prima
+                    </TabsTrigger>
+                    <TabsTrigger value="insumo" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                      Insumos
+                    </TabsTrigger>
+                    <TabsTrigger value="supplies" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                      Suministros
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -698,11 +715,11 @@ export default function Inventory() {
                       <DropdownMenuContent align="end" className="rounded-2xl p-2 border-slate-100 shadow-xl">
                         <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exportar vista actual</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Materias Primas e Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : activeTab === "raw" ? "Materia Prima" : activeTab === "insumo" ? "Insumos" : "Suministros")}>
                           <div className="p-1.5 bg-red-50 text-red-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar PDF
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Materias Primas e Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : activeTab === "raw" ? "Materia Prima" : activeTab === "insumo" ? "Insumos" : "Suministros")}>
                           <div className="p-1.5 bg-green-50 text-green-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar Excel
                         </DropdownMenuItem>
@@ -945,7 +962,9 @@ export default function Inventory() {
 
 function PrintInventoryContent({ inventory }: { inventory: any[] }) {
   const finishedProducts = inventory.filter((item: any) => item.product?.category === "finished_product");
-  const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material" || item.product?.category === "supplies" || item.product?.category === "insumo");
+  const rawMaterials = inventory.filter((item: any) => item.product?.category === "raw_material");
+  const insumos = inventory.filter((item: any) => item.product?.category === "insumo");
+  const supplies = inventory.filter((item: any) => item.product?.category === "supplies");
   
   const calculateTotalCost = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.price || 0) / 100)), 0);
   const calculateTotalSale = (items: any[]) => items.reduce((acc, item) => acc + (item.quantity * ((item.product?.salePrice || 0) / 100)), 0);
@@ -954,8 +973,13 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
   const totalSaleFinished = calculateTotalSale(finishedProducts);
   const totalCostRaw = calculateTotalCost(rawMaterials);
   const totalSaleRaw = calculateTotalSale(rawMaterials);
-  const grandTotalCost = totalCostFinished + totalCostRaw;
-  const grandTotalSale = totalSaleFinished + totalSaleRaw;
+  const totalCostInsumos = calculateTotalCost(insumos);
+  const totalSaleInsumos = calculateTotalSale(insumos);
+  const totalCostSupplies = calculateTotalCost(supplies);
+  const totalSaleSupplies = calculateTotalSale(supplies);
+  
+  const grandTotalCost = totalCostFinished + totalCostRaw + totalCostInsumos + totalCostSupplies;
+  const grandTotalSale = totalSaleFinished + totalSaleRaw + totalSaleInsumos + totalSaleSupplies;
 
   return (
     <div className="hidden print:block bg-white text-slate-900 w-full min-h-screen p-8 font-sans">
@@ -1011,12 +1035,12 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
 
       {rawMaterials.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Insumos y Materias Primas</h2>
+          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Materias Primas</h2>
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-slate-300">
                 <th className="py-2 font-semibold">Codigo</th>
-                <th className="py-2 font-semibold">Insumo</th>
+                <th className="py-2 font-semibold">Producto</th>
                 <th className="py-2 text-center font-semibold">Cant.</th>
                 <th className="py-2 text-right font-semibold">Costo Unit.</th>
                 <th className="py-2 text-right font-semibold">Total Costo</th>
@@ -1045,9 +1069,99 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Materias Primas e Insumos:</td>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Materias Primas:</td>
                 <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostRaw * 100))}</td>
                 <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleRaw * 100))}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {insumos.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Insumos</h2>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-300">
+                <th className="py-2 font-semibold">Codigo</th>
+                <th className="py-2 font-semibold">Insumo</th>
+                <th className="py-2 text-center font-semibold">Cant.</th>
+                <th className="py-2 text-right font-semibold">Costo Unit.</th>
+                <th className="py-2 text-right font-semibold">Total Costo</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Precio Venta</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Total Venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {insumos.map((item: any) => {
+                const costPrice = (item.product?.price || 0) / 100;
+                const salePrice = (item.product?.salePrice || 0) / 100;
+                const totalCost = item.quantity * costPrice;
+                const totalSale = item.quantity * salePrice;
+                return (
+                  <tr key={item.id} className="border-b border-slate-100">
+                    <td className="py-2 text-slate-500">{item.product?.code}</td>
+                    <td className="py-2 font-medium">{item.product?.name}</td>
+                    <td className="py-2 text-center">{item.quantity}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(costPrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(totalCost * 100))}</td>
+                    <td className="py-2 text-right text-blue-700">{formatCurrency(Math.round(salePrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold text-blue-800">{formatCurrency(Math.round(totalSale * 100))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Insumos:</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostInsumos * 100))}</td>
+                <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleInsumos * 100))}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {supplies.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold mb-4 bg-slate-100 p-2 uppercase tracking-widest text-slate-700">Suministros</h2>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-300">
+                <th className="py-2 font-semibold">Codigo</th>
+                <th className="py-2 font-semibold">Suministro</th>
+                <th className="py-2 text-center font-semibold">Cant.</th>
+                <th className="py-2 text-right font-semibold">Costo Unit.</th>
+                <th className="py-2 text-right font-semibold">Total Costo</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Precio Venta</th>
+                <th className="py-2 text-right font-semibold text-blue-800">Total Venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplies.map((item: any) => {
+                const costPrice = (item.product?.price || 0) / 100;
+                const salePrice = (item.product?.salePrice || 0) / 100;
+                const totalCost = item.quantity * costPrice;
+                const totalSale = item.quantity * salePrice;
+                return (
+                  <tr key={item.id} className="border-b border-slate-100">
+                    <td className="py-2 text-slate-500">{item.product?.code}</td>
+                    <td className="py-2 font-medium">{item.product?.name}</td>
+                    <td className="py-2 text-center">{item.quantity}</td>
+                    <td className="py-2 text-right">{formatCurrency(Math.round(costPrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold">{formatCurrency(Math.round(totalCost * 100))}</td>
+                    <td className="py-2 text-right text-blue-700">{formatCurrency(Math.round(salePrice * 100))}</td>
+                    <td className="py-2 text-right font-semibold text-blue-800">{formatCurrency(Math.round(totalSale * 100))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Suministros:</td>
+                <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostSupplies * 100))}</td>
+                <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleSupplies * 100))}</td>
               </tr>
             </tfoot>
           </table>

@@ -36,11 +36,14 @@ export function TransferToProductionDialog({
           const nameLower = item.productName.toLowerCase();
           let existingItem = kInv.find((i: any) => i.name?.toLowerCase() === nameLower);
           
+          let kCategory = "materia";
+          if (item.category === "supplies") kCategory = "envase";
+          else if (item.category === "finished_product") kCategory = "producto";
+          else if (item.category === "insumo" && (nameLower.includes("botella") || nameLower.includes("tapa") || nameLower.includes("envase") || nameLower.includes("etiqueta"))) {
+            kCategory = "envase";
+          }
+          
           if (!existingItem) {
-            let kCategory = "materia";
-            if (item.category === "supplies") kCategory = "envase";
-            else if (item.category === "finished_product") kCategory = "producto";
-
             const nextId = kInv.length > 0 ? Math.max(...kInv.map((i:any) => typeof i.id === 'number' ? i.id : 0)) + 1 : 1;
 
             existingItem = { 
@@ -52,6 +55,8 @@ export function TransferToProductionDialog({
               category: kCategory
             };
             kInv.push(existingItem);
+          } else {
+            existingItem.category = kCategory; // Ensure it corrects any old manual entries
           }
           
           // KefirControl uses "quantity" instead of "stock"
