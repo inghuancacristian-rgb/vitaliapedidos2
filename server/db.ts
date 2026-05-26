@@ -204,9 +204,15 @@ export async function getDb() {
             productId INT NOT NULL,
             quantity INT NOT NULL,
             productName VARCHAR(255),
-            productUnit VARCHAR(50)
+            productUnit VARCHAR(50),
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
           )
         `).catch(console.error);
+        
+        // Agregar columna createdAt por si la tabla se creó con la versión anterior del código
+        _pool.execute(`
+          ALTER TABLE inventory_transfer_items ADD COLUMN createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+        `).catch(() => {}); // ignorar error si la columna ya existe
       }
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);
