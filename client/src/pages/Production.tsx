@@ -1,5 +1,5 @@
-import { ExternalLink, FlaskConical, Loader2, ArrowRightLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { FlaskConical, Loader2, ArrowRightLeft, Plus, CheckCircle, AlertCircle } from "lucide-react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,208 +13,150 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function Production() {
-  const [syncKey, setSyncKey] = useState(Date.now());
   const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [productionItems, setProductionItems] = useState<any[]>([]);
-  const [selectedItems, setSelectedItems] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isNewBatchOpen, setIsNewBatchOpen] = useState(false);
+  const [isCompleteBatchOpen, setIsCompleteBatchOpen] = useState(false);
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+
+  // Transfer State
+  const [transferItems, setTransferItems] = useState<Record<number, string>>({});
+  const [transferNotes, setTransferNotes] = useState("");
+
+  // New Batch State
+  const [batchType, setBatchType] = useState<'kefir_production' | 'nodule_washing' | 'maintenance'>('kefir_production');
+  const [batchNotes, setBatchNotes] = useState("");
+
+  // Complete Batch State
+  const [outputs, setOutputs] = useState<{ productId: number; quantity: string }[]>([]);
+  const [inputs, setInputs] = useState<{ productId: number; quantity: string }[]>([]);
 
   const utils = trpc.useContext();
-  const setStorageMutation = trpc.production.setKefirStorage.useMutation();
-  const { data: kefirStorageData } = trpc.production.getKefirStorage.useQuery(undefined, {
-    enabled: true,
-    refetchOnWindowFocus: false,
-  });
-  const { data: movements } = trpc.production.getKefirMovements.useQuery();
-  const transferMutation = trpc.inventory.transferToGeneral.useMutation({
-    onSuccess: (data) => {
-      // Restar del localStorage
-      try {
-        const kInvStr = localStorage.getItem('kefir_inventory_v3');
-        let kInv: any[] = [];
-        try {
-          const parsed = JSON.parse(kInvStr || "[]");
-          kInv = Array.isArray(parsed) ? parsed : Object.values(parsed);
-        } catch(e) {
-          kInv = [];
-        }
-        
-        data.items.forEach((item: any) => {
-          const nameLower = item.productName.toLowerCase();
-          const existingItem = kInv.find((i: any) => i.name?.toLowerCase() === nameLower);
-          if (existingItem) {
-            existingItem.quantity = Math.max(0, (existingItem.quantity || existingItem.stock || 0) - item.quantity);
-          }
-        });
-        
-        const newVal = JSON.stringify(kInv);
-        localStorage.setItem('kefir_inventory_v3', newVal);
-        setStorageMutation.mutate({ key: 'kefir_inventory_v3', value: newVal });
-        setSyncKey(Date.now()); // Recargar iframe para que vea los cambios
-      } catch (e) {
-        console.error("Error updating local storage", e);
-      }
 
-      toast.success(`Traspaso ${data.transferNumber} realizado con éxito`);
-      setIsTransferOpen(false);
-      setSelectedItems({});
-      setNotes("");
-      (utils as any).inventory?.listInventory?.invalidate?.();
-      (utils as any).inventory?.getTransfers?.invalidate?.();
+  // ── Queries ────────────────────────────────────────────────
+  const { data: batches, isLoading: loadingBatches, error: batchesError } =
+    trpc.production.getBatches.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+
+  const { data: productionInventory, isLoading: loadingInv, error: invError } =
+    trpc.production.getProductionInventory.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+
+  const { data: movements, isLoading: loadingMovements } =
+    trpc.production.getKefirMovements.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+
+  // CORRECTED: listProducts (not getProducts)
+  const { data: allProducts } =
+    trpc.inventory.listProducts.useQuery(undefined, { retry: 2 });
+
+  // ── Mutations ──────────────────────────────────────────────
+  const createBatchMutation = trpc.production.createBatch.useMutation({
+    onSuccess: () => {
+      toast.success("Lote iniciado exitosamente");
+      setIsNewBatchOpen(false);
+      setBatchNotes("");
+      utils.production.getBatches.invalidate();
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Error al realizar el traspaso");
-    }
+    onError: (err) => toast.error("Error al iniciar lote: " + err.message),
   });
 
-  const openTransferDialog = () => {
-    try {
-      const kInvStr = localStorage.getItem('kefir_inventory_v3');
-      let kInv: any[] = [];
-      try {
-        const parsed = JSON.parse(kInvStr || "[]");
-        kInv = Array.isArray(parsed) ? parsed : Object.values(parsed);
-      } catch(e) {
-        kInv = [];
-      }
-      
-      const items = kInv.filter((i: any) => 
-        ((i.quantity || i.stock || 0) > 0) && 
-        (i.category === "producto" || i.category === "finished_product" || String(i.id).startsWith("PROD-") || i.name?.toLowerCase().includes("kefir") || i.name?.toLowerCase().includes("queso") || i.name?.toLowerCase().includes("suero"))
-      );
-      
-      setProductionItems(items);
-      setSelectedItems({});
-      setNotes("");
-      setIsTransferOpen(true);
-    } catch (e) {
-      toast.error("No se pudo leer el inventario de producción");
-    }
+  const completeBatchMutation = trpc.production.completeBatch.useMutation({
+    onSuccess: () => {
+      toast.success("Lote finalizado. El stock de Planta se actualizó.");
+      setIsCompleteBatchOpen(false);
+      setSelectedBatchId(null);
+      utils.production.getBatches.invalidate();
+      utils.production.getProductionInventory.invalidate();
+      utils.production.getKefirMovements.invalidate();
+      utils.inventory.listInventory.invalidate();
+    },
+    onError: (err) => toast.error("Error al finalizar lote: " + err.message),
+  });
+
+  const transferMutation = trpc.inventory.transferToGeneral.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Traspaso ${data?.transferNumber ?? ""} realizado con éxito`);
+      setIsTransferOpen(false);
+      setTransferItems({});
+      setTransferNotes("");
+      utils.production.getProductionInventory.invalidate();
+      utils.production.getKefirMovements.invalidate();
+      utils.inventory.listInventory.invalidate();
+    },
+    onError: (error) => toast.error(error.message || "Error al realizar el traspaso"),
+  });
+
+  // ── Handlers ───────────────────────────────────────────────
+  const handleCreateBatch = () => {
+    createBatchMutation.mutate({ type: batchType, notes: batchNotes });
   };
 
-  useEffect(() => {
-    if (kefirStorageData) {
-      if (kefirStorageData.length > 0) {
-        kefirStorageData.forEach((row) => {
-          localStorage.setItem(row.storage_key, row.storage_value);
-        });
-      } else {
-        // Cloud is empty. Seed cloud from localStorage (for the first user syncing)
-        ['kefir_inventory_v3', 'kefir_batches_v3', 'kefir_yields'].forEach(key => {
-          const val = localStorage.getItem(key);
-          if (val) {
-            setStorageMutation.mutate({ key, value: val });
-          }
-        });
-      }
-      // Force iframe reload and mark as not loading
-      setSyncKey(Date.now());
-      setIsLoading(false);
-      
-      // FIX AUTOMÁTICO: Corregir items que se hayan categorizado erróneamente en el pasado
-      try {
-        const kInvStr = localStorage.getItem('kefir_inventory_v3');
-        if (kInvStr) {
-          let kInv = JSON.parse(kInvStr);
-          const wasArray = Array.isArray(kInv);
-          kInv = wasArray ? kInv : Object.values(kInv);
-          let changed = !wasArray;
-          kInv.forEach((v: any) => {
-            if (v.category === "producto" && (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta"))) {
-              v.category = "envase";
-              changed = true;
-            }
-          });
-          if (changed) {
-            const newVal = JSON.stringify(kInv);
-            localStorage.setItem('kefir_inventory_v3', newVal);
-            setStorageMutation.mutate({ key: 'kefir_inventory_v3', value: newVal });
-          }
-        }
-      } catch (e) {
-        console.error("Error auto-fixing inventory", e);
-      }
-    }
-  }, [kefirStorageData]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OPEN_TRANSFER_DIALOG') {
-        openTransferDialog();
-      }
-    };
-    
-    // Sync localStorage changes back to server
-    let timeoutId: any;
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key && e.key.startsWith('kefir_') && e.newValue) {
-        // Debounce to prevent spam
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          setStorageMutation.mutate({ key: e.key!, value: e.newValue! });
-        }, 500);
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      window.removeEventListener('storage', handleStorage);
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
-  const handleQuantityChange = (id: string, val: string, maxQty: number) => {
-    if (val === "") {
-      setSelectedItems(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      return;
-    }
-    
-    const num = Number(val);
-    if (!isNaN(num) && num > maxQty) {
-      toast.error(`Cantidad máxima disponible: ${maxQty}`);
-      val = maxQty.toString();
-    }
-    
-    setSelectedItems(prev => ({
-      ...prev,
-      [id]: val
-    }));
+  const openCompleteDialog = (batchId: number) => {
+    setSelectedBatchId(batchId);
+    setOutputs([{ productId: 0, quantity: "" }]);
+    setInputs([{ productId: 0, quantity: "" }]);
+    setIsCompleteBatchOpen(true);
   };
 
-  const handleSubmit = () => {
-    const itemsToTransfer = Object.entries(selectedItems)
-      .map(([id, qty]) => {
-        const item = productionItems.find(i => i.id === id);
-        return {
-          productId: 0, // El backend lo buscará por nombre si es 0
-          productName: item?.name || id,
-          quantity: Number(qty)
-        };
-      })
-      .filter(i => i.quantity > 0);
+  const handleCompleteBatch = () => {
+    if (!selectedBatchId) return;
+
+    const validOutputs = outputs
+      .filter((o) => o.productId > 0 && Number(o.quantity) > 0)
+      .map((o) => ({ productId: o.productId, quantity: Number(o.quantity) }));
+
+    const validInputs = inputs
+      .filter((i) => i.productId > 0 && Number(i.quantity) > 0)
+      .map((i) => ({ productId: i.productId, quantity: Number(i.quantity) }));
+
+    completeBatchMutation.mutate({ batchId: selectedBatchId, outputs: validOutputs, inputs: validInputs });
+  };
+
+  const handleTransfer = () => {
+    const itemsToTransfer = Object.entries(transferItems)
+      .map(([id, qty]) => ({ productId: Number(id), quantity: Number(qty) }))
+      .filter((i) => i.quantity > 0);
 
     if (itemsToTransfer.length === 0) {
-      toast.error("Seleccione al menos un producto para traspasar");
+      toast.error("Seleccione al menos un producto con cantidad mayor a 0");
       return;
     }
 
-    transferMutation.mutate({
-      items: itemsToTransfer,
-      notes: notes.trim() || undefined
-    });
+    transferMutation.mutate({ items: itemsToTransfer, notes: transferNotes.trim() || undefined });
   };
 
-  const selectedCount = Object.keys(selectedItems).length;
+  const finishedProducts = allProducts?.filter((p: any) => p.category === "finished_product") ?? [];
+  const rawMaterials = allProducts?.filter((p: any) => p.category === "raw_material" || p.category === "supplies") ?? [];
+  const inventoryWithStock = productionInventory?.filter((i: any) => Number(i.quantity) > 0) ?? [];
 
+  // ── Helpers ────────────────────────────────────────────────
+  const safeFormat = (dateVal: any, fmt: string) => {
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return "—";
+      return format(d, fmt, { locale: es });
+    } catch {
+      return "—";
+    }
+  };
+
+  // ── If there's a query error, show it instead of crashing ──
+  if (batchesError || invError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-6">
+        <AlertCircle className="h-12 w-12 text-red-400" />
+        <h2 className="text-xl font-bold text-slate-700">Error de conexión con el servidor</h2>
+        <p className="text-slate-500 max-w-sm">
+          {(batchesError || invError)?.message || "No se pudo cargar el módulo de producción."}
+        </p>
+        <Button onClick={() => { utils.production.getBatches.invalidate(); utils.production.getProductionInventory.invalidate(); }}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  }
+
+  // ── Render ─────────────────────────────────────────────────
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50">
+      {/* Header */}
       <div className="border-b bg-white px-4 py-3 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -223,159 +165,182 @@ export function Production() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-900">Producción Industrial</h1>
-              <p className="text-sm text-slate-500">Módulo KefirControl (Aislado)</p>
+              <p className="text-sm text-slate-500">Gestión de Lotes y Planta</p>
             </div>
           </div>
 
           <div className="flex gap-2">
-            <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>              <DialogContent className="max-w-3xl rounded-[2rem] border-white/70 bg-white/95">
+            {/* Transfer Dialog */}
+            <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <ArrowRightLeft className="h-4 w-4" />
+                  Traspasar a General
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-black">Traspaso a Inventario General</DialogTitle>
-                  <p className="text-sm text-slate-500">Mueva los productos terminados al inventario principal para su comercialización.</p>
+                  <DialogTitle>Traspaso a Inventario General</DialogTitle>
                 </DialogHeader>
-                
-                <div className="max-h-[50vh] overflow-y-auto pr-2 mt-4 space-y-3">
-                  {productionItems.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
-                      No hay productos terminados con stock en el área de producción.
-                    </div>
+                <p className="text-sm text-slate-500 -mt-2 mb-4">Mueve stock del Almacén de Planta a la Tienda principal.</p>
+                <div className="max-h-[50vh] overflow-y-auto space-y-3">
+                  {inventoryWithStock.length === 0 ? (
+                    <p className="text-center text-slate-500 py-6">No hay stock disponible en planta.</p>
                   ) : (
-                    productionItems.map(item => {
-                      const isSelected = selectedItems[item.id] !== undefined;
-                      return (
-                        <div key={item.id} className={`p-4 rounded-xl border flex items-center justify-between ${isSelected ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200 bg-white'}`}>
-                          <div>
-                            <p className="font-bold text-slate-900">{item.name}</p>
-                            <Badge variant="outline" className="mt-1">Disp: {item.stock}</Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Label>Traspasar:</Label>
-                            <Input 
-                              type="number" 
-                              min="0" 
-                              max={item.stock}
-                              className="w-24 text-right font-bold"
-                              value={selectedItems[item.id] || ""}
-                              onChange={(e) => handleQuantityChange(item.id, e.target.value, item.stock)}
-                            />
-                          </div>
+                    inventoryWithStock.map((item: any) => (
+                      <div key={item.id} className="flex items-center justify-between p-3 border rounded-xl">
+                        <div>
+                          <p className="font-bold text-slate-900">{item.productName}</p>
+                          <p className="text-xs text-slate-500">Disponible: {item.quantity} {item.unit}</p>
                         </div>
-                      )
-                    })
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          className="w-24"
+                          min={0}
+                          max={item.quantity}
+                          value={transferItems[item.productId] || ""}
+                          onChange={(e) => {
+                            let val = e.target.value;
+                            if (Number(val) > Number(item.quantity)) val = String(item.quantity);
+                            setTransferItems({ ...transferItems, [item.productId]: val });
+                          }}
+                        />
+                      </div>
+                    ))
                   )}
                 </div>
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <Label>Notas (Opcional)</Label>
-                    <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ej: Lote terminado hoy" />
-                  </div>
-                  <Button 
-                    className="w-full h-12 text-lg font-bold" 
-                    onClick={handleSubmit}
-                    disabled={selectedCount === 0 || transferMutation.isPending}
-                  >
-                    {transferMutation.isPending ? "Procesando..." : "Confirmar Traspaso"}
+                <div className="mt-4">
+                  <Label>Notas (Opcional)</Label>
+                  <Input
+                    value={transferNotes}
+                    onChange={(e) => setTransferNotes(e.target.value)}
+                    placeholder="Motivo del traspaso..."
+                  />
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setIsTransferOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleTransfer} disabled={transferMutation.isLoading}>
+                    {transferMutation.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Traspaso"}
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
 
-            <a
-              href="/kefir-control/index.html"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Abrir en pantalla completa
-            </a>
+            {/* New Batch Dialog */}
+            <Dialog open={isNewBatchOpen} onOpenChange={setIsNewBatchOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nuevo Lote
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Iniciar Lote de Producción</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label>Tipo de Lote</Label>
+                    <select
+                      className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm mt-1"
+                      value={batchType}
+                      onChange={(e: any) => setBatchType(e.target.value)}
+                    >
+                      <option value="kefir_production">Elaboración de Kéfir</option>
+                      <option value="nodule_washing">Lavado de Nódulos</option>
+                      <option value="maintenance">Mantenimiento</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Notas</Label>
+                    <Input
+                      value={batchNotes}
+                      onChange={(e) => setBatchNotes(e.target.value)}
+                      placeholder="Opcional..."
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button className="w-full" onClick={handleCreateBatch} disabled={createBatchMutation.isLoading}>
+                    {createBatchMutation.isLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+                    Iniciar Lote
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
 
-      <Tabs defaultValue="panel" className="w-full">
-        <div className="border-b bg-white px-4">
-          <TabsList className="bg-transparent mb-[-1px]">
-            <TabsTrigger 
-              value="panel" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-6 py-3 font-semibold"
-            >
-              Panel de Producción
-            </TabsTrigger>
-            <TabsTrigger 
-              value="kardex" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-none px-6 py-3 font-semibold"
-            >
-              Kárdex / Historial
-            </TabsTrigger>
+      {/* Main Content */}
+      <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+        <Tabs defaultValue="batches">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="batches">Lotes de Producción</TabsTrigger>
+            <TabsTrigger value="inventory">Inventario en Planta</TabsTrigger>
+            <TabsTrigger value="kardex">Kárdex de Planta</TabsTrigger>
           </TabsList>
-        </div>
 
-        <TabsContent value="panel" className="m-0 border-0 p-0">
-          {isLoading ? (
-            <div className="flex h-[calc(100vh-11rem)] w-full flex-col items-center justify-center bg-white">
-              <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
-              <p className="text-slate-500 font-medium animate-pulse">Sincronizando estado desde la nube...</p>
-            </div>
-          ) : (
-            <iframe
-              key={syncKey}
-              title="KefirControl"
-              src="/kefir-control/index.html"
-              className="h-[calc(100vh-11rem)] w-full border-0 bg-white"
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="kardex" className="m-0 border-0 p-6 bg-slate-50 min-h-[calc(100vh-11rem)]">
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden max-w-6xl mx-auto">
-            <div className="p-4 border-b bg-slate-50/50 flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Historial de Movimientos de Producción</h2>
-                <p className="text-sm text-slate-500">Kárdex generado automáticamente a partir de los cambios detectados en la nube.</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => utils.production.getKefirMovements.invalidate()}>
-                Actualizar
-              </Button>
-            </div>
-            <div className="overflow-x-auto">
+          {/* ─── TAB 1: Batches ─── */}
+          <TabsContent value="batches">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <Table>
                 <TableHeader className="bg-slate-50">
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead className="text-right">Movimiento</TableHead>
-                    <TableHead className="text-right">Saldo Final</TableHead>
+                    <TableHead>Lote #</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Inicio</TableHead>
+                    <TableHead>Fin</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!movements || movements.length === 0 ? (
+                  {loadingBatches ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-32 text-center text-slate-500">
-                        No hay movimientos registrados. Realice cambios en el Panel de Producción para generar historial.
+                      <TableCell colSpan={6} className="text-center py-10">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+                      </TableCell>
+                    </TableRow>
+                  ) : !batches || batches.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-10 text-slate-400">
+                        No hay lotes registrados. Cree uno con el botón "Nuevo Lote".
                       </TableCell>
                     </TableRow>
                   ) : (
-                    movements.map((mov) => (
-                      <TableRow key={mov.id}>
-                        <TableCell className="font-medium whitespace-nowrap">
-                          {format(new Date(mov.createdAt), "dd MMM yyyy, HH:mm", { locale: es })}
-                        </TableCell>
-                        <TableCell className="font-semibold text-slate-700">{mov.productName}</TableCell>
+                    batches.map((batch: any) => (
+                      <TableRow key={batch.id}>
+                        <TableCell className="font-bold">{batch.batchNumber}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="capitalize">{mov.category || 'N/A'}</Badge>
+                          {batch.type === "kefir_production" ? "Elaboración de Kéfir" :
+                            batch.type === "nodule_washing" ? "Lavado de Nódulos" : "Mantenimiento"}
                         </TableCell>
-                        <TableCell className="text-slate-600">{mov.reason}</TableCell>
+                        <TableCell>
+                          {batch.status === "in_progress" ? (
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200">En Progreso</Badge>
+                          ) : (
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Completado</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-slate-500">
+                          {safeFormat(batch.startDate || batch.createdAt, "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-slate-500">
+                          {batch.endDate ? safeFormat(batch.endDate, "dd/MM/yyyy HH:mm") : "—"}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <span className={\`font-bold \${mov.changeAmount > 0 ? 'text-green-600' : 'text-red-600'}\`}>
-                            {mov.changeAmount > 0 ? '+' : ''}{mov.changeAmount}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-black text-slate-900 text-lg">
-                          {mov.newQuantity}
+                          {batch.status === "in_progress" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                              onClick={() => openCompleteDialog(batch.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Finalizar Lote
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -383,9 +348,230 @@ export function Production() {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* ─── TAB 2: Inventario en Planta ─── */}
+          <TabsContent value="inventory">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Categoría</TableHead>
+                    <TableHead className="text-right">Stock en Planta</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingInv ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-10">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+                      </TableCell>
+                    </TableRow>
+                  ) : inventoryWithStock.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-10 text-slate-400">
+                        No hay productos en el almacén de planta. Finalice un lote para generar stock.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    inventoryWithStock.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-bold text-slate-900">{item.productName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-slate-50 capitalize">
+                            {String(item.category ?? "").replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-lg text-slate-700">
+                          {item.quantity}{" "}
+                          <span className="text-sm font-normal text-slate-500">{item.unit}</span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* ─── TAB 3: Kárdex ─── */}
+          <TabsContent value="kardex">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead className="text-right">Movimiento</TableHead>
+                    <TableHead className="text-right">Stock Resultante</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingMovements ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+                      </TableCell>
+                    </TableRow>
+                  ) : !movements || movements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-slate-400">
+                        No hay movimientos registrados aún.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    movements.map((mov: any) => (
+                      <TableRow key={mov.id}>
+                        <TableCell className="text-slate-500">
+                          {safeFormat(mov.createdAt, "dd MMM yyyy, HH:mm")}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-900">{mov.productName}</TableCell>
+                        <TableCell className="text-slate-600">{mov.reason}</TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className={`font-bold px-2 py-0.5 rounded text-sm ${
+                              Number(mov.changeAmount) > 0
+                                ? "bg-emerald-50 text-emerald-600"
+                                : Number(mov.changeAmount) < 0
+                                ? "bg-rose-50 text-rose-600"
+                                : "bg-slate-50 text-slate-600"
+                            }`}
+                          >
+                            {Number(mov.changeAmount) > 0 ? "+" : ""}
+                            {mov.changeAmount}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right text-slate-500 font-medium">{mov.newQuantity}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* ─── Complete Batch Dialog ─── */}
+      <Dialog open={isCompleteBatchOpen} onOpenChange={setIsCompleteBatchOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Finalizar Lote de Producción</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-500 -mt-2">
+            Registre los insumos consumidos y los productos elaborados en este lote.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
+            {/* Inputs */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <span className="w-6 h-6 rounded bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">−</span>
+                Insumos Consumidos
+              </h3>
+              {inputs.map((input, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <select
+                    className="flex-1 h-9 rounded-md border border-slate-200 text-sm px-2"
+                    value={input.productId}
+                    onChange={(e) => {
+                      const arr = [...inputs];
+                      arr[idx].productId = Number(e.target.value);
+                      setInputs(arr);
+                    }}
+                  >
+                    <option value={0}>Seleccionar insumo...</option>
+                    {rawMaterials.map((rm: any) => (
+                      <option key={rm.id} value={rm.id}>{rm.name}</option>
+                    ))}
+                  </select>
+                  <Input
+                    type="number"
+                    className="w-20 h-9"
+                    placeholder="Cant."
+                    value={input.quantity}
+                    onChange={(e) => {
+                      const arr = [...inputs];
+                      arr[idx].quantity = e.target.value;
+                      setInputs(arr);
+                    }}
+                  />
+                  <button
+                    className="text-rose-400 hover:text-rose-600 font-bold text-sm px-2"
+                    onClick={() => {
+                      const arr = inputs.filter((_, i) => i !== idx);
+                      setInputs(arr.length ? arr : [{ productId: 0, quantity: "" }]);
+                    }}
+                  >✕</button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => setInputs([...inputs, { productId: 0, quantity: "" }])}>
+                + Agregar insumo
+              </Button>
+            </div>
+
+            {/* Outputs */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <span className="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">+</span>
+                Productos Elaborados
+              </h3>
+              {outputs.map((out, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <select
+                    className="flex-1 h-9 rounded-md border border-slate-200 text-sm px-2"
+                    value={out.productId}
+                    onChange={(e) => {
+                      const arr = [...outputs];
+                      arr[idx].productId = Number(e.target.value);
+                      setOutputs(arr);
+                    }}
+                  >
+                    <option value={0}>Seleccionar producto...</option>
+                    {finishedProducts.map((fp: any) => (
+                      <option key={fp.id} value={fp.id}>{fp.name}</option>
+                    ))}
+                  </select>
+                  <Input
+                    type="number"
+                    className="w-20 h-9"
+                    placeholder="Cant."
+                    value={out.quantity}
+                    onChange={(e) => {
+                      const arr = [...outputs];
+                      arr[idx].quantity = e.target.value;
+                      setOutputs(arr);
+                    }}
+                  />
+                  <button
+                    className="text-rose-400 hover:text-rose-600 font-bold text-sm px-2"
+                    onClick={() => {
+                      const arr = outputs.filter((_, i) => i !== idx);
+                      setOutputs(arr.length ? arr : [{ productId: 0, quantity: "" }]);
+                    }}
+                  >✕</button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => setOutputs([...outputs, { productId: 0, quantity: "" }])}>
+                + Agregar producto
+              </Button>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+
+          <div className="mt-6 flex justify-end gap-3 border-t pt-4">
+            <Button variant="ghost" onClick={() => setIsCompleteBatchOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={handleCompleteBatch}
+              disabled={completeBatchMutation.isLoading}
+            >
+              {completeBatchMutation.isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirmar y Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

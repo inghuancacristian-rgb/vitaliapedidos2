@@ -943,9 +943,36 @@ export const inventoryRouter = router({
         });
 
         // 4. Update Inventory (Production -> General, so general increases)
-        const currentInv = inventoryData.find(i => i.productId === product.id);
+        const currentInv = inventoryData.find((i: any) => i.productId === product!.id);
         const newQty = (currentInv?.quantity || 0) + item.quantity;
-        await updateInventory(product.id, newQty);
+        await updateInventory(product!.id, newQty);
+
+        // 4.5 Deduct from production_inventory
+        const { productionInventory } = await import("../../drizzle/schema");
+        const [prodStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, product!.id));
+        if (prodStock) {
+          const newProdQty = Math.max(0, prodStock.quantity - item.quantity);
+          await db.update(productionInventory)
+            .set({ quantity: newProdQty })
+            .where(eq(productionInventory.id, prodStock.id));
+            
+          // Registrar en Kardex de Planta (kefir_movements)
+          const pool = (db as any).session?.client || (global as any)._pool;
+          if (pool) {
+            await pool.execute(
+              'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [
+                product!.id.toString(),
+                product!.name,
+                product!.category,
+                prodStock.quantity,
+                newProdQty,
+                -item.quantity,
+                `Traspaso a General ${transferNumber}`
+              ]
+            ).catch(console.error);
+          }
+        }
 
         // 5. Create Movement
         await createInventoryMovement({

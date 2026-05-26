@@ -1,7 +1,16 @@
 import { z } from 'zod';
 import { router, publicProcedure } from '../_core/trpc';
 import { getDb } from '../db';
-import { productionBatches, productionOutputs, inventory, inventoryMovements, users, products } from '../../drizzle/schema';
+import { 
+  productionBatches, 
+  productionOutputs, 
+  productionInputs,
+  productionInventory,
+  inventory, 
+  inventoryMovements, 
+  users, 
+  products 
+} from '../../drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
@@ -61,11 +70,16 @@ export const productionRouter = router({
       outputs: z.array(z.object({
         productId: z.number(),
         quantity: z.number(),
-      }))
+      })),
+      inputs: z.array(z.object({
+        productId: z.number(),
+        quantity: z.number(),
+      })).optional()
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const pool = (db as any).session?.client || (global as any)._pool;
 
       // @ts-ignore
       const userId = ctx.user?.id || 1;
@@ -75,8 +89,40 @@ export const productionRouter = router({
         .set({ status: 'completed', endDate: new Date() })
         .where(eq(productionBatches.id, input.batchId));
 
-      // Record outputs and update inventory
+      const productsData = await db.select().from(products);
+
+      // Process Inputs (Raw Materials Consumed)
+      if (input.inputs && input.inputs.length > 0) {
+        for (const inputItem of input.inputs) {
+          await db.insert(productionInputs).values({
+            batchId: input.batchId,
+            productId: inputItem.productId,
+            quantity: inputItem.quantity,
+          });
+
+          // Deduct from general inventory
+          const [existingStock] = await db.select().from(inventory).where(eq(inventory.productId, inputItem.productId));
+          if (existingStock) {
+            await db.update(inventory)
+              .set({ quantity: Math.max(0, existingStock.quantity - inputItem.quantity) })
+              .where(eq(inventory.id, existingStock.id));
+          }
+
+          // Record inventory movement
+          await db.insert(inventoryMovements).values({
+            productId: inputItem.productId,
+            type: 'exit',
+            quantity: inputItem.quantity,
+            reason: `Consumo en lote #${input.batchId}`,
+            userId: userId,
+          });
+        }
+      }
+
+      // Process Outputs (Finished Goods Produced)
       for (const output of input.outputs) {
+        const product = productsData.find((p: any) => p.id === output.productId);
+
         // Record output
         await db.insert(productionOutputs).values({
           batchId: input.batchId,
@@ -84,38 +130,50 @@ export const productionRouter = router({
           quantity: output.quantity,
         });
 
-        // Add to inventory
-        const [existingStock] = await db.select().from(inventory).where(eq(inventory.productId, output.productId));
+        // Add to production inventory (Almacén de Planta)
+        const [existingStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, output.productId));
+        
+        let previousQty = 0;
+        let newQty = output.quantity;
+
         if (existingStock) {
-          await db.update(inventory)
-            .set({ quantity: existingStock.quantity + output.quantity })
-            .where(eq(inventory.id, existingStock.id));
+          previousQty = existingStock.quantity;
+          newQty = existingStock.quantity + output.quantity;
+          await db.update(productionInventory)
+            .set({ quantity: newQty })
+            .where(eq(productionInventory.id, existingStock.id));
         } else {
-          await db.insert(inventory).values({
+          await db.insert(productionInventory).values({
             productId: output.productId,
             quantity: output.quantity,
           });
         }
 
-        // Record inventory movement
-        await db.insert(inventoryMovements).values({
-          productId: output.productId,
-          type: 'entry',
-          quantity: output.quantity,
-          reason: `Producción de lote #${input.batchId}`,
-          userId: userId,
-        });
+        // Registrar en Kardex de Planta (kefir_movements)
+        if (pool && product) {
+          await pool.execute(
+            'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              product.id.toString(),
+              product.name,
+              product.category,
+              previousQty,
+              newQty,
+              output.quantity,
+              `Ingreso Lote #${input.batchId}`
+            ]
+          ).catch(console.error);
+        }
       }
 
       return { success: true };
     }),
 
-  getBatchOutputs: publicProcedure
+  getBatchDetails: publicProcedure
     .input(z.object({ batchId: z.number() }))
     .query(async ({ input }) => {
-      console.log(`[Production] Fetching outputs for batch ${input.batchId}...`);
       const db = await getDb();
-      if (!db) return [];
+      if (!db) return { outputs: [], inputs: [] };
       
       const outputs = await db
         .select({
@@ -128,104 +186,41 @@ export const productionRouter = router({
         .innerJoin(products, eq(productionOutputs.productId, products.id))
         .where(eq(productionOutputs.batchId, input.batchId));
         
-      console.log(`[Production] Found ${outputs.length} outputs for batch ${input.batchId}`);
-      return outputs;
-    }),
-    
-  logKefirData: publicProcedure
-    .input(z.object({
-      batches: z.any(),
-      yields: z.any(),
-      inventory: z.any()
-    }))
-    .mutation(async ({ input }) => {
-      console.log("\n\n=== KEFIR CONTROL DATA DUMP ===");
-      console.log("BATCHES:", JSON.stringify(input.batches, null, 2));
-      console.log("YIELDS:", JSON.stringify(input.yields, null, 2));
-      console.log("INVENTORY:", JSON.stringify(input.inventory, null, 2));
-      console.log("===============================\n\n");
-      return { success: true };
-    }),
-
-  getKefirStorage: publicProcedure
-    .query(async () => {
-      const db = await getDb();
-      if (!db) return [];
-      
-      const pool = (db as any).session?.client || (global as any)._pool;
-      if (!pool) return [];
-      
-      try {
-        const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
-        return rows as any[];
-      } catch (e) {
-        console.error("Error getting kefir storage:", e);
-        return [];
-      }
-    }),
-
-  setKefirStorage: publicProcedure
-    .input(z.object({
-      key: z.string(),
-      value: z.string()
-    }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return { success: false };
-      
-      const pool = (db as any).session?.client || (global as any)._pool;
-      if (!pool) return { success: false };
-      
-      try {
-        if (input.key === 'kefir_inventory_v3') {
-          try {
-            // Get old value
-            const [rows] = await pool.execute('SELECT storage_value FROM kefir_storage WHERE storage_key = ?', [input.key]);
-            const oldValStr = rows.length > 0 ? rows[0].storage_value : "[]";
-            
-            let oldArr = JSON.parse(oldValStr || "[]");
-            let newArr = JSON.parse(input.value || "[]");
-            
-            oldArr = Array.isArray(oldArr) ? oldArr : Object.values(oldArr);
-            newArr = Array.isArray(newArr) ? newArr : Object.values(newArr);
-            
-            for (const newItem of newArr) {
-              const oldItem = oldArr.find((i: any) => i.id === newItem.id || (i.name === newItem.name && i.category === newItem.category));
-              const oldQty = oldItem ? (oldItem.stock ?? oldItem.quantity ?? 0) : 0;
-              const newQty = newItem.stock ?? newItem.quantity ?? 0;
-              
-              if (oldQty !== newQty) {
-                const diff = newQty - oldQty;
-                await pool.execute(
-                  'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                  [
-                    newItem.id || '',
-                    newItem.name || 'Desconocido',
-                    newItem.category || '',
-                    oldQty,
-                    newQty,
-                    diff,
-                    diff > 0 ? 'Ingreso/Producción' : 'Salida/Traspaso'
-                  ]
-                );
-              }
-            }
-          } catch(e) {
-            console.error("Error computing diff for Kardex:", e);
-          }
-        }
+      const inputs = await db
+        .select({
+          id: productionInputs.id,
+          productId: productionInputs.productId,
+          quantity: productionInputs.quantity,
+          productName: products.name,
+        })
+        .from(productionInputs)
+        .innerJoin(products, eq(productionInputs.productId, products.id))
+        .where(eq(productionInputs.batchId, input.batchId));
         
-        await pool.execute(
-          'INSERT INTO kefir_storage (storage_key, storage_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE storage_value = ?',
-          [input.key, input.value, input.value]
-        );
-        return { success: true };
-      } catch (e) {
-        console.error("Error setting kefir storage:", e);
-        return { success: false };
-      }
+      return { outputs, inputs };
     }),
-    
+
+  getProductionInventory: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+
+    const items = await db
+      .select({
+        id: productionInventory.id,
+        productId: productionInventory.productId,
+        quantity: productionInventory.quantity,
+        productName: products.name,
+        productCode: products.code,
+        category: products.category,
+        unit: products.unit,
+      })
+      .from(productionInventory)
+      .innerJoin(products, eq(productionInventory.productId, products.id));
+
+    return items;
+  }),
+
+  // Mantenemos el endpoint de Kardex intacto
   getKefirMovements: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
@@ -240,5 +235,32 @@ export const productionRouter = router({
       console.error("Error getting kefir movements:", e);
       return [];
     }
-  })
+  }),
+
+  // ==========================================
+  // LEGACY ENDPOINTS (Backward Compatibility)
+  // Para clientes antiguos que tengan el caché del navegador sin actualizar
+  // ==========================================
+  getKefirStorage: publicProcedure.query(async () => {
+    return [];
+  }),
+
+  setKefirStorage: publicProcedure
+    .input(z.object({
+      key: z.string(),
+      value: z.string()
+    }))
+    .mutation(async ({ input }) => {
+      return { success: true };
+    }),
+
+  logKefirData: publicProcedure
+    .input(z.object({
+      batches: z.any(),
+      yields: z.any(),
+      inventory: z.any()
+    }))
+    .mutation(async ({ input }) => {
+      return { success: true };
+    })
 });
