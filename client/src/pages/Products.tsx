@@ -130,9 +130,9 @@ export default function Products() {
                       )}
                       <div className="absolute top-2 right-2">
                         <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">
-                          {product.category === 'finished_product' ? '📦 Terminado' : 
-                           product.category === 'raw_material' ? '🧪 Materia' : 
-                           product.category === 'supplies' ? '🛠️ Suministro' : '⚙️ Insumo'}
+                          {product.category === 'finished_product' ? '📦 Producto Terminado' : 
+                           product.category === 'raw_material' ? '💧 Materia Prima' : 
+                           product.category === 'supplies' ? '🏷️ Suministro' : '🧪 Insumo'}
                         </Badge>
                       </div>
                     </div>

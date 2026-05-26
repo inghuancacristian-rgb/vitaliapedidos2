@@ -663,7 +663,7 @@ export default function Inventory() {
                       Terminados
                     </TabsTrigger>
                     <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
-                      Insumos
+                      Materia Prima / Insumos
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -698,11 +698,11 @@ export default function Inventory() {
                       <DropdownMenuContent align="end" className="rounded-2xl p-2 border-slate-100 shadow-xl">
                         <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exportar vista actual</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToPDF(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Materias Primas e Insumos")}>
                           <div className="p-1.5 bg-red-50 text-red-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar PDF
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Insumos")}>
+                        <DropdownMenuItem className="rounded-xl font-bold gap-2 cursor-pointer" onClick={() => exportInventoryToExcel(displayItems, activeTab === "all" ? "Todos" : activeTab === "finished" ? "Terminados" : "Materias Primas e Insumos")}>
                           <div className="p-1.5 bg-green-50 text-green-600 rounded-lg"><FileDown className="h-4 w-4" /></div>
                           Descargar Excel
                         </DropdownMenuItem>
@@ -1045,7 +1045,7 @@ function PrintInventoryContent({ inventory }: { inventory: any[] }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Insumos:</td>
+                <td colSpan={4} className="py-3 text-right font-bold">Subtotal Materias Primas e Insumos:</td>
                 <td className="py-3 text-right font-bold text-lg">{formatCurrency(Math.round(totalCostRaw * 100))}</td>
                 <td colSpan={2} className="py-3 text-right font-bold text-lg text-blue-800">{formatCurrency(Math.round(totalSaleRaw * 100))}</td>
               </tr>
