@@ -153,7 +153,7 @@ export function Production() {
                     productionItems.map(item => {
                       const isSelected = selectedItems[item.id] !== undefined;
                       return (
-                        <div key={item.id} className={\`p-4 rounded-xl border flex items-center justify-between \${isSelected ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200 bg-white'}\`}>
+                        <div key={item.id} className={`p-4 rounded-xl border flex items-center justify-between ${isSelected ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200 bg-white'}`}>
                           <div>
                             <p className="font-bold text-slate-900">{item.name}</p>
                             <Badge variant="outline" className="mt-1">Disp: {item.stock}</Badge>

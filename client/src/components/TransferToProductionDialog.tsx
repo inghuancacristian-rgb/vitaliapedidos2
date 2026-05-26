@@ -187,14 +187,14 @@ export function TransferToProductionDialog({
                 return (
                   <div 
                     key={item.id} 
-                    className={\`p-4 rounded-2xl border transition-all duration-200 \${isSelected ? 'border-blue-500 bg-blue-50/30 shadow-[0_4px_20px_rgba(59,130,246,0.1)]' : 'border-slate-200 bg-white hover:border-blue-200'}\`}
+                    className={`p-4 rounded-2xl border transition-all duration-200 ${isSelected ? 'border-blue-500 bg-blue-50/30 shadow-[0_4px_20px_rgba(59,130,246,0.1)]' : 'border-slate-200 bg-white hover:border-blue-200'}`}
                   >
                     <div className="flex justify-between items-start mb-3">
                        <div>
                          <h4 className="font-bold text-slate-900 leading-tight">{item.product?.name}</h4>
                          <p className="text-[10px] text-slate-500 font-bold tracking-wider uppercase mt-0.5">{item.product?.code}</p>
                        </div>
-                       <Badge variant="outline" className={\`rounded-md \${isSelected ? 'border-blue-200 bg-blue-100 text-blue-700' : 'bg-slate-50'}\`}>
+                       <Badge variant="outline" className={`rounded-md ${isSelected ? 'border-blue-200 bg-blue-100 text-blue-700' : 'bg-slate-50'}`}>
                          Disp: {item.quantity}
                        </Badge>
                     </div>
@@ -210,7 +210,7 @@ export function TransferToProductionDialog({
                            placeholder="0"
                            value={selectedItems[item.productId] || ""}
                            onChange={(e) => handleQuantityChange(item.productId, e.target.value, item.quantity)}
-                           className={\`h-10 rounded-xl text-right pr-12 font-bold \${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}\`}
+                           className={`h-10 rounded-xl text-right pr-12 font-bold ${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}`}
                          />
                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 uppercase">
                            {item.product?.unit || 'ud'}

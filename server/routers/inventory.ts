@@ -805,12 +805,12 @@ export const inventoryRouter = router({
       // 1. Generate transfer number
       const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
       const nextId = (countRes[0] as any)[0].count + 1;
-      const transferNumber = \`TR-\${new Date().getFullYear()}-\${String(nextId).padStart(4, '0')}\`;
+      const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
       const insertRes = await db.execute(require("drizzle-orm").sql`
         INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
-        VALUES (\${transferNumber}, 'to_production', 'completed', \${ctx.user.id}, \${input.notes || null})
+        VALUES (${transferNumber}, 'to_production', 'completed', ${ctx.user.id}, ${input.notes || null})
       `);
       const transferId = (insertRes[0] as any).insertId;
 
@@ -826,7 +826,7 @@ export const inventoryRouter = router({
         // 3. Create Transfer Item
         await db.execute(require("drizzle-orm").sql`
           INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
-          VALUES (\${transferId}, \${item.productId}, \${item.quantity}, \${product.name}, \${product.unit || 'unidad'})
+          VALUES (${transferId}, ${item.productId}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
         `);
 
         // 4. Update Inventory (General -> decrease)
@@ -841,7 +841,7 @@ export const inventoryRouter = router({
           type: "exit",
           quantity: item.quantity,
           reason: "Traspaso a Producción",
-          notes: \`Traspaso \${transferNumber}\${input.notes ? ': ' + input.notes : ''}\`,
+          notes: `Traspaso ${transferNumber}${input.notes ? ': ' + input.notes : ''}`,
         });
 
         transferDetails.push({
@@ -875,12 +875,12 @@ export const inventoryRouter = router({
       // 1. Generate transfer number
       const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
       const nextId = (countRes[0] as any)[0].count + 1;
-      const transferNumber = \`TR-\${new Date().getFullYear()}-\${String(nextId).padStart(4, '0')}\`;
+      const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
       const insertRes = await db.execute(require("drizzle-orm").sql`
         INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
-        VALUES (\${transferNumber}, 'to_general', 'completed', \${ctx.user.id}, \${input.notes || null})
+        VALUES (${transferNumber}, 'to_general', 'completed', ${ctx.user.id}, ${input.notes || null})
       `);
       const transferId = (insertRes[0] as any).insertId;
 
@@ -905,7 +905,7 @@ export const inventoryRouter = router({
         // 3. Create Transfer Item
         await db.execute(require("drizzle-orm").sql`
           INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
-          VALUES (\${transferId}, \${product.id}, \${item.quantity}, \${product.name}, \${product.unit || 'unidad'})
+          VALUES (${transferId}, ${product.id}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
         `);
 
         // 4. Update Inventory (Production -> General, so general increases)
@@ -920,7 +920,7 @@ export const inventoryRouter = router({
           type: "entry",
           quantity: item.quantity,
           reason: "Ingreso por Producción",
-          notes: \`Traspaso \${transferNumber}\${input.notes ? ': ' + input.notes : ''}\`,
+          notes: `Traspaso ${transferNumber}${input.notes ? ': ' + input.notes : ''}`,
         });
 
         transferDetails.push({
@@ -951,12 +951,12 @@ export const inventoryRouter = router({
     
     // Fetch items
     const transferIds = transfers.map(t => t.id);
-    const inClause = require("drizzle-orm").sql.raw(\`(\${transferIds.join(',')})\`);
+    const inClause = require("drizzle-orm").sql.raw(`(${transferIds.join(',')})`);
     
-    const itemsRows = await db.execute(require("drizzle-orm").sql\`
+    const itemsRows = await db.execute(require("drizzle-orm").sql`
       SELECT * FROM inventory_transfer_items 
-      WHERE transferId IN \${inClause}
-    \`);
+      WHERE transferId IN ${inClause}
+    `);
     
     const items = itemsRows[0] as any[];
     

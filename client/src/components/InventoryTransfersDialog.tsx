@@ -48,13 +48,13 @@ export function InventoryTransfersDialog() {
                 <div key={t.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
                     <div className="flex gap-4 items-center">
-                      <div className={\`p-3 rounded-xl \${t.direction === 'to_production' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}\`}>
+                      <div className={`p-3 rounded-xl ${t.direction === 'to_production' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                         {t.direction === 'to_production' ? <ArrowRight className="h-6 w-6" /> : <ArrowLeft className="h-6 w-6" />}
                       </div>
                       <div>
                         <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
                           {t.transferNumber}
-                          <Badge variant="outline" className={\`\${t.direction === 'to_production' ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-blue-50 border-blue-200 text-blue-700'}\`}>
+                          <Badge variant="outline" className={`${t.direction === 'to_production' ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
                             {t.direction === 'to_production' ? 'A Producción' : 'A General'}
                           </Badge>
                         </h3>
