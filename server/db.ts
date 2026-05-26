@@ -181,6 +181,33 @@ export async function getDb() {
       }
       _db = drizzle(_pool, { schema, mode: "default" });
       console.log("[Database] Drizzle instance initialized");
+      
+      // Asegurar que existan las nuevas tablas para los traspasos (PlanetScale)
+      if (!(typeof (_pool as any).tablesEnsured !== 'undefined')) {
+        (_pool as any).tablesEnsured = true;
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS inventory_transfers (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            transferNumber VARCHAR(50) NOT NULL UNIQUE,
+            direction ENUM('to_production', 'to_general') NOT NULL,
+            status ENUM('completed', 'cancelled') NOT NULL DEFAULT 'completed',
+            userId INT NOT NULL,
+            notes TEXT,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+          )
+        `).catch(console.error);
+        
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS inventory_transfer_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            transferId INT NOT NULL,
+            productId INT NOT NULL,
+            quantity INT NOT NULL,
+            productName VARCHAR(255),
+            productUnit VARCHAR(50)
+          )
+        `).catch(console.error);
+      }
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);
       console.error("[Database] Error in getDb:", _dbInitError);
