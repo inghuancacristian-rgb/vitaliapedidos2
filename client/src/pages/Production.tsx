@@ -82,6 +82,28 @@ export function Production() {
   };
 
   useEffect(() => {
+    // FIX AUTOMÁTICO: Corregir items que se hayan categorizado erróneamente en el pasado
+    try {
+      const kInvStr = localStorage.getItem('kefir_inventory_v3');
+      if (kInvStr) {
+        let kInv = JSON.parse(kInvStr);
+        kInv = Array.isArray(kInv) ? kInv : Object.values(kInv);
+        let changed = false;
+        kInv.forEach((v: any) => {
+          if (v.category === "producto" && (v.name?.toLowerCase().includes("botella") || v.name?.toLowerCase().includes("tapa") || v.name?.toLowerCase().includes("envase") || v.name?.toLowerCase().includes("etiqueta"))) {
+            v.category = "envase";
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
+          window.dispatchEvent(new Event('storage'));
+        }
+      }
+    } catch (e) {
+      console.error("Error auto-fixing inventory", e);
+    }
+
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'OPEN_TRANSFER_DIALOG') {
         openTransferDialog();
