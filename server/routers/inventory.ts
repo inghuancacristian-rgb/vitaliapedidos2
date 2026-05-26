@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { inventory } from "../../drizzle/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import {
   getAllProducts,
   createProduct,
@@ -759,7 +759,7 @@ export const inventoryRouter = router({
     const db = await import("../db").then(m => m.getDb());
     if (!db) return { success: false, message: "No db connection" };
     
-    await db.execute(require("drizzle-orm").sql`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS inventory_transfers (
         id INT AUTO_INCREMENT PRIMARY KEY,
         transferNumber VARCHAR(50) NOT NULL UNIQUE,
@@ -771,7 +771,7 @@ export const inventoryRouter = router({
       )
     `);
 
-    await db.execute(require("drizzle-orm").sql`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS inventory_transfer_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
         transferId INT NOT NULL,
@@ -803,12 +803,12 @@ export const inventoryRouter = router({
       const { createInventoryMovement, updateInventory } = await import("../db");
       
       // 1. Generate transfer number
-      const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
+      const countRes = await db.execute(sql`SELECT COUNT(*) as count FROM inventory_transfers`);
       const nextId = (countRes[0] as any)[0].count + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
-      const insertRes = await db.execute(require("drizzle-orm").sql`
+      const insertRes = await db.execute(sql`
         INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
         VALUES (${transferNumber}, 'to_production', 'completed', ${ctx.user.id}, ${input.notes || null})
       `);
@@ -824,7 +824,7 @@ export const inventoryRouter = router({
         if (!product) continue;
 
         // 3. Create Transfer Item
-        await db.execute(require("drizzle-orm").sql`
+        await db.execute(sql`
           INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
           VALUES (${transferId}, ${item.productId}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
         `);
@@ -873,12 +873,12 @@ export const inventoryRouter = router({
       const { createInventoryMovement, updateInventory } = await import("../db");
       
       // 1. Generate transfer number
-      const countRes = await db.execute(require("drizzle-orm").sql`SELECT COUNT(*) as count FROM inventory_transfers`);
+      const countRes = await db.execute(sql`SELECT COUNT(*) as count FROM inventory_transfers`);
       const nextId = (countRes[0] as any)[0].count + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
 
       // 2. Create Transfer Record
-      const insertRes = await db.execute(require("drizzle-orm").sql`
+      const insertRes = await db.execute(sql`
         INSERT INTO inventory_transfers (transferNumber, direction, status, userId, notes)
         VALUES (${transferNumber}, 'to_general', 'completed', ${ctx.user.id}, ${input.notes || null})
       `);
@@ -903,7 +903,7 @@ export const inventoryRouter = router({
         }
 
         // 3. Create Transfer Item
-        await db.execute(require("drizzle-orm").sql`
+        await db.execute(sql`
           INSERT INTO inventory_transfer_items (transferId, productId, quantity, productName, productUnit)
           VALUES (${transferId}, ${product.id}, ${item.quantity}, ${product.name}, ${product.unit || 'unidad'})
         `);
@@ -939,7 +939,7 @@ export const inventoryRouter = router({
     if (!db) return [];
     
     // Fetch transfers
-    const transfersRows = await db.execute(require("drizzle-orm").sql`
+    const transfersRows = await db.execute(sql`
       SELECT t.*, u.username, u.name as userFullName 
       FROM inventory_transfers t
       LEFT JOIN users u ON t.userId = u.id
@@ -951,9 +951,9 @@ export const inventoryRouter = router({
     
     // Fetch items
     const transferIds = transfers.map(t => t.id);
-    const inClause = require("drizzle-orm").sql.raw(`(${transferIds.join(',')})`);
+    const inClause = sql.raw(`(${transferIds.join(',')})`);
     
-    const itemsRows = await db.execute(require("drizzle-orm").sql`
+    const itemsRows = await db.execute(sql`
       SELECT * FROM inventory_transfer_items 
       WHERE transferId IN ${inClause}
     `);
