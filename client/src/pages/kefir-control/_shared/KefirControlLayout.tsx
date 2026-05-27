@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import {
+  ArrowLeft,
   BarChart3,
   Boxes,
   ClipboardList,
@@ -14,6 +15,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const MAIN_APP_URL = "https://vitaliapedidos2-production-a969.up.railway.app/";
 
 type KefirControlLayoutProps = {
   title: string;
@@ -127,6 +130,13 @@ export default function KefirControlLayout({
           </nav>
 
           <div className="border-t border-slate-100 p-4">
+            <a
+              href={MAIN_APP_URL}
+              className="mb-3 flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 transition-colors hover:bg-sky-500 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Volver al programa</span>
+            </a>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Estado
