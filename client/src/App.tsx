@@ -34,7 +34,7 @@ import KefirControlInventoryPage from "@/pages/KefirControlInventoryPage";
 import KefirControlKardexPage from "@/pages/KefirControlKardexPage";
 function OpenKefirControl() {
   useEffect(() => {
-    window.location.replace("/kefir-control/inventory");
+    window.location.replace("/kefir-control/");
   }, []);
 
   return null;
