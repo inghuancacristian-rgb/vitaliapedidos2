@@ -532,6 +532,29 @@ export const productionOutputs = mysqlTable("production_outputs", {
 export type ProductionOutput = typeof productionOutputs.$inferSelect;
 export type InsertProductionOutput = typeof productionOutputs.$inferInsert;
 
+// Tabla de Insumos Consumidos en Producción
+export const productionInputs = mysqlTable("production_inputs", {
+  id: int("id").autoincrement().primaryKey(),
+  batchId: int("batchId").notNull().references(() => productionBatches.id),
+  productId: int("productId").notNull().references(() => products.id),
+  quantity: int("quantity").notNull(), // Cantidad de materia prima consumida
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProductionInput = typeof productionInputs.$inferSelect;
+export type InsertProductionInput = typeof productionInputs.$inferInsert;
+
+// Tabla de Inventario en Planta (Almacén de Producción)
+export const productionInventory = mysqlTable("production_inventory", {
+  id: int("id").autoincrement().primaryKey(),
+  productId: int("productId").notNull().references(() => products.id),
+  quantity: int("quantity").notNull().default(0),
+  lastUpdated: timestamp("lastUpdated").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProductionInventory = typeof productionInventory.$inferSelect;
+export type InsertProductionInventory = typeof productionInventory.$inferInsert;
+
 // Definición de Relaciones (Drizzle Relational API)
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   customer: one(customers, {

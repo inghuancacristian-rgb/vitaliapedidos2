@@ -801,6 +801,7 @@ export const inventoryRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB Error" });
       
       const { createInventoryMovement, updateInventory } = await import("../db");
+      const { productionInventory } = await import("../../drizzle/schema");
       
       // 1. Generate transfer number
       const countRes = await db.select({ value: count() }).from(inventoryTransfers);
@@ -840,6 +841,23 @@ export const inventoryRouter = router({
         const newQty = (currentInv?.quantity || 0) - item.quantity;
         await updateInventory(item.productId, Math.max(0, newQty));
 
+        // 4.1 Incrementar el almacén de planta para que la vista de producción
+        // refleje inmediatamente el stock transferido desde inventario general.
+        const [prodStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, item.productId));
+        const previousProdQty = prodStock?.quantity || 0;
+        const nextProdQty = previousProdQty + item.quantity;
+
+        if (prodStock) {
+          await db.update(productionInventory)
+            .set({ quantity: nextProdQty })
+            .where(eq(productionInventory.id, prodStock.id));
+        } else {
+          await db.insert(productionInventory).values({
+            productId: item.productId,
+            quantity: item.quantity,
+          });
+        }
+
         // 5. Create Movement
         await createInventoryMovement({
           productId: item.productId,
@@ -849,6 +867,22 @@ export const inventoryRouter = router({
           reason: "Traspaso a Producción",
           notes: `Traspaso ${transferNumber}${input.notes ? ': ' + input.notes : ''}`,
         });
+
+        const pool = (db as any).session?.client || (global as any)._pool;
+        if (pool) {
+          await pool.execute(
+            'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              item.productId.toString(),
+              product.name,
+              product.category,
+              previousProdQty,
+              nextProdQty,
+              item.quantity,
+              `Traspaso a Producción ${transferNumber}`,
+            ]
+          ).catch(console.error);
+        }
 
         transferDetails.push({
           productId: item.productId,

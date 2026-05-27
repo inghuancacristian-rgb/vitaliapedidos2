@@ -235,6 +235,25 @@ export async function getDb() {
             createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
           )
         `).catch(console.error);
+
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS production_inputs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            batchId INT NOT NULL,
+            productId INT NOT NULL,
+            quantity INT NOT NULL,
+            createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+          )
+        `).catch(console.error);
+
+        _pool.execute(`
+          CREATE TABLE IF NOT EXISTS production_inventory (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            productId INT NOT NULL,
+            quantity INT NOT NULL DEFAULT 0,
+            lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL
+          )
+        `).catch(console.error);
       }
     } catch (error) {
       _dbInitError = error instanceof Error ? error.message : String(error);

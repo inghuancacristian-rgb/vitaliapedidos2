@@ -6,12 +6,14 @@ import {
   productionOutputs, 
   productionInputs,
   productionInventory,
+  inventoryTransfers,
+  inventoryTransferItems,
   inventory, 
   inventoryMovements, 
   users, 
   products 
 } from '../../drizzle/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
 export const productionRouter = router({
@@ -217,7 +219,43 @@ export const productionRouter = router({
       .from(productionInventory)
       .innerJoin(products, eq(productionInventory.productId, products.id));
 
-    return items;
+    if (items.length > 0) {
+      return items;
+    }
+
+    const transferRows = await db
+      .select({
+        productId: inventoryTransferItems.productId,
+        quantity: inventoryTransferItems.quantity,
+        productName: products.name,
+        productCode: products.code,
+        category: products.category,
+        unit: products.unit,
+      })
+      .from(inventoryTransferItems)
+      .innerJoin(inventoryTransfers, eq(inventoryTransferItems.transferId, inventoryTransfers.id))
+      .innerJoin(products, eq(inventoryTransferItems.productId, products.id))
+      .where(and(
+        eq(inventoryTransfers.direction, 'to_production'),
+        eq(inventoryTransfers.status, 'completed')
+      ));
+
+    const aggregate = new Map<number, any>();
+    for (const row of transferRows) {
+      const current = aggregate.get(row.productId) || {
+        id: `transfer-${row.productId}`,
+        productId: row.productId,
+        quantity: 0,
+        productName: row.productName,
+        productCode: row.productCode,
+        category: row.category,
+        unit: row.unit,
+      };
+      current.quantity += row.quantity;
+      aggregate.set(row.productId, current);
+    }
+
+    return Array.from(aggregate.values());
   }),
 
   // Mantenemos el endpoint de Kardex intacto

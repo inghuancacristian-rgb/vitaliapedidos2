@@ -94,6 +94,8 @@ export function TransferToProductionDialog({
       setNotes("");
       setSearchTerm("");
       if (onSuccess) onSuccess();
+      (utils as any).production?.getProductionInventory?.invalidate?.();
+      (utils as any).production?.getKefirMovements?.invalidate?.();
       (utils as any).inventory?.listInventory?.invalidate?.();
       (utils as any).inventory?.getTransfers?.invalidate?.();
     },
