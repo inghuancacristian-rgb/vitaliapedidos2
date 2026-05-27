@@ -125,6 +125,9 @@ async function startServer() {
   app.get("/kefir-control/inventory", (_req, res) => {
     res.sendFile(rootAppIndex);
   });
+  app.get("/kefir-control/kardex", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
     if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {

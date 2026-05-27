@@ -31,6 +31,7 @@ import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
 import KefirControlInventoryPage from "@/pages/KefirControlInventoryPage";
+import KefirControlKardexPage from "@/pages/KefirControlKardexPage";
 function OpenKefirControl() {
   useEffect(() => {
     window.location.replace("/kefir-control/inventory");
@@ -102,6 +103,9 @@ function Router() {
           </Route>
           <Route path="/kefir-control/inventory">
             <ProtectedRoute component={KefirControlInventoryPage} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/kardex">
+            <ProtectedRoute component={KefirControlKardexPage} adminOnly={true} />
           </Route>
           <Route path="/kefir-control/:section">
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />
