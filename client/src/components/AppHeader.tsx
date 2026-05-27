@@ -14,7 +14,7 @@ export default function AppHeader() {
         { href: "/sales", label: "Ventas", icon: ShoppingBag },
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/inventory", label: "Inventario General" },
-        { href: "/production", label: "Producción" },
+        { href: "/kefir-control/", label: "Producción" },
         { href: "/customers", label: "Clientes" },
         { href: "/finance", label: "Finanzas" },
         { href: "/expenses", label: "Gastos" },
@@ -59,6 +59,12 @@ export default function AppHeader() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={(e) => {
+                      if (item.href === "/kefir-control/") {
+                        e.preventDefault();
+                        window.location.assign("/kefir-control/");
+                      }
+                    }}
                     className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"

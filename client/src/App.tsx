@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppHeader from "./components/AppHeader";
@@ -29,7 +30,14 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
-import { Production } from "@/pages/Production";
+
+function ProductionRedirect() {
+  useEffect(() => {
+    window.location.replace("/kefir-control/");
+  }, []);
+
+  return null;
+}
 
 function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: any) {
   const { user } = useAuth();
@@ -85,7 +93,7 @@ function Router() {
             <ProtectedRoute component={Inventory} adminOnly={true} />
           </Route>
           <Route path="/production">
-            <ProtectedRoute component={Production} adminOnly={true} />
+            <ProtectedRoute component={ProductionRedirect} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />
