@@ -30,9 +30,10 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
+import KefirControlInventoryPage from "@/pages/KefirControlInventoryPage";
 function OpenKefirControl() {
   useEffect(() => {
-    window.location.replace("/kefir-control/index.html");
+    window.location.replace("/kefir-control/inventory");
   }, []);
 
   return null;
@@ -98,6 +99,9 @@ function Router() {
           </Route>
           <Route path="/kefir-control">
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/inventory">
+            <ProtectedRoute component={KefirControlInventoryPage} adminOnly={true} />
           </Route>
           <Route path="/kefir-control/:section">
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />

@@ -37,7 +37,7 @@ export default function MobileMenu() {
     { href: "/orders", label: "Pedidos", icon: ShoppingCart },
     { href: "/sales", label: "Ventas", icon: ShoppingBag },
     { href: "/inventory", label: "Inventario General", icon: Package },
-    { href: "/kefir-control/index.html", label: "Producción", icon: Package },
+    { href: "/kefir-control/inventory", label: "Producción", icon: Package },
     { href: "/products", label: "Catálogo", icon: Tag },
     { href: "/expenses", label: "Gastos", icon: Receipt },
     { href: "/customers", label: "Clientes", icon: Users },

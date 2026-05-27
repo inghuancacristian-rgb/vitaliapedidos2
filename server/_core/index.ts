@@ -117,7 +117,14 @@ async function startServer() {
 
   const kefirControlDir = path.resolve(process.cwd(), "client", "public", "kefir-control");
   const kefirControlIndex = path.join(kefirControlDir, "index.html");
+  const rootAppIndex =
+    process.env.NODE_ENV === "development"
+      ? path.resolve(process.cwd(), "client", "index.html")
+      : path.resolve(process.cwd(), "dist", "public", "index.html");
   app.use("/kefir-control", express.static(kefirControlDir));
+  app.get("/kefir-control/inventory", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
     if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
