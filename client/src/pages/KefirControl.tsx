@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { formatCurrency } from "@/lib/currency";
+import { toast } from "sonner";
 import {
   BarChart3,
   Boxes,
@@ -16,7 +17,10 @@ import {
   Factory,
   FileText,
   FlaskConical,
+  CheckCircle,
+  Loader2,
   Package2,
+  RefreshCcw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -446,6 +450,455 @@ function ProductsView() {
   );
 }
 
+function BatchesView() {
+  const utils = trpc.useContext();
+  const { data: batches = [], isLoading: loadingBatches, refetch: refetchBatches } =
+    trpc.production.getBatches.useQuery(undefined, {
+      retry: 2,
+      refetchOnWindowFocus: true,
+    });
+  const { data: products = [], isLoading: loadingProducts } = trpc.inventory.listProducts.useQuery(undefined, {
+    retry: 2,
+    refetchOnWindowFocus: true,
+  });
+
+  const [batchType, setBatchType] = useState<"kefir_production" | "nodule_washing" | "maintenance">("kefir_production");
+  const [batchNotes, setBatchNotes] = useState("");
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [outputs, setOutputs] = useState<Array<{ productId: number; quantity: string }>>([
+    { productId: 0, quantity: "" },
+  ]);
+  const [inputs, setInputs] = useState<Array<{ productId: number; quantity: string }>>([
+    { productId: 0, quantity: "" },
+  ]);
+
+  const finishedProducts = useMemo(
+    () => (products as any[]).filter((product) => product.category === "finished_product"),
+    [products]
+  );
+  const rawMaterials = useMemo(
+    () =>
+      (products as any[]).filter((product) =>
+        ["raw_material", "supplies", "insumo"].includes(product.category)
+      ),
+    [products]
+  );
+  const selectedBatch = useMemo(
+    () => (batches as any[]).find((batch) => batch.id === selectedBatchId) ?? null,
+    [batches, selectedBatchId]
+  );
+  const activeBatches = useMemo(
+    () => (batches as any[]).filter((batch) => batch.status === "in_progress"),
+    [batches]
+  );
+  const batchCounts = useMemo(() => {
+    const list = batches as any[];
+    return {
+      total: list.length,
+      active: list.filter((batch) => batch.status === "in_progress").length,
+      completed: list.filter((batch) => batch.status === "completed").length,
+    };
+  }, [batches]);
+
+  const createBatchMutation = trpc.production.createBatch.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Lote ${result.batchNumber} iniciado`);
+      setBatchNotes("");
+      setBatchType("kefir_production");
+      utils.production.getBatches.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "No se pudo iniciar el lote");
+    },
+  });
+
+  const completeBatchMutation = trpc.production.completeBatch.useMutation({
+    onSuccess: () => {
+      toast.success("Lote finalizado y stock actualizado");
+      setSelectedBatchId(null);
+      setOutputs([{ productId: 0, quantity: "" }]);
+      setInputs([{ productId: 0, quantity: "" }]);
+      utils.production.getBatches.invalidate();
+      utils.production.getProductionInventory.invalidate();
+      utils.production.getKefirMovements.invalidate();
+      utils.inventory.listInventory.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "No se pudo finalizar el lote");
+    },
+  });
+
+  const handleCreateBatch = () => {
+    createBatchMutation.mutate({
+      type: batchType,
+      notes: batchNotes.trim() || undefined,
+    });
+  };
+
+  const resetCompleteForm = (batchId: number | null) => {
+    setSelectedBatchId(batchId);
+    setOutputs([{ productId: 0, quantity: "" }]);
+    setInputs([{ productId: 0, quantity: "" }]);
+  };
+
+  const handleCompleteBatch = () => {
+    if (!selectedBatchId) {
+      toast.error("Selecciona un lote para finalizar");
+      return;
+    }
+
+    const validOutputs = outputs
+      .filter((item) => item.productId > 0 && Number(item.quantity) > 0)
+      .map((item) => ({ productId: item.productId, quantity: Number(item.quantity) }));
+    const validInputs = inputs
+      .filter((item) => item.productId > 0 && Number(item.quantity) > 0)
+      .map((item) => ({ productId: item.productId, quantity: Number(item.quantity) }));
+
+    if (validOutputs.length === 0) {
+      toast.error("Agrega al menos un producto elaborado con cantidad mayor a 0");
+      return;
+    }
+
+    completeBatchMutation.mutate({
+      batchId: selectedBatchId,
+      outputs: validOutputs,
+      inputs: validInputs,
+    });
+  };
+
+  const formatDate = (value: unknown) => {
+    if (!value) return "—";
+    const date = new Date(value as any);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleString("es-BO", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const typeLabel = (type?: string) => {
+    if (type === "kefir_production") return "Elaboracion de Kefir";
+    if (type === "nodule_washing") return "Lavado de Nodulos";
+    if (type === "maintenance") return "Mantenimiento";
+    return "Otro";
+  };
+
+  const statusBadgeClass = (status?: string) => {
+    if (status === "completed") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Total lotes</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{batchCounts.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">En progreso</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{batchCounts.active}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Completados</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{batchCounts.completed}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="space-y-4 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Nuevo lote</h3>
+                <p className="text-sm text-slate-500">Abre un lote de produccion, lavado o mantenimiento.</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetchBatches()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Actualizar
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Tipo de lote</label>
+                <select
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-400"
+                  value={batchType}
+                  onChange={(e) => setBatchType(e.target.value as any)}
+                >
+                  <option value="kefir_production">Elaboracion de Kefir</option>
+                  <option value="nodule_washing">Lavado de Nodulos</option>
+                  <option value="maintenance">Mantenimiento</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Notas</label>
+                <Input
+                  value={batchNotes}
+                  onChange={(e) => setBatchNotes(e.target.value)}
+                  placeholder="Notas del lote..."
+                  className="h-11 rounded-2xl bg-slate-50/70"
+                />
+              </div>
+
+              <Button
+                className="h-11 w-full rounded-2xl"
+                onClick={handleCreateBatch}
+                disabled={createBatchMutation.isPending}
+              >
+                {createBatchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Iniciar lote
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="space-y-4 p-5">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Finalizar lote</h3>
+              <p className="text-sm text-slate-500">
+                Registra insumos consumidos y productos generados para actualizar el inventario.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Seleccionar lote activo</label>
+              <select
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-400"
+                value={selectedBatchId ?? ""}
+                onChange={(e) => resetCompleteForm(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Elegir lote...</option>
+                {activeBatches.map((batch: any) => (
+                  <option key={batch.id} value={batch.id}>
+                    {batch.batchNumber} - {typeLabel(batch.type)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedBatch && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Lote seleccionado</p>
+                <p className="mt-1 font-bold text-slate-900">{selectedBatch.batchNumber}</p>
+                <p className="text-sm text-slate-500">{typeLabel(selectedBatch.type)}</p>
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Productos elaborados</label>
+                {outputs.map((row, index) => (
+                  <div key={`out-${index}`} className="grid grid-cols-[1fr_110px_40px] gap-2">
+                    <select
+                      className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-400"
+                      value={row.productId}
+                      onChange={(e) => {
+                        const next = [...outputs];
+                        next[index].productId = Number(e.target.value);
+                        setOutputs(next);
+                      }}
+                    >
+                      <option value={0}>Producto...</option>
+                      {finishedProducts.map((product: any) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Cant."
+                      value={row.quantity}
+                      onChange={(e) => {
+                        const next = [...outputs];
+                        next[index].quantity = e.target.value;
+                        setOutputs(next);
+                      }}
+                      className="h-11 rounded-2xl bg-slate-50/70"
+                    />
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50"
+                      onClick={() =>
+                        setOutputs((current) => {
+                          const next = current.filter((_, currentIndex) => currentIndex !== index);
+                          return next.length ? next : [{ productId: 0, quantity: "" }];
+                        })
+                      }
+                    >
+                      -
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  className="w-full rounded-2xl"
+                  onClick={() => setOutputs((current) => [...current, { productId: 0, quantity: "" }])}
+                >
+                  Agregar producto
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Insumos consumidos</label>
+                {inputs.map((row, index) => (
+                  <div key={`in-${index}`} className="grid grid-cols-[1fr_110px_40px] gap-2">
+                    <select
+                      className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-sky-400"
+                      value={row.productId}
+                      onChange={(e) => {
+                        const next = [...inputs];
+                        next[index].productId = Number(e.target.value);
+                        setInputs(next);
+                      }}
+                    >
+                      <option value={0}>Insumo...</option>
+                      {rawMaterials.map((product: any) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Cant."
+                      value={row.quantity}
+                      onChange={(e) => {
+                        const next = [...inputs];
+                        next[index].quantity = e.target.value;
+                        setInputs(next);
+                      }}
+                      className="h-11 rounded-2xl bg-slate-50/70"
+                    />
+                    <button
+                      type="button"
+                      className="rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50"
+                      onClick={() =>
+                        setInputs((current) => {
+                          const next = current.filter((_, currentIndex) => currentIndex !== index);
+                          return next.length ? next : [{ productId: 0, quantity: "" }];
+                        })
+                      }
+                    >
+                      -
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  className="w-full rounded-2xl"
+                  onClick={() => setInputs((current) => [...current, { productId: 0, quantity: "" }])}
+                >
+                  Agregar insumo
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                className="rounded-2xl"
+                onClick={() => {
+                  setSelectedBatchId(null);
+                  setOutputs([{ productId: 0, quantity: "" }]);
+                  setInputs([{ productId: 0, quantity: "" }]);
+                }}
+              >
+                Limpiar
+              </Button>
+              <Button
+                className="rounded-2xl"
+                onClick={handleCompleteBatch}
+                disabled={completeBatchMutation.isPending || loadingProducts}
+              >
+                {completeBatchMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                Finalizar lote
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden border-slate-200/80 shadow-sm">
+        <CardContent className="p-0">
+          {loadingBatches ? (
+            <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-500">
+              Cargando lotes...
+            </div>
+          ) : (batches as any[]).length === 0 ? (
+            <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
+              <Boxes className="h-12 w-12 text-slate-300" />
+              <h3 className="text-lg font-bold text-slate-800">Aun no hay lotes registrados</h3>
+              <p className="max-w-md text-sm text-slate-500">
+                Inicia un lote desde el panel superior para empezar a registrar movimientos.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Lote</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Tipo</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Estado</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Inicio</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Fin</th>
+                    <th className="px-4 py-3 text-right font-bold text-slate-700">Accion</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {(batches as any[]).map((batch) => (
+                    <tr key={batch.id}>
+                      <td className="px-4 py-4 font-bold text-slate-900">{batch.batchNumber}</td>
+                      <td className="px-4 py-4 text-slate-700">{typeLabel(batch.type)}</td>
+                      <td className="px-4 py-4">
+                        <Badge variant="outline" className={statusBadgeClass(batch.status)}>
+                          {batch.status === "completed" ? "Completado" : "En progreso"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4 text-slate-500">{formatDate(batch.startDate || batch.createdAt)}</td>
+                      <td className="px-4 py-4 text-slate-500">{formatDate(batch.endDate)}</td>
+                      <td className="px-4 py-4 text-right">
+                        {batch.status === "in_progress" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-2xl border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => resetCompleteForm(batch.id)}
+                          >
+                            Finalizar
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin acciones</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function InventoryView() {
   const { data: productionInventory = [], isLoading: loadingInventory, refetch: refetchInventory } =
     trpc.production.getProductionInventory.useQuery(undefined, {
@@ -803,7 +1256,12 @@ export default function KefirControlModulePage() {
   const section = getSectionFromPath(location);
 
   const sectionMeta = sections.find((item) => item.key === section) ?? sections.find((item) => item.key === "inventario")!;
-  const headerTitle = section === "inventario" ? "Control de Inventario" : sectionMeta.label;
+  const headerTitle =
+    section === "inventario"
+      ? "Control de Inventario"
+      : section === "lotes"
+        ? "Lotes de Produccion"
+        : sectionMeta.label;
   const headerSubtitle =
     section === "inventario"
       ? `${new Date().toLocaleDateString("es-BO", {
@@ -811,6 +1269,8 @@ export default function KefirControlModulePage() {
           month: "2-digit",
           day: "2-digit",
         })} · inventario sincronizado`
+      : section === "lotes"
+        ? "Gestion y cierre de lotes de planta"
       : section === "productos"
         ? "Catálogo interno y control de roles de producción"
         : "Submódulo pendiente de migración";
@@ -888,6 +1348,8 @@ export default function KefirControlModulePage() {
             <InventoryView />
           ) : section === "productos" ? (
             <ProductsView />
+          ) : section === "lotes" ? (
+            <BatchesView />
           ) : (
             <SectionPlaceholder label={sectionMeta.label} />
           )}
