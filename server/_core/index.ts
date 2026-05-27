@@ -116,30 +116,22 @@ async function startServer() {
   app.use("/uploads", express.static(uploadsDir));
 
   const kefirControlDir = path.resolve(process.cwd(), "client", "public", "kefir-control");
+  const kefirControlIndex = path.join(kefirControlDir, "index.html");
   const rootAppIndex =
     process.env.NODE_ENV === "development"
       ? path.resolve(process.cwd(), "client", "index.html")
       : path.resolve(process.cwd(), "dist", "public", "index.html");
   app.use("/kefir-control", express.static(kefirControlDir, { index: false }));
   app.get("/kefir-control", (_req, res) => {
-    res.sendFile(rootAppIndex);
+    res.sendFile(kefirControlIndex);
   });
   app.get("/kefir-control/index.html", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/kefir-control/inventory", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/kefir-control/kardex", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/kefir-control/lotes", (_req, res) => {
-    res.sendFile(rootAppIndex);
+    res.sendFile(kefirControlIndex);
   });
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
     if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
-      res.sendFile(rootAppIndex);
+      res.sendFile(kefirControlIndex);
       return;
     }
     next();
