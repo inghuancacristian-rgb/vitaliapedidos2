@@ -114,6 +114,18 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use("/uploads", express.static(uploadsDir));
+
+  const kefirControlDir = path.resolve(process.cwd(), "client", "public", "kefir-control");
+  const kefirControlIndex = path.join(kefirControlDir, "index.html");
+  app.use("/kefir-control", express.static(kefirControlDir));
+  app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
+    const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
+    if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
+      res.sendFile(kefirControlIndex);
+      return;
+    }
+    next();
+  });
   
   // Configurar multer para upload de imágenes
   const upload = multer({
