@@ -1441,6 +1441,328 @@ function OrdersView() {
   );
 }
 
+function AuditView() {
+  const utils = trpc.useContext();
+  const [entityType, setEntityType] = useState("");
+  const [entityId, setEntityId] = useState("");
+  const [action, setAction] = useState("all");
+  const [userId, setUserId] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedLog, setSelectedLog] = useState<any | null>(null);
+
+  const { data: users = [] } = trpc.users.list.useQuery(undefined, {
+    retry: 2,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: stats } = trpc.audit.stats.useQuery(
+    {
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    },
+    { retry: 2, refetchOnWindowFocus: true }
+  );
+
+  const { data: logs = [], isLoading, refetch } = trpc.audit.list.useQuery(
+    {
+      entityType: entityType.trim() || undefined,
+      entityId: entityId.trim() ? Number(entityId) : undefined,
+      action: action === "all" ? undefined : (action as "CREATE" | "UPDATE" | "DELETE"),
+      userId: userId === "all" ? undefined : Number(userId),
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      limit: 150,
+      offset: 0,
+    },
+    { retry: 2, refetchOnWindowFocus: true }
+  );
+
+  const actionTotals = useMemo(() => {
+    const rows = (stats?.byAction || []) as any[];
+    return {
+      create: rows.find((row) => row.action === "CREATE")?.count || 0,
+      update: rows.find((row) => row.action === "UPDATE")?.count || 0,
+      delete: rows.find((row) => row.action === "DELETE")?.count || 0,
+    };
+  }, [stats]);
+
+  const entityTotals = useMemo(() => {
+    const rows = (stats?.byEntity || []) as any[];
+    return rows.slice(0, 3);
+  }, [stats]);
+
+  const userTotals = useMemo(() => {
+    const rows = (stats?.byUser || []) as any[];
+    return rows.slice(0, 5);
+  }, [stats]);
+
+  const getActionClass = (value: string) => {
+    if (value === "CREATE") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    if (value === "UPDATE") return "border-sky-200 bg-sky-50 text-sky-700";
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  };
+
+  const getUserLabel = (log: any) =>
+    log.user?.name ||
+    log.user?.username ||
+    log.userName ||
+    `Usuario #${log.userId || "sistema"}`;
+
+  const safeJson = (value: any) => {
+    if (!value) return "—";
+    try {
+      if (typeof value === "string") return JSON.stringify(JSON.parse(value), null, 2);
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Creaciones</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{actionTotals.create}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Actualizaciones</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{actionTotals.update}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Eliminaciones</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{actionTotals.delete}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-200/80 shadow-sm">
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Filtros de auditoria</h3>
+              <p className="text-sm text-slate-500">Explora el historial de cambios por entidad, usuario o fecha.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Actualizar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEntityType("");
+                  setEntityId("");
+                  setAction("all");
+                  setUserId("all");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-5">
+            <Input
+              value={entityType}
+              onChange={(e) => setEntityType(e.target.value)}
+              placeholder="Entidad (products, orders...)"
+              className="h-11 rounded-2xl border-slate-200 bg-white"
+            />
+            <Input
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+              placeholder="ID entidad"
+              className="h-11 rounded-2xl border-slate-200 bg-white"
+            />
+            <Select value={action} onValueChange={setAction}>
+              <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                <SelectValue placeholder="Accion" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="CREATE">CREATE</SelectItem>
+                <SelectItem value="UPDATE">UPDATE</SelectItem>
+                <SelectItem value="DELETE">DELETE</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={userId} onValueChange={setUserId}>
+              <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                <SelectValue placeholder="Usuario" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(users as any[]).map((user) => (
+                  <SelectItem key={user.id} value={String(user.id)}>
+                    {user.name || user.username || `#${user.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-11 rounded-2xl border-slate-200 bg-white"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-11 rounded-2xl border-slate-200 bg-white"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <Card className="overflow-hidden border-slate-200/80 shadow-sm">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-500">
+                Cargando auditoria...
+              </div>
+            ) : (logs as any[]).length === 0 ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
+                <FileText className="h-12 w-12 text-slate-300" />
+                <h3 className="text-lg font-bold text-slate-800">Sin registros encontrados</h3>
+                <p className="max-w-md text-sm text-slate-500">
+                  Prueba ajustando los filtros para ubicar cambios específicos.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-bold text-slate-700">Fecha</th>
+                      <th className="px-4 py-3 text-left font-bold text-slate-700">Entidad</th>
+                      <th className="px-4 py-3 text-left font-bold text-slate-700">Accion</th>
+                      <th className="px-4 py-3 text-left font-bold text-slate-700">Usuario</th>
+                      <th className="px-4 py-3 text-left font-bold text-slate-700">Descripcion</th>
+                      <th className="px-4 py-3 text-right font-bold text-slate-700">Ver</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {(logs as any[]).map((log) => (
+                      <tr key={log.id}>
+                        <td className="px-4 py-4 text-slate-500">
+                          {new Date(log.createdAt).toLocaleString("es-BO", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-slate-900">{log.entityType}</p>
+                            <p className="text-xs text-slate-500">ID {log.entityId}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <Badge variant="outline" className={getActionClass(log.action)}>
+                            {log.action}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700">{getUserLabel(log)}</td>
+                        <td className="px-4 py-4 text-slate-600">{log.description || "Sin descripcion"}</td>
+                        <td className="px-4 py-4 text-right">
+                          <Button size="sm" variant="outline" className="rounded-2xl" onClick={() => setSelectedLog(log)}>
+                            Ver
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <h3 className="text-base font-bold text-slate-900">Resumen rapido</h3>
+
+            <div className="mt-4 space-y-3">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Entidades destacadas</p>
+                <div className="mt-2 space-y-1 text-sm text-slate-700">
+                  {entityTotals.length > 0 ? (
+                    entityTotals.map((row: any) => (
+                      <div key={row.entityType} className="flex items-center justify-between">
+                        <span className="font-semibold">{row.entityType}</span>
+                        <span className="font-black">{row.count}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-500">Sin datos</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Usuarios activos</p>
+                <div className="mt-2 space-y-1 text-sm text-slate-700">
+                  {userTotals.length > 0 ? (
+                    userTotals.map((row: any) => (
+                      <div key={String(row.userId)} className="flex items-center justify-between">
+                        <span className="font-semibold">{row.userName || `#${row.userId}`}</span>
+                        <span className="font-black">{row.count}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-500">Sin datos</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={selectedLog !== null} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalle de auditoria</DialogTitle>
+            <DialogDescription>Consulta los valores anteriores y nuevos del cambio registrado.</DialogDescription>
+          </DialogHeader>
+
+          {selectedLog && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700">Valores anteriores</p>
+                <pre className="max-h-[340px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+                  {safeJson(selectedLog.oldValues)}
+                </pre>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700">Valores nuevos</p>
+                <pre className="max-h-[340px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+                  {safeJson(selectedLog.newValues)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function InventoryView() {
   const { data: productionInventory = [], isLoading: loadingInventory, refetch: refetchInventory } =
     trpc.production.getProductionInventory.useQuery(undefined, {
@@ -1815,6 +2137,8 @@ export default function KefirControlModulePage() {
         ? "Gestion y cierre de lotes de planta"
       : section === "ordenes"
         ? "Seguimiento, cambios de estado y control de pedidos"
+      : section === "auditoria"
+        ? "Historial de cambios y trazabilidad del sistema"
       : section === "productos"
         ? "Catálogo interno y control de roles de producción"
         : "Submódulo pendiente de migración";
@@ -1896,6 +2220,8 @@ export default function KefirControlModulePage() {
             <BatchesView />
           ) : section === "ordenes" ? (
             <OrdersView />
+          ) : section === "auditoria" ? (
+            <AuditView />
           ) : (
             <SectionPlaceholder label={sectionMeta.label} />
           )}
