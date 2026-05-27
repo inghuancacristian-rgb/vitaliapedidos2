@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { formatCurrency } from "@/lib/currency";
@@ -13,11 +16,20 @@ import {
   BarChart3,
   Boxes,
   ClipboardList,
+  Calendar,
+  CheckCircle2,
+  Clock,
   Droplets,
+  DollarSign,
   Factory,
   FileText,
   FlaskConical,
   CheckCircle,
+  Eye,
+  Filter,
+  MapPin,
+  MessageCircle,
+  MoreHorizontal,
   Loader2,
   Package2,
   RefreshCcw,
@@ -29,6 +41,7 @@ import {
   Store,
   Tag,
   ShoppingCart,
+  Trash2,
   Edit2,
 } from "lucide-react";
 
@@ -899,6 +912,535 @@ function BatchesView() {
   );
 }
 
+function OrdersView() {
+  const utils = trpc.useContext();
+  const { data: orders = [], isLoading, refetch } = trpc.orders.list.useQuery(undefined, {
+    retry: 2,
+    refetchOnWindowFocus: true,
+  });
+  const { data: deliveryPersons = [] } = trpc.users.listDeliveryPersons.useQuery(undefined, {
+    retry: 2,
+    refetchOnWindowFocus: true,
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [deliveryPersonFilter, setDeliveryPersonFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [statusDraft, setStatusDraft] = useState<"pending" | "assigned" | "in_transit" | "delivered" | "cancelled">("assigned");
+  const [cancelTargetId, setCancelTargetId] = useState<number | null>(null);
+  const [cancelledBy, setCancelledBy] = useState<"client" | "company" | "system">("client");
+  const [cancelReason, setCancelReason] = useState("");
+
+  const { data: orderDetails, isLoading: loadingDetails } = trpc.orders.getDetails.useQuery(
+    { orderId: selectedOrderId ?? 0 },
+    { enabled: selectedOrderId !== null }
+  );
+
+  const updateStatusMutation = trpc.orders.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Estado del pedido actualizado");
+      setSelectedOrderId(null);
+      utils.orders.list.invalidate();
+      utils.orders.getDetails.invalidate();
+      utils.inventory.listInventory.invalidate();
+    },
+    onError: (error) => toast.error(error.message || "No se pudo actualizar el pedido"),
+  });
+
+  const dismissMutation = trpc.orders.dismissOrder.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido dado de baja");
+      setCancelTargetId(null);
+      setCancelReason("");
+      utils.orders.list.invalidate();
+      utils.orders.getDetails.invalidate();
+      utils.inventory.listInventory.invalidate();
+    },
+    onError: (error) => toast.error(error.message || "No se pudo cancelar el pedido"),
+  });
+
+  const filteredOrders = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    return (orders as any[])
+      .filter((order) => {
+        const clientLabel = String(
+          order.clientName ||
+            order.customerName ||
+            order.customer?.name ||
+            order.customerNumber ||
+            order.customerId ||
+            ""
+        ).toLowerCase();
+        const matchesSearch =
+          String(order.orderNumber || "").toLowerCase().includes(term) ||
+          clientLabel.includes(term) ||
+          String(order.zone || "").toLowerCase().includes(term);
+        const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+        const matchesDeliveryPerson =
+          deliveryPersonFilter === "all" ||
+          (deliveryPersonFilter === "none"
+            ? !order.deliveryPersonId
+            : String(order.deliveryPersonId) === deliveryPersonFilter);
+        const orderDate = order.deliveryDate || order.createdAt?.slice?.(0, 10) || "";
+        const matchesDate = !dateFilter || orderDate === dateFilter;
+        return matchesSearch && matchesStatus && matchesDeliveryPerson && matchesDate;
+      })
+      .sort((a, b) => {
+        const dateA = String(a.deliveryDate || a.createdAt || "");
+        const dateB = String(b.deliveryDate || b.createdAt || "");
+        const timeA = String(a.deliveryTime || "99:99");
+        const timeB = String(b.deliveryTime || "99:99");
+        return dateB.localeCompare(dateA) || timeB.localeCompare(timeA);
+      });
+  }, [orders, searchTerm, statusFilter, deliveryPersonFilter, dateFilter]);
+
+  const stats = useMemo(() => {
+    const list = orders as any[];
+    return {
+      total: list.length,
+      pending: list.filter((order) => order.status === "pending").length,
+      active: list.filter((order) => ["assigned", "in_transit", "rescheduled"].includes(order.status)).length,
+      delivered: list.filter((order) => order.status === "delivered").length,
+      cancelled: list.filter((order) => order.status === "cancelled").length,
+    };
+  }, [orders]);
+
+  const selectedOrder = useMemo(
+    () => (orders as any[]).find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId]
+  );
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "border-amber-200 bg-amber-50 text-amber-700";
+      case "assigned":
+        return "border-sky-200 bg-sky-50 text-sky-700";
+      case "in_transit":
+        return "border-violet-200 bg-violet-50 text-violet-700";
+      case "rescheduled":
+        return "border-orange-200 bg-orange-50 text-orange-700";
+      case "delivered":
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      case "cancelled":
+        return "border-rose-200 bg-rose-50 text-rose-700";
+      default:
+        return "border-slate-200 bg-slate-50 text-slate-700";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: "Pendiente",
+      assigned: "Asignado",
+      in_transit: "En transito",
+      rescheduled: "Reprogramado",
+      delivered: "Entregado",
+      cancelled: "Cancelado",
+    };
+    return labels[status] || status;
+  };
+
+  const getClientLabel = (order: any) =>
+    order.clientName ||
+    order.customerName ||
+    order.customer?.name ||
+    order.customerNumber ||
+    `Cliente #${order.customerId || order.id}`;
+
+  const getContactValue = (order: any) =>
+    order.customerWhatsapp || order.customerPhone || order.customerNumber || "";
+
+  const getDeliveryPersonLabel = (order: any) =>
+    order.deliveryPersonName || deliveryPersons.find((person: any) => person.id === order.deliveryPersonId)?.username || "Sin asignar";
+
+  const openOrderDetails = (order: any) => {
+    setSelectedOrderId(order.id);
+    setStatusDraft(order.status || "assigned");
+  };
+
+  const handleQuickDeliver = (orderId: number) => {
+    updateStatusMutation.mutate({ orderId, status: "delivered" });
+  };
+
+  const handleSaveStatus = () => {
+    if (!selectedOrderId) return;
+    updateStatusMutation.mutate({ orderId: selectedOrderId, status: statusDraft });
+  };
+
+  const handleDismiss = () => {
+    if (!cancelTargetId || cancelReason.trim().length < 3) return;
+    dismissMutation.mutate({
+      orderId: cancelTargetId,
+      cancelledBy,
+      reason: cancelReason.trim(),
+    });
+  };
+
+  const formatMoney = (value: number) => formatCurrency(value);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-5">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Total</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Pendientes</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{stats.pending}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Activos</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{stats.active}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Entregados</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{stats.delivered}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Cancelados</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{stats.cancelled}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-200/80 shadow-sm">
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Filtros de ordenes</h3>
+              <p className="text-sm text-slate-500">Revisa, filtra y actualiza pedidos desde un solo lugar.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                Actualizar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+                setDeliveryPersonFilter("all");
+                setDateFilter("");
+              }}>
+                Limpiar filtros
+              </Button>
+              <Link href="/create-order">
+                <Button size="sm" className="gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  Nuevo pedido
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-4">
+            <div className="relative lg:col-span-2">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por pedido, cliente o zona..."
+                className="h-11 rounded-2xl border-slate-200 bg-white pl-10"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="pending">Pendientes</SelectItem>
+                <SelectItem value="assigned">Asignados</SelectItem>
+                <SelectItem value="in_transit">En transito</SelectItem>
+                <SelectItem value="rescheduled">Reprogramados</SelectItem>
+                <SelectItem value="delivered">Entregados</SelectItem>
+                <SelectItem value="cancelled">Cancelados</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={deliveryPersonFilter} onValueChange={setDeliveryPersonFilter}>
+              <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                <SelectValue placeholder="Repartidor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los repartidores</SelectItem>
+                <SelectItem value="none">Sin asignar</SelectItem>
+                {(deliveryPersons as any[]).map((person) => (
+                  <SelectItem key={person.id} value={String(person.id)}>
+                    {person.username || person.name || `#${person.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[240px_1fr]">
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="h-11 rounded-2xl border-slate-200 bg-white pl-10"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Filter className="h-4 w-4" />
+              <span>{filteredOrders.length} pedidos visibles</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden border-slate-200/80 shadow-sm">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-500">
+              Cargando ordenes...
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="flex min-h-[260px] flex-col items-center justify-center gap-3 px-6 text-center">
+              <ClipboardList className="h-12 w-12 text-slate-300" />
+              <h3 className="text-lg font-bold text-slate-800">No hay ordenes que coincidan</h3>
+              <p className="max-w-md text-sm text-slate-500">
+                Ajusta los filtros o crea un nuevo pedido para comenzar.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Pedido</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Cliente</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Zona</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Fecha</th>
+                    <th className="px-4 py-3 text-right font-bold text-slate-700">Total</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Estado</th>
+                    <th className="px-4 py-3 text-left font-bold text-slate-700">Repartidor</th>
+                    <th className="px-4 py-3 text-right font-bold text-slate-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {filteredOrders.map((order: any) => (
+                    <tr key={order.id}>
+                      <td className="px-4 py-4 font-bold text-slate-900">#{order.orderNumber}</td>
+                      <td className="px-4 py-4">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-900">{getClientLabel(order)}</p>
+                          <p className="text-xs text-slate-500">{getContactValue(order) || "Sin contacto"}</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">{order.zone || "Sin zona"}</td>
+                      <td className="px-4 py-4 text-slate-500">
+                        <div className="flex flex-col">
+                          <span>{order.deliveryDate || order.createdAt?.slice?.(0, 10) || "—"}</span>
+                          <span className="text-xs">{order.deliveryTime || "Sin hora"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-right font-bold text-slate-900">{formatMoney(order.totalPrice || 0)}</td>
+                      <td className="px-4 py-4">
+                        <Badge variant="outline" className={getStatusClass(order.status)}>
+                          {getStatusLabel(order.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">{getDeliveryPersonLabel(order)}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-2xl"
+                            onClick={() => openOrderDetails(order)}
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            Ver
+                          </Button>
+                          {order.status !== "delivered" && order.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              className="rounded-2xl"
+                              onClick={() => handleQuickDeliver(order.id)}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Entregar
+                            </Button>
+                          )}
+                          {order.status !== "cancelled" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-2xl border-rose-200 text-rose-700 hover:bg-rose-50"
+                              onClick={() => {
+                                setCancelTargetId(order.id);
+                                setCancelReason("");
+                                setCancelledBy("client");
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={selectedOrderId !== null} onOpenChange={(open) => !open && setSelectedOrderId(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detalle del pedido</DialogTitle>
+            <DialogDescription>Revisa el pedido y actualiza su estado operativo.</DialogDescription>
+          </DialogHeader>
+
+          {loadingDetails || !orderDetails ? (
+            <div className="py-8 text-center text-sm text-slate-500">Cargando detalle...</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Pedido</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">#{orderDetails.order.orderNumber}</p>
+                  <p className="text-sm text-slate-600">{getStatusLabel(orderDetails.order.status)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Cliente</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">{orderDetails.customer?.name || getClientLabel(orderDetails.order)}</p>
+                  <p className="text-sm text-slate-600">{orderDetails.order.zone || "Sin zona"}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Fecha</p>
+                  <p className="mt-1 font-semibold text-slate-900">{orderDetails.order.deliveryDate || "—"}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Hora</p>
+                  <p className="mt-1 font-semibold text-slate-900">{orderDetails.order.deliveryTime || "—"}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Total</p>
+                  <p className="mt-1 font-semibold text-slate-900">{formatMoney(orderDetails.order.totalPrice || 0)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200">
+                <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-sm font-bold text-slate-900">Items del pedido</p>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {(orderDetails.items || []).map((item: any) => (
+                    <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                      <div>
+                        <p className="font-semibold text-slate-900">{item.productName || `Producto #${item.productId}`}</p>
+                        <p className="text-xs text-slate-500">Cantidad: {item.quantity}</p>
+                      </div>
+                      <p className="font-bold text-slate-900">{formatMoney(item.price || 0)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Nuevo estado</label>
+                  <Select value={statusDraft} onValueChange={(value) => setStatusDraft(value as any)}>
+                    <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pendiente</SelectItem>
+                      <SelectItem value="assigned">Asignado</SelectItem>
+                      <SelectItem value="in_transit">En transito</SelectItem>
+                      <SelectItem value="rescheduled">Reprogramado</SelectItem>
+                      <SelectItem value="delivered">Entregado</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="h-11 rounded-2xl"
+                  onClick={handleSaveStatus}
+                  disabled={updateStatusMutation.isPending}
+                >
+                  {updateStatusMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Guardar estado
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelTargetId !== null} onOpenChange={(open) => !open && setCancelTargetId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cancelar pedido</DialogTitle>
+            <DialogDescription>Indica el motivo para registrar la baja del pedido.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Cancelado por</label>
+              <Select value={cancelledBy} onValueChange={(value) => setCancelledBy(value as any)}>
+                <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">Cliente</SelectItem>
+                  <SelectItem value="company">Empresa</SelectItem>
+                  <SelectItem value="system">Sistema</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Motivo</label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Describe el motivo de la baja..."
+                className="min-h-28 rounded-2xl border-slate-200 bg-white"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setCancelTargetId(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={handleDismiss}
+              disabled={dismissMutation.isPending || cancelReason.trim().length < 3}
+            >
+              {dismissMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Confirmar baja
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function InventoryView() {
   const { data: productionInventory = [], isLoading: loadingInventory, refetch: refetchInventory } =
     trpc.production.getProductionInventory.useQuery(undefined, {
@@ -1271,6 +1813,8 @@ export default function KefirControlModulePage() {
         })} · inventario sincronizado`
       : section === "lotes"
         ? "Gestion y cierre de lotes de planta"
+      : section === "ordenes"
+        ? "Seguimiento, cambios de estado y control de pedidos"
       : section === "productos"
         ? "Catálogo interno y control de roles de producción"
         : "Submódulo pendiente de migración";
@@ -1350,6 +1894,8 @@ export default function KefirControlModulePage() {
             <ProductsView />
           ) : section === "lotes" ? (
             <BatchesView />
+          ) : section === "ordenes" ? (
+            <OrdersView />
           ) : (
             <SectionPlaceholder label={sectionMeta.label} />
           )}
