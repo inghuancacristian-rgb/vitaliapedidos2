@@ -98,6 +98,9 @@ function Router() {
           <Route path="/production">
             <ProtectedRoute component={ProductionRedirect} adminOnly={true} />
           </Route>
+          <Route path="/kefir-control">
+            <ProtectedRoute component={ProductionRedirect} adminOnly={true} />
+          </Route>
           <Route path="/kefir-control/:section">
             <ProtectedRoute component={KefirControlModulePage} adminOnly={true} />
           </Route>

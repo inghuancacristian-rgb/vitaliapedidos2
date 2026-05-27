@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { AddProductDialog } from "@/components/AddProductDialog";
+import { EditProductDialog } from "@/components/EditProductDialog";
+import { formatCurrency } from "@/lib/currency";
 import {
   BarChart3,
   Boxes,
@@ -20,6 +23,9 @@ import {
   Wallet,
   LineChart,
   Store,
+  Tag,
+  ShoppingCart,
+  Edit2,
 } from "lucide-react";
 
 type SectionKey =
@@ -147,6 +153,296 @@ function SectionPlaceholder({ label }: { label: string }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ProductsView() {
+  const { data: products = [], isLoading, refetch } = trpc.inventory.listProducts.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: 2,
+  });
+  const { data: inventory = [] } = trpc.inventory.listInventory.useQuery(undefined, {
+    staleTime: 30_000,
+    retry: 2,
+  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  const inventoryByProductId = useMemo(() => {
+    const map = new Map<number, any>();
+    for (const item of inventory as any[]) {
+      map.set(item.productId, item);
+    }
+    return map;
+  }, [inventory]);
+
+  const categories = [
+    { id: "all", label: "Todos" },
+    { id: "finished_product", label: "Producto terminado" },
+    { id: "raw_material", label: "Materia prima" },
+    { id: "supplies", label: "Suministros" },
+    { id: "insumo", label: "Insumos" },
+  ];
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    return (products as any[]).filter((product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, categoryFilter]);
+
+  const productCounts = useMemo(() => {
+    if (!products) return { total: 0, finished: 0, raw: 0, supplies: 0, insumo: 0 };
+
+    return {
+      total: products.length,
+      finished: products.filter((p: any) => p.category === "finished_product").length,
+      raw: products.filter((p: any) => p.category === "raw_material").length,
+      supplies: products.filter((p: any) => p.category === "supplies").length,
+      insumo: products.filter((p: any) => p.category === "insumo").length,
+    };
+  }, [products]);
+
+  const totalCatalogValue = useMemo(() => {
+    return (filteredProducts as any[]).reduce((sum, product) => {
+      const stock = normalizeNumber(inventoryByProductId.get(product.id)?.quantity, 0);
+      const unitValue = normalizeNumber(product.salePrice ?? product.price ?? 0, 0);
+      return sum + stock * unitValue;
+    }, 0);
+  }, [filteredProducts, inventoryByProductId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center text-sm text-slate-500">
+        Cargando productos...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Total productos</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{productCounts.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Terminados</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{productCounts.finished}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Materia prima</p>
+            <p className="mt-2 text-3xl font-black text-slate-900">{productCounts.raw + productCounts.supplies + productCounts.insumo}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Valor catalogado</p>
+            <p className="mt-2 text-2xl font-black text-slate-900">{formatCurrencyBs(totalCatalogValue / 100)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-slate-200/80 shadow-sm">
+        <CardContent className="space-y-4 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Buscar por nombre o código..."
+                className="h-11 rounded-2xl border-slate-200 bg-white pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={categoryFilter === cat.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCategoryFilter(cat.id)}
+                  className="whitespace-nowrap rounded-full"
+                >
+                  {cat.label}
+                </Button>
+              ))}
+              <AddProductDialog onProductAdded={() => refetch()} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+        <Card className="border-slate-200/80 shadow-sm">
+          <CardContent className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Catálogo de Productos</h3>
+                <p className="text-sm text-slate-500">Define y categoriza productos e insumos del módulo de producción.</p>
+              </div>
+              <Badge variant="outline" className="bg-slate-50 text-slate-700">
+                {filteredProducts.length} ítems
+              </Badge>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredProducts.map((product: any) => {
+                const stockItem = inventoryByProductId.get(product.id);
+                const stockQty = normalizeNumber(stockItem?.quantity, 0);
+                const minStock = normalizeNumber(stockItem?.minStock, 0);
+                const isLow = stockQty <= minStock;
+
+                return (
+                  <Card key={product.id} className="overflow-hidden border-slate-200/80 transition-shadow hover:shadow-md">
+                    <div className="aspect-video bg-slate-100 relative">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-slate-300">
+                          <Package2 className="h-10 w-10" />
+                        </div>
+                      )}
+                      <div className="absolute right-2 top-2">
+                        <Badge variant="outline" className={getCategoryBadgeClass(product.category)}>
+                          {getCategoryLabel(product.category)}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <CardContent className="space-y-3 p-4">
+                      <div>
+                        <h4 className="text-lg font-bold text-slate-900">{product.name}</h4>
+                        <p className="text-xs text-slate-500">Cod: {product.code}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Compra</p>
+                          <p className="mt-1 font-black text-slate-900">{formatCurrency(product.price)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-emerald-50 px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Venta</p>
+                          <p className="mt-1 font-black text-emerald-900">{formatCurrency(product.salePrice)}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="rounded-2xl bg-sky-50 px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-700">Stock</p>
+                          <p className="mt-1 font-black text-sky-900">{stockQty}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Mín.</p>
+                          <p className="mt-1 font-black text-slate-900">{minStock}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge
+                          variant="outline"
+                          className={isLow ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}
+                        >
+                          {isLow ? "Stock bajo" : "Stock OK"}
+                        </Badge>
+
+                        <Button size="sm" variant="outline" className="gap-2" onClick={() => setSelectedProduct(product)}>
+                          <Edit2 className="h-4 w-4" />
+                          Editar
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {filteredProducts.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-14 text-center text-sm text-slate-500">
+                No se encontraron productos con estos criterios.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="border-slate-200/80 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-slate-500" />
+                <h3 className="text-base font-bold text-slate-900">Resumen del catálogo</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">Total</span>
+                  <span className="font-black text-slate-900">{productCounts.total}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">Terminados</span>
+                  <span className="font-black text-slate-900">{productCounts.finished}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">Materia prima</span>
+                  <span className="font-black text-slate-900">{productCounts.raw}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">Suministros</span>
+                  <span className="font-black text-slate-900">{productCounts.supplies}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">Insumos</span>
+                  <span className="font-black text-slate-900">{productCounts.insumo}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-blue-200 bg-blue-50/70 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex gap-3">
+                <ShoppingCart className="h-5 w-5 shrink-0 text-blue-600" />
+                <div>
+                  <h4 className="text-sm font-bold text-blue-800">Producción y catálogo</h4>
+                  <p className="mt-1 text-xs leading-relaxed text-blue-700">
+                    Aquí dejaremos los productos y sus roles de producción bien organizados para que luego el resto de módulos migre con orden.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {selectedProduct && (
+        <EditProductDialog
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onOpenChange={(open) => {
+            if (!open) setSelectedProduct(null);
+          }}
+          onProductUpdated={() => {
+            setSelectedProduct(null);
+            refetch();
+          }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -515,7 +811,9 @@ export default function KefirControlModulePage() {
           month: "2-digit",
           day: "2-digit",
         })} · inventario sincronizado`
-      : "Submódulo pendiente de migración";
+      : section === "productos"
+        ? "Catálogo interno y control de roles de producción"
+        : "Submódulo pendiente de migración";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -586,7 +884,13 @@ export default function KefirControlModulePage() {
         </div>
 
         <main className="px-4 py-6 sm:px-6">
-          {section === "inventario" ? <InventoryView /> : <SectionPlaceholder label={sectionMeta.label} />}
+          {section === "inventario" ? (
+            <InventoryView />
+          ) : section === "productos" ? (
+            <ProductsView />
+          ) : (
+            <SectionPlaceholder label={sectionMeta.label} />
+          )}
         </main>
       </div>
     </div>
