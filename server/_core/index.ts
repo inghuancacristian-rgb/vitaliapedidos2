@@ -128,6 +128,29 @@ async function startServer() {
   app.get("/kefir-control/index.html", (_req, res) => {
     res.sendFile(kefirControlIndex);
   });
+  app.get("/preview/kefir-control", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
+  app.get("/preview/kefir-control/index.html", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
+  app.get("/preview/kefir-control/inventory", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
+  app.get("/preview/kefir-control/kardex", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
+  app.get("/preview/kefir-control/lotes", (_req, res) => {
+    res.sendFile(rootAppIndex);
+  });
+  app.get(/^\/preview\/kefir-control(?:\/.*)?$/, (req, res, next) => {
+    const relativePath = req.path.replace(/^\/preview\/kefir-control\/?/, "");
+    if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
+      res.sendFile(rootAppIndex);
+      return;
+    }
+    next();
+  });
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
     if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {

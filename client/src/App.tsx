@@ -31,6 +31,9 @@ import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
 import KefirControlInventoryPage from "@/pages/KefirControlInventoryPage";
 import KefirControlKardexPage from "@/pages/KefirControlKardexPage";
+import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
+import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
+import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
 import { useEffect } from "react";
 
 function OpenKefirControl() {
@@ -64,7 +67,10 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
 function Router() {
   const { user, loading } = useAuth();
   const [location] = useLocation();
-  const showTopHeader = !location.startsWith("/kefir-control") && !location.startsWith("/production");
+  const showTopHeader =
+    !location.startsWith("/kefir-control") &&
+    !location.startsWith("/production") &&
+    !location.startsWith("/preview/kefir-control");
 
   if (loading) {
     return (
@@ -113,6 +119,24 @@ function Router() {
           </Route>
           <Route path="/kefir-control/:section">
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control">
+            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control/index.html">
+            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control/inventory">
+            <ProtectedRoute component={KefirControlPreviewInventoryPage} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control/kardex">
+            <ProtectedRoute component={KefirControlPreviewKardexPage} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control/lotes">
+            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
+          </Route>
+          <Route path="/preview/kefir-control/:section">
+            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />
