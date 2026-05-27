@@ -14,7 +14,7 @@ export default function AppHeader() {
         { href: "/sales", label: "Ventas", icon: ShoppingBag },
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/inventory", label: "Inventario General" },
-        { href: "/kefir-control/inventario", label: "Producción" },
+        { href: "/kefir-control/index.html", label: "Producción" },
         { href: "/customers", label: "Clientes" },
         { href: "/finance", label: "Finanzas" },
         { href: "/expenses", label: "Gastos" },

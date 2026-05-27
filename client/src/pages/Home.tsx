@@ -29,7 +29,7 @@ const adminModules = [
   { href: "/dashboard", title: "Dashboard", description: "Metricas y control general.", icon: LayoutGrid },
   { href: "/orders", title: "Pedidos", description: "Gestion y seguimiento del dia.", icon: ShoppingCart },
   { href: "/inventory", title: "Inventario", description: "Stock, vencimientos e historial.", icon: Package },
-  { href: "/kefir-control/inventario", title: "Producción", description: "Lotes, mermas y rendimiento.", icon: Factory },
+  { href: "/kefir-control/index.html", title: "Producción", description: "Lotes, mermas y rendimiento.", icon: Factory },
   { href: "/suppliers", title: "Proveedores", description: "Contactos y abastecimiento.", icon: Users },
   { href: "/purchases", title: "Compras", description: "Registro de compras e ingresos.", icon: ShoppingCart },
   { href: "/sales", title: "Ventas", description: "Ventas rapidas y cobros.", icon: ShoppingBag },
