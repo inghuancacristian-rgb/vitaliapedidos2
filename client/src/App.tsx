@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch, Link } from "wouter";
+import { Route, Switch, Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -30,10 +30,11 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
+import KefirControlModulePage from "@/pages/KefirControl";
 
 function ProductionRedirect() {
   useEffect(() => {
-    window.location.replace("/kefir-control/");
+    window.location.replace("/kefir-control/inventario");
   }, []);
 
   return null;
@@ -61,6 +62,8 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
 
 function Router() {
   const { user, loading } = useAuth();
+  const [location] = useLocation();
+  const showTopHeader = !location.startsWith("/kefir-control") && !location.startsWith("/production");
 
   if (loading) {
     return (
@@ -82,8 +85,8 @@ function Router() {
 
   return (
     <>
-      <AppHeader />
-      <div className="pb-20 md:pb-0"> {/* Espacio para el menú móvil si fuera necesario */}
+      {showTopHeader ? <AppHeader /> : null}
+      <div className={showTopHeader ? "pb-20 md:pb-0" : ""}>
         <Switch>
           <Route path={"/"} component={Home} />
           <Route path="/dashboard">
@@ -94,6 +97,9 @@ function Router() {
           </Route>
           <Route path="/production">
             <ProtectedRoute component={ProductionRedirect} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/:section">
+            <ProtectedRoute component={KefirControlModulePage} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />

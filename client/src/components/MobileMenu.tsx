@@ -37,7 +37,7 @@ export default function MobileMenu() {
     { href: "/orders", label: "Pedidos", icon: ShoppingCart },
     { href: "/sales", label: "Ventas", icon: ShoppingBag },
     { href: "/inventory", label: "Inventario General", icon: Package },
-    { href: "/kefir-control/", label: "Producción", icon: Package },
+    { href: "/kefir-control/inventario", label: "Producción", icon: Package },
     { href: "/products", label: "Catálogo", icon: Tag },
     { href: "/expenses", label: "Gastos", icon: Receipt },
     { href: "/customers", label: "Clientes", icon: Users },
@@ -111,13 +111,7 @@ export default function MobileMenu() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={(e) => {
-                    if (item.href === "/kefir-control/") {
-                      e.preventDefault();
-                      window.location.assign("/kefir-control/");
-                    }
-                    setOpen(false);
-                  }}
+                  onClick={() => setOpen(false)}
                 >
                   <Button
                     variant={isActive(item.href) ? "default" : "ghost"}

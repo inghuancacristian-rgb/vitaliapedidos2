@@ -29,7 +29,7 @@ const adminModules = [
   { href: "/dashboard", title: "Dashboard", description: "Metricas y control general.", icon: LayoutGrid },
   { href: "/orders", title: "Pedidos", description: "Gestion y seguimiento del dia.", icon: ShoppingCart },
   { href: "/inventory", title: "Inventario", description: "Stock, vencimientos e historial.", icon: Package },
-  { href: "/kefir-control/", title: "Producción", description: "Lotes, mermas y rendimiento.", icon: Factory },
+  { href: "/kefir-control/inventario", title: "Producción", description: "Lotes, mermas y rendimiento.", icon: Factory },
   { href: "/suppliers", title: "Proveedores", description: "Contactos y abastecimiento.", icon: Users },
   { href: "/purchases", title: "Compras", description: "Registro de compras e ingresos.", icon: ShoppingCart },
   { href: "/sales", title: "Ventas", description: "Ventas rapidas y cobros.", icon: ShoppingBag },
@@ -542,37 +542,21 @@ function OperationalRow({
 
 function ModuleCard({ module }: { module: any }) {
   const Icon = module.icon;
-  const isExternal = module.href === "/kefir-control/";
-
-  const content = (
-    <Card className="touch-card h-full cursor-pointer overflow-hidden border-white/70">
-      <CardContent className="flex h-full items-start gap-4 p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/90">
-          <Icon className="h-5 w-5 text-slate-900" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-lg font-bold text-slate-900">{module.title}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{module.description}</p>
-        </div>
-      </CardContent>
-    </Card>
+  return (
+    <Link href={module.href}>
+      <Card className="touch-card h-full cursor-pointer overflow-hidden border-white/70">
+        <CardContent className="flex h-full items-start gap-4 p-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/90">
+            <Icon className="h-5 w-5 text-slate-900" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-slate-900">{module.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{module.description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
-
-  if (isExternal) {
-    return (
-      <a
-        href={module.href}
-        onClick={(e) => {
-          e.preventDefault();
-          window.location.assign(module.href);
-        }}
-      >
-        {content}
-      </a>
-    );
-  }
-
-  return <Link href={module.href}>{content}</Link>;
 }
 
 function EmptyState({ message }: { message: string }) {
