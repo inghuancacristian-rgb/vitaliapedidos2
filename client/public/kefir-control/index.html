@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/kefir-control/favicon.svg" />
@@ -7,85 +7,235 @@
     <title>KéfirControl - Panel de Control Industrial</title>
     <script>
       try {
-        var kInvStr = localStorage.getItem('kefir_inventory_v3');
+        var kInvStr = localStorage.getItem("kefir_inventory_v3");
         if (kInvStr) {
           var kInv = JSON.parse(kInvStr);
           var wasArray = Array.isArray(kInv);
           kInv = wasArray ? kInv : Object.values(kInv);
           var changed = !wasArray;
-          kInv.forEach(function(v) {
-            if (v.category === "producto" && v.name && (v.name.toLowerCase().includes("botella") || v.name.toLowerCase().includes("tapa") || v.name.toLowerCase().includes("envase") || v.name.toLowerCase().includes("etiqueta"))) {
+          kInv.forEach(function (v) {
+            if (
+              v.category === "producto" &&
+              v.name &&
+              (v.name.toLowerCase().includes("botella") ||
+                v.name.toLowerCase().includes("tapa") ||
+                v.name.toLowerCase().includes("envase") ||
+                v.name.toLowerCase().includes("etiqueta"))
+            ) {
               v.category = "envase";
               changed = true;
             }
           });
           if (changed) {
-            localStorage.setItem('kefir_inventory_v3', JSON.stringify(kInv));
+            localStorage.setItem("kefir_inventory_v3", JSON.stringify(kInv));
           }
         }
-        
+
         // Interceptar setItem para sincronizar en la nube automáticamente
         var originalSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
+        localStorage.setItem = function (key, value) {
           originalSetItem.apply(this, arguments);
-          if (key && key.startsWith('kefir_')) {
+          if (key && key.startsWith("kefir_")) {
             try {
-              fetch('/api/trpc/production.setKefirStorage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ "0": { key: key, value: value } }) // TRPC format
+              fetch("/api/trpc/production.setKefirStorage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 0: { key: key, value: value } }), // TRPC format
               });
-            } catch(e) {}
+            } catch (e) {}
           }
         };
-        
       } catch (e) {
         console.error("Auto-fix before React load failed:", e);
       }
     </script>
-    <script type="module" crossorigin src="/kefir-control/assets/index-8XlJpsEw.js"></script>
-    <link rel="stylesheet" crossorigin href="/kefir-control/assets/index-B8wn4ucd.css">
+    <link
+      rel="modulepreload"
+      crossorigin
+      href="/kefir-control/assets/index-8XlJpsEw.js"
+    />
+    <script
+      type="module"
+      crossorigin
+      src="/kefir-control/assets/index-8XlJpsEw.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      crossorigin
+      href="/kefir-control/assets/index-B8wn4ucd.css"
+    />
   </head>
 
   <body>
     <div id="root"></div>
     <script>
-      window.addEventListener('DOMContentLoaded', () => {
+      (() => {
+        const BASE_PATH = "/kefir-control";
+        const modules = [
+          { slug: "inicio", labels: ["inicio"] },
+          { slug: "productos", labels: ["productos"] },
+          { slug: "lotes", labels: ["lotes"] },
+          { slug: "ordenes", labels: ["ordenes"] },
+          { slug: "auditoria", labels: ["auditoria", "trazabilidad"] },
+          { slug: "nodulos", labels: ["nodulos"] },
+          { slug: "reportes", labels: ["reportes"] },
+          {
+            slug: "inventario-produccion",
+            labels: ["inventario de produccion", "inventario"],
+          },
+          { slug: "calidad", labels: ["calidad"] },
+          { slug: "costos", labels: ["costos"] },
+          { slug: "rendimientos", labels: ["rendimientos"] },
+        ];
+
+        const normalize = value =>
+          String(value || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const moduleBySlug = new Map(
+          modules.map(module => [module.slug, module])
+        );
+
+        const getSlugFromPath = () => {
+          const rawSlug = decodeURIComponent(
+            window.location.pathname
+              .replace(/^\/kefir-control\/?/, "")
+              .replace(/\/$/, "")
+          );
+
+          if (!rawSlug || rawSlug === "index.html") return null;
+          if (rawSlug === "inventory" || rawSlug === "inventario") {
+            return "inventario-produccion";
+          }
+          if (rawSlug === "kardex" || rawSlug === "trazabilidad") {
+            return "auditoria";
+          }
+
+          return moduleBySlug.has(rawSlug) ? rawSlug : null;
+        };
+
+        const findSlugByText = text => {
+          const normalizedText = normalize(text);
+          return modules.find(module =>
+            module.labels.some(
+              label =>
+                normalizedText === label || normalizedText.includes(label)
+            )
+          )?.slug;
+        };
+
+        const setUrlForSlug = slug => {
+          const nextPath = `${BASE_PATH}/${slug}`;
+          if (window.location.pathname === nextPath) return;
+          window.history.pushState({ kefirModule: slug }, "", nextPath);
+        };
+
+        const getNavigationTarget = event => {
+          const path = event.composedPath ? event.composedPath() : [];
+          const elements = path.filter(item => item instanceof Element);
+          const directTarget = elements.find(element =>
+            element.matches("button,a,[role='button']")
+          );
+
+          if (directTarget) return directTarget;
+
+          return elements.find(element => {
+            if (["HTML", "BODY"].includes(element.tagName)) return false;
+            const text = normalize(element.textContent);
+            return text.length > 0 && text.length < 80;
+          });
+        };
+
+        const findModuleButton = slug => {
+          const module = moduleBySlug.get(slug);
+          if (!module) return null;
+
+          const elements = Array.from(
+            document.querySelectorAll("button,a,[role='button'],nav *")
+          );
+
+          const match = elements.find(element => {
+            const text = normalize(element.textContent);
+            return module.labels.some(
+              label => text === label || text.includes(label)
+            );
+          });
+
+          return match?.closest("button,a,[role='button']") || match || null;
+        };
+
+        const selectModuleFromPath = () => {
+          const slug = getSlugFromPath();
+          if (!slug) return;
+
+          let attempts = 0;
+          const timer = window.setInterval(() => {
+            attempts += 1;
+            const target = findModuleButton(slug);
+            if (!target && attempts < 40) return;
+
+            window.clearInterval(timer);
+            if (target) target.click();
+          }, 100);
+        };
+
+        document.addEventListener(
+          "click",
+          event => {
+            const target = getNavigationTarget(event);
+            const slug = findSlugByText(target?.textContent);
+            if (!slug) return;
+
+            window.setTimeout(() => setUrlForSlug(slug), 0);
+          },
+          true
+        );
+
+        window.addEventListener("popstate", selectModuleFromPath);
+        window.addEventListener("DOMContentLoaded", selectModuleFromPath);
+      })();
+
+      window.addEventListener("DOMContentLoaded", () => {
         // Only show if we are in an iframe (embedded in Production.tsx)
         if (window !== window.parent) {
-          const btn = document.createElement('button');
+          const btn = document.createElement("button");
           btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg> Pasar a Inventario General`;
-          btn.style.position = 'fixed';
-          btn.style.bottom = '24px';
-          btn.style.right = '24px';
-          btn.style.zIndex = '999999';
-          btn.style.backgroundColor = '#2563eb'; // blue-600
-          btn.style.color = 'white';
-          btn.style.padding = '12px 24px';
-          btn.style.borderRadius = '9999px';
-          btn.style.boxShadow = '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)';
-          btn.style.border = 'none';
-          btn.style.cursor = 'pointer';
-          btn.style.display = 'flex';
-          btn.style.alignItems = 'center';
-          btn.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-          btn.style.fontWeight = 'bold';
-          btn.style.fontSize = '14px';
-          btn.style.transition = 'all 0.2s';
-          
+          btn.style.position = "fixed";
+          btn.style.bottom = "24px";
+          btn.style.right = "24px";
+          btn.style.zIndex = "999999";
+          btn.style.backgroundColor = "#2563eb"; // blue-600
+          btn.style.color = "white";
+          btn.style.padding = "12px 24px";
+          btn.style.borderRadius = "9999px";
+          btn.style.boxShadow =
+            "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)";
+          btn.style.border = "none";
+          btn.style.cursor = "pointer";
+          btn.style.display = "flex";
+          btn.style.alignItems = "center";
+          btn.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          btn.style.fontWeight = "bold";
+          btn.style.fontSize = "14px";
+          btn.style.transition = "all 0.2s";
+
           btn.onmouseover = () => {
-            btn.style.backgroundColor = '#1d4ed8'; // blue-700
-            btn.style.transform = 'translateY(-2px)';
+            btn.style.backgroundColor = "#1d4ed8"; // blue-700
+            btn.style.transform = "translateY(-2px)";
           };
           btn.onmouseout = () => {
-            btn.style.backgroundColor = '#2563eb';
-            btn.style.transform = 'translateY(0)';
+            btn.style.backgroundColor = "#2563eb";
+            btn.style.transform = "translateY(0)";
           };
-          
+
           btn.onclick = () => {
-            window.parent.postMessage({ type: 'OPEN_TRANSFER_DIALOG' }, '*');
+            window.parent.postMessage({ type: "OPEN_TRANSFER_DIALOG" }, "*");
           };
-          
+
           document.body.appendChild(btn);
         }
       });

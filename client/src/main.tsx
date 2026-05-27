@@ -21,6 +21,7 @@ const queryClient = new QueryClient({
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
+  if (window.location.pathname.startsWith("/preview/kefir-control")) return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 

@@ -59,7 +59,10 @@ async function runDatabaseMigrations() {
     await migrate(db, { migrationsFolder });
     console.log("[Database] Migrations completed");
   } catch (err: any) {
-    console.warn("[Database] Drizzle migrate failed (often due to existing columns). ensureTables will run next to verify schema.", err.message);
+    console.warn(
+      "[Database] Drizzle migrate failed (often due to existing columns). ensureTables will run next to verify schema.",
+      err.message
+    );
   } finally {
     await pool.end();
   }
@@ -73,7 +76,9 @@ async function seedDefaultAdmin() {
   const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
   if (!username || !password) {
-    console.log("[Seed] ADMIN_USERNAME or ADMIN_PASSWORD not configured; skipping admin seed");
+    console.log(
+      "[Seed] ADMIN_USERNAME or ADMIN_PASSWORD not configured; skipping admin seed"
+    );
     return;
   }
 
@@ -94,7 +99,7 @@ async function seedDefaultAdmin() {
         loginMethod = VALUES(loginMethod),
         role = VALUES(role),
         updatedAt = NOW()`,
-      [`local_${username}`, username, passwordHash, name, email],
+      [`local_${username}`, username, passwordHash, name, email]
     );
     console.log(`[Seed] Admin user ready: ${username}`);
   } finally {
@@ -104,7 +109,9 @@ async function seedDefaultAdmin() {
 
 async function startServer() {
   await runDatabaseMigrations();
-  await ensureTables().catch(err => console.error("[StartServer] ensureTables failed:", err));
+  await ensureTables().catch(err =>
+    console.error("[StartServer] ensureTables failed:", err)
+  );
   await seedDefaultAdmin();
 
   const app = express();
@@ -115,37 +122,77 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use("/uploads", express.static(uploadsDir));
 
-  const kefirControlDir = path.resolve(process.cwd(), "client", "public", "kefir-control");
+  const kefirControlDir = path.resolve(
+    process.cwd(),
+    "client",
+    "public",
+    "kefir-control"
+  );
   const kefirControlIndex = path.join(kefirControlDir, "index.html");
   const rootAppIndex =
     process.env.NODE_ENV === "development"
       ? path.resolve(process.cwd(), "client", "index.html")
       : path.resolve(process.cwd(), "dist", "public", "index.html");
-  app.use("/kefir-control", express.static(kefirControlDir, { index: false }));
-  app.get("/kefir-control", (_req, res) => {
+  const setKefirControlCacheHeaders = (
+    res: express.Response,
+    filePath: string
+  ) => {
+    const normalizedFilePath = filePath.split(path.sep).join("/");
+
+    if (normalizedFilePath.includes("/assets/")) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return;
+    }
+
+    if (normalizedFilePath.endsWith("/index.html")) {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+  };
+  const sendRootAppIndex = (
+    _req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    if (process.env.NODE_ENV === "development") {
+      next();
+      return;
+    }
+
+    res.sendFile(rootAppIndex);
+  };
+  const sendKefirControlIndex = (
+    _req: express.Request,
+    res: express.Response
+  ) => {
+    res.setHeader("Cache-Control", "no-cache");
     res.sendFile(kefirControlIndex);
-  });
-  app.get("/kefir-control/index.html", (_req, res) => {
-    res.sendFile(kefirControlIndex);
-  });
-  app.get("/preview/kefir-control", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/preview/kefir-control/index.html", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/preview/kefir-control/inventory", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/preview/kefir-control/kardex", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
-  app.get("/preview/kefir-control/lotes", (_req, res) => {
-    res.sendFile(rootAppIndex);
-  });
+  };
+  app.use(
+    "/kefir-control",
+    express.static(kefirControlDir, {
+      index: false,
+      setHeaders: setKefirControlCacheHeaders,
+    })
+  );
+  app.get("/kefir-control", sendKefirControlIndex);
+  app.get("/kefir-control/index.html", sendKefirControlIndex);
+  app.get("/preview/kefir-control", sendRootAppIndex);
+  app.get("/preview/kefir-control/index.html", sendRootAppIndex);
+  app.get("/preview/kefir-control/inventory", sendRootAppIndex);
+  app.get("/preview/kefir-control/kardex", sendRootAppIndex);
+  app.get("/preview/kefir-control/lotes", sendRootAppIndex);
   app.get(/^\/preview\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/preview\/kefir-control\/?/, "");
-    if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
+    if (
+      !relativePath ||
+      relativePath === "index.html" ||
+      !path.extname(relativePath)
+    ) {
+      if (process.env.NODE_ENV === "development") {
+        next();
+        return;
+      }
+
       res.sendFile(rootAppIndex);
       return;
     }
@@ -153,61 +200,73 @@ async function startServer() {
   });
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
-    if (!relativePath || relativePath === "index.html" || !path.extname(relativePath)) {
-      res.sendFile(kefirControlIndex);
+    if (
+      !relativePath ||
+      relativePath === "index.html" ||
+      !path.extname(relativePath)
+    ) {
+      sendKefirControlIndex(req, res);
       return;
     }
     next();
   });
-  
+
   // Configurar multer para upload de imágenes
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB máximo
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
+      if (file.mimetype.startsWith("image/")) {
         cb(null, true);
       } else {
-        cb(new Error('Solo se permiten archivos de imagen'));
+        cb(new Error("Solo se permiten archivos de imagen"));
       }
-    }
+    },
   });
-  
+
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  
+
   // Image upload endpoint
-  app.post("/api/upload-image", upload.single('file'), async (req, res) => {
+  app.post("/api/upload-image", upload.single("file"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file provided" });
       }
-      
-      const extension = req.file.mimetype.split('/')[1] || 'jpg';
+
+      const extension = req.file.mimetype.split("/")[1] || "jpg";
       const fileName = `product-${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
-      
+
       let url: string;
 
       try {
         const { storagePut } = await import("../storage");
-        const uploaded = await storagePut(fileName, req.file.buffer, req.file.mimetype);
+        const uploaded = await storagePut(
+          fileName,
+          req.file.buffer,
+          req.file.mimetype
+        );
         url = uploaded.url;
       } catch (error) {
         console.warn("Falling back to local upload storage:", error);
         url = await saveUploadedFileLocally(fileName, req.file.buffer);
       }
-      
+
       res.json({ url, success: true });
     } catch (error) {
       console.error("Error uploading image:", error);
       res.status(500).json({ error: "Error al subir la imagen" });
     }
   });
-  
+
   // Version endpoint for deployment verification
   const APP_VERSION = "1.5.0";
   app.get("/api/version", (_req, res) => {
-    res.json({ version: APP_VERSION, buildTime: new Date().toISOString(), nodeEnv: process.env.NODE_ENV });
+    res.json({
+      version: APP_VERSION,
+      buildTime: new Date().toISOString(),
+      nodeEnv: process.env.NODE_ENV,
+    });
   });
 
   app.get("/api/debug-db-status", async (_req, res) => {
@@ -216,7 +275,9 @@ async function startServer() {
     res.json({
       dbConnected: !!db,
       envHasDatabaseUrl: !!process.env.DATABASE_URL,
-      databaseUrlStart: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) : "missing",
+      databaseUrlStart: process.env.DATABASE_URL
+        ? process.env.DATABASE_URL.substring(0, 15)
+        : "missing",
       initError: getDbInitError(),
     });
   });

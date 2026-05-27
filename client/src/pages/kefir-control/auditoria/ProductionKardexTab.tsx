@@ -1,5 +1,13 @@
 import { Loader2 } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { memo } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ProductionMovementItem = {
   id: number | string;
@@ -16,7 +24,7 @@ type ProductionKardexTabProps = {
   safeFormat: (dateVal: any, fmt: string) => string;
 };
 
-export default function ProductionKardexTab({
+function ProductionKardexTab({
   movements,
   loadingMovements,
   safeFormat,
@@ -42,17 +50,22 @@ export default function ProductionKardexTab({
             </TableRow>
           ) : !movements || movements.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-10 text-slate-400">
+              <TableCell
+                colSpan={5}
+                className="text-center py-10 text-slate-400"
+              >
                 No hay movimientos registrados aún.
               </TableCell>
             </TableRow>
           ) : (
-            movements.map((mov) => (
+            movements.map(mov => (
               <TableRow key={mov.id}>
                 <TableCell className="text-slate-500">
                   {safeFormat(mov.createdAt, "dd MMM yyyy, HH:mm")}
                 </TableCell>
-                <TableCell className="font-bold text-slate-900">{mov.productName}</TableCell>
+                <TableCell className="font-bold text-slate-900">
+                  {mov.productName}
+                </TableCell>
                 <TableCell className="text-slate-600">{mov.reason}</TableCell>
                 <TableCell className="text-right">
                   <span
@@ -60,15 +73,17 @@ export default function ProductionKardexTab({
                       Number(mov.changeAmount) > 0
                         ? "bg-emerald-50 text-emerald-600"
                         : Number(mov.changeAmount) < 0
-                        ? "bg-rose-50 text-rose-600"
-                        : "bg-slate-50 text-slate-600"
+                          ? "bg-rose-50 text-rose-600"
+                          : "bg-slate-50 text-slate-600"
                     }`}
                   >
                     {Number(mov.changeAmount) > 0 ? "+" : ""}
                     {mov.changeAmount}
                   </span>
                 </TableCell>
-                <TableCell className="text-right text-slate-500 font-medium">{mov.newQuantity}</TableCell>
+                <TableCell className="text-right text-slate-500 font-medium">
+                  {mov.newQuantity}
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -77,3 +92,5 @@ export default function ProductionKardexTab({
     </div>
   );
 }
+
+export default memo(ProductionKardexTab);

@@ -1,17 +1,48 @@
-import { FlaskConical, Loader2, ArrowRightLeft, Plus, CheckCircle, AlertCircle } from "lucide-react";
-import { useState } from "react";
+import {
+  FlaskConical,
+  Loader2,
+  ArrowRightLeft,
+  Plus,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import {
+  PRODUCT_LIST_QUERY_OPTIONS,
+  PRODUCTION_QUERY_OPTIONS,
+  formatProductionDate,
+  getFinishedProducts,
+  getInventoryWithStock,
+  getProductionBatchTypeLabel,
+  getProductionRawMaterials,
+  toPositiveQuantityItems,
+  toTransferQuantityItems,
+  type QuantityDraft,
+} from "@/lib/production";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import ProductionInventoryTab from "@/pages/ProductionInventoryTab";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import ProductionInventoryTab from "@/pages/kefir-control/inventario-produccion/ProductionInventoryTab";
+import ProductionKardexTab from "@/pages/kefir-control/auditoria/ProductionKardexTab";
 
 export function Production() {
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -20,32 +51,50 @@ export function Production() {
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
   // Transfer State
-  const [transferItems, setTransferItems] = useState<Record<number, string>>({});
+  const [transferItems, setTransferItems] = useState<Record<number, string>>(
+    {}
+  );
   const [transferNotes, setTransferNotes] = useState("");
 
   // New Batch State
-  const [batchType, setBatchType] = useState<'kefir_production' | 'nodule_washing' | 'maintenance'>('kefir_production');
+  const [batchType, setBatchType] = useState<
+    "kefir_production" | "nodule_washing" | "maintenance"
+  >("kefir_production");
   const [batchNotes, setBatchNotes] = useState("");
 
   // Complete Batch State
-  const [outputs, setOutputs] = useState<{ productId: number; quantity: string }[]>([]);
-  const [inputs, setInputs] = useState<{ productId: number; quantity: string }[]>([]);
+  const [outputs, setOutputs] = useState<QuantityDraft[]>([]);
+  const [inputs, setInputs] = useState<QuantityDraft[]>([]);
 
   const utils = trpc.useContext();
 
   // ── Queries ────────────────────────────────────────────────
-  const { data: batches, isLoading: loadingBatches, error: batchesError } =
-    trpc.production.getBatches.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+  const {
+    data: batches,
+    isLoading: loadingBatches,
+    error: batchesError,
+  } = trpc.production.getBatches.useQuery(undefined, PRODUCTION_QUERY_OPTIONS);
 
-  const { data: productionInventory, isLoading: loadingInv, error: invError } =
-    trpc.production.getProductionInventory.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+  const {
+    data: productionInventory,
+    isLoading: loadingInv,
+    error: invError,
+  } = trpc.production.getProductionInventory.useQuery(
+    undefined,
+    PRODUCTION_QUERY_OPTIONS
+  );
 
   const { data: movements, isLoading: loadingMovements } =
-    trpc.production.getKefirMovements.useQuery(undefined, { retry: 2, refetchOnWindowFocus: true });
+    trpc.production.getKefirMovements.useQuery(
+      undefined,
+      PRODUCTION_QUERY_OPTIONS
+    );
 
   // CORRECTED: listProducts (not getProducts)
-  const { data: allProducts } =
-    trpc.inventory.listProducts.useQuery(undefined, { retry: 2 });
+  const { data: allProducts } = trpc.inventory.listProducts.useQuery(
+    undefined,
+    PRODUCT_LIST_QUERY_OPTIONS
+  );
 
   // ── Mutations ──────────────────────────────────────────────
   const createBatchMutation = trpc.production.createBatch.useMutation({
@@ -55,7 +104,7 @@ export function Production() {
       setBatchNotes("");
       utils.production.getBatches.invalidate();
     },
-    onError: (err) => toast.error("Error al iniciar lote: " + err.message),
+    onError: err => toast.error("Error al iniciar lote: " + err.message),
   });
 
   const completeBatchMutation = trpc.production.completeBatch.useMutation({
@@ -68,12 +117,14 @@ export function Production() {
       utils.production.getKefirMovements.invalidate();
       utils.inventory.listInventory.invalidate();
     },
-    onError: (err) => toast.error("Error al finalizar lote: " + err.message),
+    onError: err => toast.error("Error al finalizar lote: " + err.message),
   });
 
   const transferMutation = trpc.inventory.transferToGeneral.useMutation({
     onSuccess: (data: any) => {
-      toast.success(`Traspaso ${data?.transferNumber ?? ""} realizado con éxito`);
+      toast.success(
+        `Traspaso ${data?.transferNumber ?? ""} realizado con éxito`
+      );
       setIsTransferOpen(false);
       setTransferItems({});
       setTransferNotes("");
@@ -81,7 +132,8 @@ export function Production() {
       utils.production.getKefirMovements.invalidate();
       utils.inventory.listInventory.invalidate();
     },
-    onError: (error) => toast.error(error.message || "Error al realizar el traspaso"),
+    onError: error =>
+      toast.error(error.message || "Error al realizar el traspaso"),
   });
 
   // ── Handlers ───────────────────────────────────────────────
@@ -99,55 +151,64 @@ export function Production() {
   const handleCompleteBatch = () => {
     if (!selectedBatchId) return;
 
-    const validOutputs = outputs
-      .filter((o) => o.productId > 0 && Number(o.quantity) > 0)
-      .map((o) => ({ productId: o.productId, quantity: Number(o.quantity) }));
+    const validOutputs = toPositiveQuantityItems(outputs);
+    const validInputs = toPositiveQuantityItems(inputs);
 
-    const validInputs = inputs
-      .filter((i) => i.productId > 0 && Number(i.quantity) > 0)
-      .map((i) => ({ productId: i.productId, quantity: Number(i.quantity) }));
-
-    completeBatchMutation.mutate({ batchId: selectedBatchId, outputs: validOutputs, inputs: validInputs });
+    completeBatchMutation.mutate({
+      batchId: selectedBatchId,
+      outputs: validOutputs,
+      inputs: validInputs,
+    });
   };
 
   const handleTransfer = () => {
-    const itemsToTransfer = Object.entries(transferItems)
-      .map(([id, qty]) => ({ productId: Number(id), quantity: Number(qty) }))
-      .filter((i) => i.quantity > 0);
+    const itemsToTransfer = toTransferQuantityItems(transferItems);
 
     if (itemsToTransfer.length === 0) {
       toast.error("Seleccione al menos un producto con cantidad mayor a 0");
       return;
     }
 
-    transferMutation.mutate({ items: itemsToTransfer, notes: transferNotes.trim() || undefined });
+    transferMutation.mutate({
+      items: itemsToTransfer,
+      notes: transferNotes.trim() || undefined,
+    });
   };
 
-  const finishedProducts = allProducts?.filter((p: any) => p.category === "finished_product") ?? [];
-  const rawMaterials = allProducts?.filter((p: any) => p.category === "raw_material" || p.category === "supplies") ?? [];
-  const inventoryWithStock = productionInventory?.filter((i: any) => Number(i.quantity) > 0) ?? [];
+  const finishedProducts = useMemo(
+    () => getFinishedProducts(allProducts),
+    [allProducts]
+  );
+  const rawMaterials = useMemo(
+    () => getProductionRawMaterials(allProducts),
+    [allProducts]
+  );
+  const inventoryWithStock = useMemo(
+    () => getInventoryWithStock(productionInventory),
+    [productionInventory]
+  );
 
   // ── Helpers ────────────────────────────────────────────────
-  const safeFormat = (dateVal: any, fmt: string) => {
-    try {
-      const d = new Date(dateVal);
-      if (isNaN(d.getTime())) return "—";
-      return format(d, fmt, { locale: es });
-    } catch {
-      return "—";
-    }
-  };
+  const safeFormat = formatProductionDate;
 
   // ── If there's a query error, show it instead of crashing ──
   if (batchesError || invError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-6">
         <AlertCircle className="h-12 w-12 text-red-400" />
-        <h2 className="text-xl font-bold text-slate-700">Error de conexión con el servidor</h2>
+        <h2 className="text-xl font-bold text-slate-700">
+          Error de conexión con el servidor
+        </h2>
         <p className="text-slate-500 max-w-sm">
-          {(batchesError || invError)?.message || "No se pudo cargar el módulo de producción."}
+          {(batchesError || invError)?.message ||
+            "No se pudo cargar el módulo de producción."}
         </p>
-        <Button onClick={() => { utils.production.getBatches.invalidate(); utils.production.getProductionInventory.invalidate(); }}>
+        <Button
+          onClick={() => {
+            utils.production.getBatches.invalidate();
+            utils.production.getProductionInventory.invalidate();
+          }}
+        >
           Reintentar
         </Button>
       </div>
@@ -165,8 +226,12 @@ export function Production() {
               <FlaskConical className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900">Producción Industrial</h1>
-              <p className="text-sm text-slate-500">Gestión de Lotes y Planta</p>
+              <h1 className="text-lg font-bold text-slate-900">
+                Producción Industrial
+              </h1>
+              <p className="text-sm text-slate-500">
+                Gestión de Lotes y Planta
+              </p>
             </div>
           </div>
 
@@ -183,16 +248,27 @@ export function Production() {
                 <DialogHeader>
                   <DialogTitle>Traspaso a Inventario General</DialogTitle>
                 </DialogHeader>
-                <p className="text-sm text-slate-500 -mt-2 mb-4">Mueve stock del Almacén de Planta a la Tienda principal.</p>
+                <p className="text-sm text-slate-500 -mt-2 mb-4">
+                  Mueve stock del Almacén de Planta a la Tienda principal.
+                </p>
                 <div className="max-h-[50vh] overflow-y-auto space-y-3">
                   {inventoryWithStock.length === 0 ? (
-                    <p className="text-center text-slate-500 py-6">No hay stock disponible en planta.</p>
+                    <p className="text-center text-slate-500 py-6">
+                      No hay stock disponible en planta.
+                    </p>
                   ) : (
                     inventoryWithStock.map((item: any) => (
-                      <div key={item.id} className="flex items-center justify-between p-3 border rounded-xl">
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 border rounded-xl"
+                      >
                         <div>
-                          <p className="font-bold text-slate-900">{item.productName}</p>
-                          <p className="text-xs text-slate-500">Disponible: {item.quantity} {item.unit}</p>
+                          <p className="font-bold text-slate-900">
+                            {item.productName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Disponible: {item.quantity} {item.unit}
+                          </p>
                         </div>
                         <Input
                           type="number"
@@ -201,10 +277,14 @@ export function Production() {
                           min={0}
                           max={item.quantity}
                           value={transferItems[item.productId] || ""}
-                          onChange={(e) => {
+                          onChange={e => {
                             let val = e.target.value;
-                            if (Number(val) > Number(item.quantity)) val = String(item.quantity);
-                            setTransferItems({ ...transferItems, [item.productId]: val });
+                            if (Number(val) > Number(item.quantity))
+                              val = String(item.quantity);
+                            setTransferItems(current => ({
+                              ...current,
+                              [item.productId]: val,
+                            }));
                           }}
                         />
                       </div>
@@ -215,14 +295,26 @@ export function Production() {
                   <Label>Notas (Opcional)</Label>
                   <Input
                     value={transferNotes}
-                    onChange={(e) => setTransferNotes(e.target.value)}
+                    onChange={e => setTransferNotes(e.target.value)}
                     placeholder="Motivo del traspaso..."
                   />
                 </div>
                 <div className="mt-4 flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => setIsTransferOpen(false)}>Cancelar</Button>
-                  <Button onClick={handleTransfer} disabled={transferMutation.isLoading}>
-                    {transferMutation.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Traspaso"}
+                  <Button
+                    variant="ghost"
+                    onClick={() => setIsTransferOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleTransfer}
+                    disabled={transferMutation.isPending}
+                  >
+                    {transferMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Confirmar Traspaso"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
@@ -248,7 +340,9 @@ export function Production() {
                       value={batchType}
                       onChange={(e: any) => setBatchType(e.target.value)}
                     >
-                      <option value="kefir_production">Elaboración de Kéfir</option>
+                      <option value="kefir_production">
+                        Elaboración de Kéfir
+                      </option>
                       <option value="nodule_washing">Lavado de Nódulos</option>
                       <option value="maintenance">Mantenimiento</option>
                     </select>
@@ -257,13 +351,19 @@ export function Production() {
                     <Label>Notas</Label>
                     <Input
                       value={batchNotes}
-                      onChange={(e) => setBatchNotes(e.target.value)}
+                      onChange={e => setBatchNotes(e.target.value)}
                       placeholder="Opcional..."
                       className="mt-1"
                     />
                   </div>
-                  <Button className="w-full" onClick={handleCreateBatch} disabled={createBatchMutation.isLoading}>
-                    {createBatchMutation.isLoading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+                  <Button
+                    className="w-full"
+                    onClick={handleCreateBatch}
+                    disabled={createBatchMutation.isPending}
+                  >
+                    {createBatchMutation.isPending ? (
+                      <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                    ) : null}
                     Iniciar Lote
                   </Button>
                 </div>
@@ -305,30 +405,44 @@ export function Production() {
                     </TableRow>
                   ) : !batches || batches.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-slate-400">
-                        No hay lotes registrados. Cree uno con el botón "Nuevo Lote".
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-10 text-slate-400"
+                      >
+                        No hay lotes registrados. Cree uno con el botón "Nuevo
+                        Lote".
                       </TableCell>
                     </TableRow>
                   ) : (
                     batches.map((batch: any) => (
                       <TableRow key={batch.id}>
-                        <TableCell className="font-bold">{batch.batchNumber}</TableCell>
+                        <TableCell className="font-bold">
+                          {batch.batchNumber}
+                        </TableCell>
                         <TableCell>
-                          {batch.type === "kefir_production" ? "Elaboración de Kéfir" :
-                            batch.type === "nodule_washing" ? "Lavado de Nódulos" : "Mantenimiento"}
+                          {getProductionBatchTypeLabel(batch.type)}
                         </TableCell>
                         <TableCell>
                           {batch.status === "in_progress" ? (
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200">En Progreso</Badge>
+                            <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                              En Progreso
+                            </Badge>
                           ) : (
-                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Completado</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                              Completado
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-slate-500">
-                          {safeFormat(batch.startDate || batch.createdAt, "dd/MM/yyyy HH:mm")}
+                          {safeFormat(
+                            batch.startDate || batch.createdAt,
+                            "dd/MM/yyyy HH:mm"
+                          )}
                         </TableCell>
                         <TableCell className="text-slate-500">
-                          {batch.endDate ? safeFormat(batch.endDate, "dd/MM/yyyy HH:mm") : "—"}
+                          {batch.endDate
+                            ? safeFormat(batch.endDate, "dd/MM/yyyy HH:mm")
+                            : "—"}
                         </TableCell>
                         <TableCell className="text-right">
                           {batch.status === "in_progress" && (
@@ -353,64 +467,19 @@ export function Production() {
 
           {/* ─── TAB 2: Inventario en Planta ─── */}
           <TabsContent value="inventory">
-            <ProductionInventoryTab inventoryWithStock={inventoryWithStock as any[]} loadingInv={loadingInv} />
+            <ProductionInventoryTab
+              inventoryWithStock={inventoryWithStock}
+              loadingInv={loadingInv}
+            />
           </TabsContent>
 
           {/* ─── TAB 3: Kárdex ─── */}
           <TabsContent value="kardex">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead className="text-right">Movimiento</TableHead>
-                    <TableHead className="text-right">Stock Resultante</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loadingMovements ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-                      </TableCell>
-                    </TableRow>
-                  ) : !movements || movements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-slate-400">
-                        No hay movimientos registrados aún.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    movements.map((mov: any) => (
-                      <TableRow key={mov.id}>
-                        <TableCell className="text-slate-500">
-                          {safeFormat(mov.createdAt, "dd MMM yyyy, HH:mm")}
-                        </TableCell>
-                        <TableCell className="font-bold text-slate-900">{mov.productName}</TableCell>
-                        <TableCell className="text-slate-600">{mov.reason}</TableCell>
-                        <TableCell className="text-right">
-                          <span
-                            className={`font-bold px-2 py-0.5 rounded text-sm ${
-                              Number(mov.changeAmount) > 0
-                                ? "bg-emerald-50 text-emerald-600"
-                                : Number(mov.changeAmount) < 0
-                                ? "bg-rose-50 text-rose-600"
-                                : "bg-slate-50 text-slate-600"
-                            }`}
-                          >
-                            {Number(mov.changeAmount) > 0 ? "+" : ""}
-                            {mov.changeAmount}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right text-slate-500 font-medium">{mov.newQuantity}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <ProductionKardexTab
+              movements={movements ?? []}
+              loadingMovements={loadingMovements}
+              safeFormat={safeFormat}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -422,13 +491,16 @@ export function Production() {
             <DialogTitle>Finalizar Lote de Producción</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-slate-500 -mt-2">
-            Registre los insumos consumidos y los productos elaborados en este lote.
+            Registre los insumos consumidos y los productos elaborados en este
+            lote.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
             {/* Inputs */}
             <div className="space-y-3">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">−</span>
+                <span className="w-6 h-6 rounded bg-rose-100 text-rose-600 flex items-center justify-center text-xs font-bold">
+                  −
+                </span>
                 Insumos Consumidos
               </h3>
               {inputs.map((input, idx) => (
@@ -436,15 +508,20 @@ export function Production() {
                   <select
                     className="flex-1 h-9 rounded-md border border-slate-200 text-sm px-2"
                     value={input.productId}
-                    onChange={(e) => {
-                      const arr = [...inputs];
-                      arr[idx].productId = Number(e.target.value);
-                      setInputs(arr);
+                    onChange={e => {
+                      const productId = Number(e.target.value);
+                      setInputs(current =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === idx ? { ...item, productId } : item
+                        )
+                      );
                     }}
                   >
                     <option value={0}>Seleccionar insumo...</option>
                     {rawMaterials.map((rm: any) => (
-                      <option key={rm.id} value={rm.id}>{rm.name}</option>
+                      <option key={rm.id} value={rm.id}>
+                        {rm.name}
+                      </option>
                     ))}
                   </select>
                   <Input
@@ -452,22 +529,42 @@ export function Production() {
                     className="w-20 h-9"
                     placeholder="Cant."
                     value={input.quantity}
-                    onChange={(e) => {
-                      const arr = [...inputs];
-                      arr[idx].quantity = e.target.value;
-                      setInputs(arr);
+                    onChange={e => {
+                      const quantity = e.target.value;
+                      setInputs(current =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === idx ? { ...item, quantity } : item
+                        )
+                      );
                     }}
                   />
                   <button
                     className="text-rose-400 hover:text-rose-600 font-bold text-sm px-2"
                     onClick={() => {
-                      const arr = inputs.filter((_, i) => i !== idx);
-                      setInputs(arr.length ? arr : [{ productId: 0, quantity: "" }]);
+                      setInputs(current => {
+                        const nextInputs = current.filter(
+                          (_, itemIndex) => itemIndex !== idx
+                        );
+                        return nextInputs.length
+                          ? nextInputs
+                          : [{ productId: 0, quantity: "" }];
+                      });
                     }}
-                  >✕</button>
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => setInputs([...inputs, { productId: 0, quantity: "" }])}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setInputs(current => [
+                    ...current,
+                    { productId: 0, quantity: "" },
+                  ])
+                }
+              >
                 + Agregar insumo
               </Button>
             </div>
@@ -475,7 +572,9 @@ export function Production() {
             {/* Outputs */}
             <div className="space-y-3">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">+</span>
+                <span className="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+                  +
+                </span>
                 Productos Elaborados
               </h3>
               {outputs.map((out, idx) => (
@@ -483,15 +582,20 @@ export function Production() {
                   <select
                     className="flex-1 h-9 rounded-md border border-slate-200 text-sm px-2"
                     value={out.productId}
-                    onChange={(e) => {
-                      const arr = [...outputs];
-                      arr[idx].productId = Number(e.target.value);
-                      setOutputs(arr);
+                    onChange={e => {
+                      const productId = Number(e.target.value);
+                      setOutputs(current =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === idx ? { ...item, productId } : item
+                        )
+                      );
                     }}
                   >
                     <option value={0}>Seleccionar producto...</option>
                     {finishedProducts.map((fp: any) => (
-                      <option key={fp.id} value={fp.id}>{fp.name}</option>
+                      <option key={fp.id} value={fp.id}>
+                        {fp.name}
+                      </option>
                     ))}
                   </select>
                   <Input
@@ -499,35 +603,62 @@ export function Production() {
                     className="w-20 h-9"
                     placeholder="Cant."
                     value={out.quantity}
-                    onChange={(e) => {
-                      const arr = [...outputs];
-                      arr[idx].quantity = e.target.value;
-                      setOutputs(arr);
+                    onChange={e => {
+                      const quantity = e.target.value;
+                      setOutputs(current =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === idx ? { ...item, quantity } : item
+                        )
+                      );
                     }}
                   />
                   <button
                     className="text-rose-400 hover:text-rose-600 font-bold text-sm px-2"
                     onClick={() => {
-                      const arr = outputs.filter((_, i) => i !== idx);
-                      setOutputs(arr.length ? arr : [{ productId: 0, quantity: "" }]);
+                      setOutputs(current => {
+                        const nextOutputs = current.filter(
+                          (_, itemIndex) => itemIndex !== idx
+                        );
+                        return nextOutputs.length
+                          ? nextOutputs
+                          : [{ productId: 0, quantity: "" }];
+                      });
                     }}
-                  >✕</button>
+                  >
+                    ✕
+                  </button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => setOutputs([...outputs, { productId: 0, quantity: "" }])}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setOutputs(current => [
+                    ...current,
+                    { productId: 0, quantity: "" },
+                  ])
+                }
+              >
                 + Agregar producto
               </Button>
             </div>
           </div>
 
           <div className="mt-6 flex justify-end gap-3 border-t pt-4">
-            <Button variant="ghost" onClick={() => setIsCompleteBatchOpen(false)}>Cancelar</Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsCompleteBatchOpen(false)}
+            >
+              Cancelar
+            </Button>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={handleCompleteBatch}
-              disabled={completeBatchMutation.isLoading}
+              disabled={completeBatchMutation.isPending}
             >
-              {completeBatchMutation.isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {completeBatchMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Confirmar y Guardar
             </Button>
           </div>

@@ -29,8 +29,8 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
-import KefirControlInventoryPage from "@/pages/KefirControlInventoryPage";
-import KefirControlKardexPage from "@/pages/KefirControlKardexPage";
+import KefirControlInventoryPage from "@/pages/kefir-control/inventario-produccion/InventoryPage";
+import KefirControlKardexPage from "@/pages/kefir-control/auditoria/KardexPage";
 import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
 import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
 import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
@@ -44,16 +44,24 @@ function OpenKefirControl() {
   return null;
 }
 
-function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: any) {
+function ProtectedRoute({
+  component: Component,
+  adminOnly = false,
+  ...rest
+}: any) {
   const { user } = useAuth();
-  
+
   if (!user) return <Login />;
-  
+
   if (adminOnly && user.role !== "admin") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Acceso Denegado</h2>
-        <p className="text-muted-foreground mb-4">No tienes permisos para acceder a este módulo administrativo.</p>
+        <h2 className="text-2xl font-bold text-red-600 mb-2">
+          Acceso Denegado
+        </h2>
+        <p className="text-muted-foreground mb-4">
+          No tienes permisos para acceder a este módulo administrativo.
+        </p>
         <Link href="/">
           <Button variant="outline">Volver al Inicio</Button>
         </Link>
@@ -65,12 +73,45 @@ function ProtectedRoute({ component: Component, adminOnly = false, ...rest }: an
 }
 
 function Router() {
-  const { user, loading } = useAuth();
   const [location] = useLocation();
+  const isKefirPreview = location.startsWith("/preview/kefir-control");
+  const { user, loading } = useAuth();
   const showTopHeader =
     !location.startsWith("/kefir-control") &&
     !location.startsWith("/production") &&
     !location.startsWith("/preview/kefir-control");
+
+  if (isKefirPreview) {
+    return (
+      <Switch>
+        <Route
+          path="/preview/kefir-control"
+          component={KefirControlPreviewHomePage}
+        />
+        <Route
+          path="/preview/kefir-control/index.html"
+          component={KefirControlPreviewHomePage}
+        />
+        <Route
+          path="/preview/kefir-control/inventory"
+          component={KefirControlPreviewInventoryPage}
+        />
+        <Route
+          path="/preview/kefir-control/kardex"
+          component={KefirControlPreviewKardexPage}
+        />
+        <Route
+          path="/preview/kefir-control/lotes"
+          component={KefirControlPreviewHomePage}
+        />
+        <Route
+          path="/preview/kefir-control/:section"
+          component={KefirControlPreviewHomePage}
+        />
+        <Route component={KefirControlPreviewHomePage} />
+      </Switch>
+    );
+  }
 
   if (loading) {
     return (
@@ -112,31 +153,19 @@ function Router() {
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />
           </Route>
           <Route path="/kefir-control/inventory">
-            <ProtectedRoute component={KefirControlInventoryPage} adminOnly={true} />
+            <ProtectedRoute
+              component={KefirControlInventoryPage}
+              adminOnly={true}
+            />
           </Route>
           <Route path="/kefir-control/kardex">
-            <ProtectedRoute component={KefirControlKardexPage} adminOnly={true} />
+            <ProtectedRoute
+              component={KefirControlKardexPage}
+              adminOnly={true}
+            />
           </Route>
           <Route path="/kefir-control/:section">
             <ProtectedRoute component={OpenKefirControl} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control">
-            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control/index.html">
-            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control/inventory">
-            <ProtectedRoute component={KefirControlPreviewInventoryPage} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control/kardex">
-            <ProtectedRoute component={KefirControlPreviewKardexPage} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control/lotes">
-            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
-          </Route>
-          <Route path="/preview/kefir-control/:section">
-            <ProtectedRoute component={KefirControlPreviewHomePage} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />

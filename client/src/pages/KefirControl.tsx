@@ -1,1 +1,1 @@
-export { default } from "./KefirControlHomePage";
+export { default } from "./kefir-control/inicio/HomePage";
