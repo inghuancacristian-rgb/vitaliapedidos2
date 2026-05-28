@@ -2,10 +2,14 @@
   var STORAGE_KEY = "kefir_inventory_v3";
   var TRANSFER_ENDPOINT = "/api/trpc/inventory.transferToGeneral?batch=1";
   var PRODUCTS_ENDPOINT = "/api/trpc/inventory.listProducts?batch=1";
+  var CREATE_PRODUCT_ENDPOINT = "/api/trpc/inventory.createProduct?batch=1";
   var pendingReload = false;
   var currentReceipt = null;
   var generalProductsPromise = null;
   var modalRows = [];
+  var productCatalogSyncRunning = false;
+  var productCatalogWriteInProgress = false;
+  var productCatalogSyncTimer = null;
 
   function toNumber(value, fallback) {
     var numberValue = Number(value);
@@ -57,6 +61,25 @@
 
   function writeInventory(inventory) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
+  }
+
+  function readKefirProducts() {
+    try {
+      var parsed = JSON.parse(localStorage.getItem("kefir_products_v3") || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error("No se pudo leer el catalogo local de productos", error);
+      return [];
+    }
+  }
+
+  function writeKefirProducts(products) {
+    productCatalogWriteInProgress = true;
+    try {
+      localStorage.setItem("kefir_products_v3", JSON.stringify(products));
+    } finally {
+      productCatalogWriteInProgress = false;
+    }
   }
 
   function isFinishedProduct(item) {
@@ -258,6 +281,85 @@
     return rawPrice > 100 ? rawPrice / 100 : rawPrice;
   }
 
+  function presentationFromKefirProduct(product) {
+    var unit = normalize(product && product.unit);
+    var volume = toNumber(product && product.volume, 0);
+
+    if (unit === "l") {
+      return { volumeMl: volume * 1000, weightGr: 0, presentationUnit: "ml" };
+    }
+
+    if (unit === "ml") {
+      return { volumeMl: volume, weightGr: 0, presentationUnit: "ml" };
+    }
+
+    if (unit === "g" || unit === "gr") {
+      return { volumeMl: 0, weightGr: volume, presentationUnit: "g" };
+    }
+
+    var parsed = parsePresentation(product);
+    return parsed.unit === "g"
+      ? { volumeMl: 0, weightGr: parsed.value, presentationUnit: "g" }
+      : { volumeMl: parsed.value, weightGr: 0, presentationUnit: "ml" };
+  }
+
+  function buildInventoryProductInput(product) {
+    var presentation = presentationFromKefirProduct(product);
+    var salePrice = toNumber(product && product.sellPrice, 0);
+    var code = String(product && product.id ? product.id : "").trim();
+
+    if (!code) {
+      code = "PROD-" + referenceKey(product && product.name).slice(0, 18);
+    }
+
+    return {
+      code: code,
+      name: String(product && product.name ? product.name : "Producto terminado"),
+      category: "finished_product",
+      price: 0,
+      salePrice: salePrice,
+      wholesalePrice: salePrice,
+      discountPrice: salePrice,
+      status: "active",
+      unit: "unidad",
+      presentationQuantity: 1,
+      presentationUnit: presentation.presentationUnit,
+      presentationVolumeMl: presentation.volumeMl,
+      presentationWeightGr: presentation.weightGr,
+      productionRole: "finished_good",
+      storageLocation: "Inventario General",
+      supplierName: "Produccion",
+      productionNotes: "Creado automaticamente desde KefirControl",
+    };
+  }
+
+  async function createGeneralProductFromKefirProduct(product) {
+    var input = buildInventoryProductInput(product);
+    var response = await fetch(CREATE_PRODUCT_ENDPOINT, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 0: { json: input } }),
+    });
+    var payload = await response.json().catch(function () {
+      return null;
+    });
+
+    if (!response.ok) {
+      var message =
+        (payload &&
+          payload[0] &&
+          payload[0].error &&
+          payload[0].error.json &&
+          payload[0].error.json.message) ||
+        (payload && payload[0] && payload[0].error && payload[0].error.message) ||
+        "No se pudo crear el producto en inventario general.";
+      throw new Error(message);
+    }
+
+    return readTrpcPayload(payload);
+  }
+
   function buildKefirProduct(product) {
     var presentation = parsePresentation(product);
     return {
@@ -275,26 +377,102 @@
     };
   }
 
-  function syncProductionProductCatalog(generalProducts) {
+  function mergeGeneralProductsIntoLocal(localProducts, generalProducts) {
     var finishedProducts = generalProducts.filter(isFinishedGeneralProduct);
-    if (!finishedProducts.length) return;
+    var mergedProducts = localProducts.map(function (product) {
+      var reference = findGeneralProductReference(product, generalProducts);
+      if (!reference.product) return product;
 
-    var nextProducts = finishedProducts.map(buildKefirProduct);
-    var nextText = JSON.stringify(nextProducts);
-    var currentText = localStorage.getItem("kefir_products_v3") || "[]";
-    if (currentText === nextText) {
-      sessionStorage.removeItem("kefir_products_synced_once");
-      return;
-    }
+      return Object.assign({}, product, {
+        generalProductId: Number(reference.product.id),
+      });
+    });
 
-    localStorage.setItem("kefir_products_v3", nextText);
+    finishedProducts.forEach(function (generalProduct) {
+      var exists = mergedProducts.some(function (product) {
+        return (
+          Number(product.generalProductId) === Number(generalProduct.id) ||
+          referenceKey(product.name) === referenceKey(generalProduct.name)
+        );
+      });
 
-    if (
-      location.pathname.indexOf("/kefir-control/productos") !== -1 &&
-      sessionStorage.getItem("kefir_products_synced_once") !== "true"
-    ) {
-      sessionStorage.setItem("kefir_products_synced_once", "true");
-      location.reload();
+      if (!exists) {
+        mergedProducts.push(buildKefirProduct(generalProduct));
+      }
+    });
+
+    return mergedProducts;
+  }
+
+  async function syncProductionProductCatalog(generalProducts) {
+    if (productCatalogSyncRunning) return;
+    productCatalogSyncRunning = true;
+
+    try {
+      var localProducts = readKefirProducts();
+      var mergedProducts = mergeGeneralProductsIntoLocal(
+        localProducts,
+        generalProducts
+      );
+      var createdProduct = false;
+
+      for (var index = 0; index < mergedProducts.length; index += 1) {
+        var product = mergedProducts[index];
+        var reference = findGeneralProductReference(product, generalProducts);
+        if (reference.product) {
+          mergedProducts[index] = Object.assign({}, product, {
+            generalProductId: Number(reference.product.id),
+          });
+          continue;
+        }
+
+        if (reference.status === "ambiguous" || !product.name) continue;
+
+        try {
+          var created = await createGeneralProductFromKefirProduct(product);
+          var productId = Number(created && created.productId);
+          if (productId > 0) {
+            mergedProducts[index] = Object.assign({}, product, {
+              generalProductId: productId,
+            });
+            createdProduct = true;
+          }
+        } catch (error) {
+          console.warn(
+            "No se pudo crear producto en inventario general",
+            product,
+            error
+          );
+        }
+      }
+
+      if (createdProduct) {
+        generalProductsPromise = null;
+        var refreshedProducts = await fetchGeneralProducts();
+        mergedProducts = mergeGeneralProductsIntoLocal(
+          mergedProducts,
+          refreshedProducts
+        );
+      }
+
+      var nextText = JSON.stringify(mergedProducts);
+      var currentText = localStorage.getItem("kefir_products_v3") || "[]";
+      if (currentText === nextText) {
+        sessionStorage.removeItem("kefir_products_synced_once");
+        return;
+      }
+
+      writeKefirProducts(mergedProducts);
+
+      if (
+        location.pathname.indexOf("/kefir-control/productos") !== -1 &&
+        sessionStorage.getItem("kefir_products_synced_once") !== "true"
+      ) {
+        sessionStorage.setItem("kefir_products_synced_once", "true");
+        location.reload();
+      }
+    } finally {
+      productCatalogSyncRunning = false;
     }
   }
 
@@ -304,6 +482,29 @@
       .catch(function (error) {
         console.warn("No se pudo sincronizar productos de KefirControl", error);
       });
+  }
+
+  function scheduleProductCatalogSync() {
+    window.clearTimeout(productCatalogSyncTimer);
+    productCatalogSyncTimer = window.setTimeout(function () {
+      generalProductsPromise = null;
+      preloadGeneralCatalog();
+    }, 500);
+  }
+
+  function installProductCatalogStorageSync() {
+    if (localStorage.__kefirProductCatalogSyncInstalled) return;
+
+    var previousSetItem = localStorage.setItem;
+    localStorage.setItem = function (key, value) {
+      previousSetItem.apply(this, arguments);
+
+      if (key === "kefir_products_v3" && !productCatalogWriteInProgress) {
+        scheduleProductCatalogSync();
+      }
+    };
+
+    localStorage.__kefirProductCatalogSyncInstalled = true;
   }
 
   function getSelectedRows() {
@@ -689,6 +890,7 @@
   function install() {
     ensureStyles();
     ensureButton();
+    installProductCatalogStorageSync();
     preloadGeneralCatalog();
   }
 
