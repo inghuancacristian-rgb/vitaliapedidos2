@@ -107,11 +107,10 @@
   async function fetchGeneralProducts() {
     if (generalProductsPromise) return generalProductsPromise;
 
-    generalProductsPromise = fetch(PRODUCTS_ENDPOINT, {
-      method: "POST",
+    var queryInput = encodeURIComponent(JSON.stringify({ 0: { json: null } }));
+    generalProductsPromise = fetch(PRODUCTS_ENDPOINT + "&input=" + queryInput, {
+      method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 0: { json: null } }),
     })
       .then(async function (response) {
         var payload = await response.json().catch(function () {
