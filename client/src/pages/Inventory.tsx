@@ -663,29 +663,29 @@ export default function Inventory() {
         {/* Barra de Búsqueda y Tabs Sticky */}
         <div className="sticky top-14 md:top-0 z-30 -mx-4 px-4 md:mx-0 md:px-0 pt-2 pb-4 bg-slate-50/80 backdrop-blur-md">
           <div className="flex flex-col gap-4">
-            <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[2rem] overflow-hidden bg-white/90 p-2">
-              <div className="flex flex-col lg:flex-row items-center gap-4">
-                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full lg:w-auto">
-                  <TabsList className="bg-slate-100 p-1 rounded-2xl h-12 w-full lg:w-auto overflow-x-auto whitespace-nowrap flex">
-                    <TabsTrigger value="all" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+            <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.5rem] overflow-visible bg-white/95 p-3">
+              <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center">
+                <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full xl:max-w-[620px] xl:flex-none">
+                  <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:grid-cols-3 lg:grid-cols-5">
+                    <TabsTrigger value="all" className="min-w-0 rounded-xl h-10 px-3 text-center text-[11px] font-bold uppercase tracking-wide">
                       Todos
                     </TabsTrigger>
-                    <TabsTrigger value="finished" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                    <TabsTrigger value="finished" className="min-w-0 rounded-xl h-10 px-3 text-center text-[11px] font-bold uppercase tracking-wide">
                       Terminados
                     </TabsTrigger>
-                    <TabsTrigger value="raw" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                    <TabsTrigger value="raw" className="min-w-0 rounded-xl h-10 px-3 text-center text-[11px] font-bold uppercase tracking-wide">
                       Materia Prima
                     </TabsTrigger>
-                    <TabsTrigger value="insumo" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                    <TabsTrigger value="insumo" className="min-w-0 rounded-xl h-10 px-3 text-center text-[11px] font-bold uppercase tracking-wide">
                       Insumos
                     </TabsTrigger>
-                    <TabsTrigger value="supplies" className="flex-1 lg:flex-none rounded-xl h-10 px-6 font-bold text-xs uppercase tracking-widest shrink-0">
+                    <TabsTrigger value="supplies" className="min-w-0 rounded-xl h-10 px-3 text-center text-[11px] font-bold uppercase tracking-wide">
                       Suministros
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
                 
-                <div className="relative flex-1 group w-full">
+                <div className="relative min-w-[220px] flex-1 group w-full">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" />
                   <Input 
                     placeholder="Buscar por nombre o código de producto..." 
@@ -695,8 +695,9 @@ export default function Inventory() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
-                  <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between xl:w-auto xl:justify-end">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
                     <Button
                       variant={showFilters ? "secondary" : "ghost"}
                       size="icon"
@@ -725,9 +726,9 @@ export default function Inventory() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
+                    </div>
 
-                  <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
+                    <div className="flex items-center gap-1 bg-slate-100 rounded-2xl p-1">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -744,10 +745,11 @@ export default function Inventory() {
                     >
                       <List className="h-5 w-5" />
                     </Button>
+                    </div>
                   </div>
 
                   {user?.role === "admin" && (
-                    <div className="flex gap-2">
+                    <div className="flex min-w-0 flex-wrap gap-2 sm:justify-end [&>*]:shrink-0">
                       <InventoryTransfersDialog />
                       <TransferToProductionDialog inventoryItems={inventory || []} onSuccess={() => refetch()} />
                       <AddProductDialog onProductAdded={() => refetch()} />
