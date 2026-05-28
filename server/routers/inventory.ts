@@ -30,6 +30,77 @@ function formatStatusLabel(status?: "active" | "inactive") {
   return status === "inactive" ? "inactivo" : "activo";
 }
 
+function normalizeProductReference(value?: string | null) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/(\d+(?:[.,]\d+)?)\s*(litros|litro|lts|lt|l)\b/g, "$1l")
+    .replace(/(\d+(?:[.,]\d+)?)\s*(mililitros|mililitro|ml)\b/g, "$1ml")
+    .replace(/(\d+(?:[.,]\d+)?)\s*(gramos|gramo|grs|gr|g)\b/g, "$1g")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function productReferenceKey(value?: string | null) {
+  return normalizeProductReference(value).replace(/\s+/g, "");
+}
+
+function productReferenceTokens(value?: string | null) {
+  return normalizeProductReference(value)
+    .split(/\s+/)
+    .filter(token => token.length > 2 || /\d/.test(token));
+}
+
+function resolveFinishedProductReference(
+  productsData: any[],
+  productId: number,
+  productName?: string
+) {
+  if (productId > 0) {
+    const product = productsData.find(product => product.id === productId);
+    if (product && product.category === "finished_product") return product;
+    return undefined;
+  }
+
+  if (!productName) return undefined;
+
+  const searchKey = productReferenceKey(productName);
+  const finishedProducts = productsData.filter(
+    product => product.category === "finished_product"
+  );
+
+  const exactMatches = finishedProducts.filter(
+    product => productReferenceKey(product.name) === searchKey
+  );
+  if (exactMatches.length === 1) return exactMatches[0];
+  if (exactMatches.length > 1) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `El producto "${productName}" coincide con mas de una referencia del inventario general. Revise el catalogo antes de traspasar.`,
+    });
+  }
+
+  const searchTokens = productReferenceTokens(productName);
+  const tokenMatches = finishedProducts.filter(product => {
+    const productTokens = new Set(productReferenceTokens(product.name));
+    return (
+      searchTokens.length > 0 &&
+      searchTokens.every(token => productTokens.has(token))
+    );
+  });
+
+  if (tokenMatches.length === 1) return tokenMatches[0];
+  if (tokenMatches.length > 1) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `El producto "${productName}" no tiene una referencia unica en inventario general. Seleccione el SKU exacto.`,
+    });
+  }
+
+  return undefined;
+}
+
 function classifyHistoryEvent(movement: any) {
   const reason = (movement.reason || "").toLowerCase();
   const notes = movement.notes || movement.reason || "";
@@ -941,40 +1012,16 @@ export const inventoryRouter = router({
       const transferDetails = [];
 
       for (const item of input.items) {
-        // Encontrar producto por ID o Nombre (si viene de KefirControl y no tiene el ID correcto)
-        let product = productsData.find(p => p.id === item.productId);
-        if (item.productName && item.productId <= 0) {
-          product = undefined;
-        }
-        if (!product && item.productName) {
-          const searchName = item.productName.toLowerCase().trim();
-          product = productsData.find(p => p.name.toLowerCase().trim() === searchName);
-          
-          if (!product) {
-            // Fuzzy match: check if product is finished_product and contains the flavor name
-            product = productsData.find(p => 
-              p.category === 'finished_product' && 
-              p.name.toLowerCase().includes(searchName)
-            );
-          }
-          
-          if (!product) {
-            // Último intento: buscar cualquier producto que contenga la palabra (ej. "piña")
-            // siempre que sea finished_product
-            const parts = searchName.split(" ").filter(w => w.length > 3);
-            if (parts.length > 0) {
-              product = productsData.find(p => 
-                p.category === 'finished_product' && 
-                parts.some(part => p.name.toLowerCase().includes(part))
-              );
-            }
-          }
-        }
-        
+        const product = resolveFinishedProductReference(
+          productsData,
+          item.productId,
+          item.productName
+        );
         if (!product) {
-          // Si no existe el producto, se ignora en el DB (podriamos crearlo, pero KefirControl deberia usar productos existentes)
-          console.warn("TransferToGeneral: Product not found:", item);
-          continue;
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `No se encontro una referencia exacta para "${item.productName || item.productId}" en el inventario general. Cree o enlace primero ese producto.`,
+          });
         }
 
         // 3. Create Transfer Item
