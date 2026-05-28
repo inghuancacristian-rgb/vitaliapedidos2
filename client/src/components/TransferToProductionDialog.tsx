@@ -38,6 +38,39 @@ const isKefirPackagingName = (value: unknown) => {
   return KEFIR_PACKAGING_KEYWORDS.some(keyword => text.includes(keyword));
 };
 
+const getKefirPresentationVolumeMl = (
+  item: KefirInventoryItem,
+  itemName: string
+) => {
+  const explicitVolume = toFiniteKefirNumber(item.presentationVolumeMl, 0);
+  if (explicitVolume > 0) return explicitVolume;
+
+  const unit = getKefirText(item.unit || item.productUnit).toLowerCase();
+  if (["l", "lt", "lts", "litro", "litros"].includes(unit)) return 1000;
+
+  const match = itemName
+    .toLowerCase()
+    .match(/(\d+(?:[.,]\d+)?)\s*(ml|l|lt|lts|litro|litros)\b/);
+  if (!match) return 0;
+
+  const value = Number(match[1].replace(",", "."));
+  if (!Number.isFinite(value) || value <= 0) return 0;
+
+  return match[2] === "ml" ? value : value * 1000;
+};
+
+const getKefirProductionRole = (item: KefirInventoryItem, itemName: string) => {
+  const currentRole = getKefirText(item.productionRole);
+  if (currentRole && currentRole !== "none") return currentRole;
+
+  const name = itemName.toLowerCase();
+  if (isKefirPackagingName(name)) return "packaging";
+  if (name.includes("leche")) return "milk";
+  if (name.includes("azucar") || name.includes("azúcar")) return "sugar";
+
+  return currentRole || "none";
+};
+
 const getKefirCategory = (categoryValue: unknown, itemName: string) => {
   const category = getKefirText(categoryValue);
 
@@ -102,6 +135,20 @@ const normalizeKefirInventory = (
         minStock: Math.max(0, toFiniteKefirNumber(item.minStock, 0)),
         category: getKefirCategory(item.category, name),
         costPerUnit: Math.max(0, toFiniteKefirNumber(item.costPerUnit, 0)),
+        presentationQuantity: Math.max(
+          1,
+          toFiniteKefirNumber(item.presentationQuantity, 1)
+        ),
+        presentationUnit:
+          getKefirText(item.presentationUnit) ||
+          getKefirText(item.unit) ||
+          "unidad",
+        presentationVolumeMl: getKefirPresentationVolumeMl(item, name),
+        presentationWeightGr: Math.max(
+          0,
+          toFiniteKefirNumber(item.presentationWeightGr, 0)
+        ),
+        productionRole: getKefirProductionRole(item, name),
       };
 
       delete sanitizedItem.stock;
@@ -165,6 +212,23 @@ export function TransferToProductionDialog({
               minStock: 0,
               category: kCategory,
               costPerUnit: 0,
+              presentationQuantity: Math.max(
+                1,
+                toFiniteKefirNumber(item.presentationQuantity, 1)
+              ),
+              presentationUnit:
+                getKefirText(item.presentationUnit) ||
+                getKefirText(item.unit) ||
+                "unidad",
+              presentationVolumeMl: getKefirPresentationVolumeMl(
+                item,
+                productName
+              ),
+              presentationWeightGr: Math.max(
+                0,
+                toFiniteKefirNumber(item.presentationWeightGr, 0)
+              ),
+              productionRole: getKefirProductionRole(item, productName),
             };
             kInv.push(existingItem);
           } else {
@@ -178,6 +242,34 @@ export function TransferToProductionDialog({
               toFiniteKefirNumber(existingItem.minStock, 0)
             );
             existingItem.category = kCategory; // Ensure it corrects any old manual entries
+            existingItem.presentationQuantity = Math.max(
+              1,
+              toFiniteKefirNumber(
+                item.presentationQuantity || existingItem.presentationQuantity,
+                1
+              )
+            );
+            existingItem.presentationUnit =
+              getKefirText(item.presentationUnit) ||
+              getKefirText(existingItem.presentationUnit) ||
+              getKefirText(item.unit) ||
+              getKefirText(existingItem.unit) ||
+              "unidad";
+            existingItem.presentationVolumeMl = getKefirPresentationVolumeMl(
+              { ...existingItem, ...item },
+              productName
+            );
+            existingItem.presentationWeightGr = Math.max(
+              0,
+              toFiniteKefirNumber(
+                item.presentationWeightGr || existingItem.presentationWeightGr,
+                0
+              )
+            );
+            existingItem.productionRole = getKefirProductionRole(
+              { ...existingItem, ...item },
+              productName
+            );
           }
 
           // KefirControl uses "quantity" instead of "stock"

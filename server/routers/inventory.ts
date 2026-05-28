@@ -889,7 +889,12 @@ export const inventoryRouter = router({
           productName: product.name,
           category: product.category,
           quantity: item.quantity,
-          unit: product.unit || 'unidad'
+          unit: product.unit || 'unidad',
+          presentationQuantity: product.presentationQuantity || 1,
+          presentationUnit: product.presentationUnit || product.unit || 'unidad',
+          presentationVolumeMl: product.presentationVolumeMl || 0,
+          presentationWeightGr: product.presentationWeightGr || 0,
+          productionRole: product.productionRole || 'none'
         });
       }
 

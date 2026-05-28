@@ -28,6 +28,54 @@
           );
         };
 
+        var getKefirPresentationVolumeMl = function (item, name) {
+          var explicitVolume = toFiniteKefirNumber(
+            item && item.presentationVolumeMl,
+            0
+          );
+          if (explicitVolume > 0) return explicitVolume;
+
+          var unit = toKefirText(
+            (item && (item.unit || item.productUnit)) || ""
+          ).toLowerCase();
+          if (
+            unit === "l" ||
+            unit === "lt" ||
+            unit === "lts" ||
+            unit === "litro" ||
+            unit === "litros"
+          ) {
+            return 1000;
+          }
+
+          var match = toKefirText(name)
+            .toLowerCase()
+            .match(/(\d+(?:[.,]\d+)?)\s*(ml|l|lt|lts|litro|litros)\b/);
+          if (!match) return 0;
+
+          var value = Number(match[1].replace(",", "."));
+          if (!Number.isFinite(value) || value <= 0) return 0;
+
+          return match[2] === "ml" ? value : value * 1000;
+        };
+
+        var getKefirProductionRole = function (item, name) {
+          var currentRole = toKefirText(item && item.productionRole);
+          if (currentRole && currentRole !== "none") return currentRole;
+
+          var lowerName = toKefirText(name).toLowerCase();
+          if (isKefirPackagingName(lowerName)) return "packaging";
+          if (lowerName.indexOf("leche") !== -1) return "milk";
+          if (
+            lowerName.indexOf("azucar") !== -1 ||
+            lowerName.indexOf("azúcar") !== -1
+          ) {
+            return "sugar";
+          }
+
+          return currentRole || "none";
+        };
+
         var getKefirCategory = function (item, name) {
           var category = toKefirText(item && item.category);
           if (category === "finished_product" || category === "producto") {
@@ -96,6 +144,20 @@
                   0,
                   toFiniteKefirNumber(item.costPerUnit, 0)
                 ),
+                presentationQuantity: Math.max(
+                  1,
+                  toFiniteKefirNumber(item.presentationQuantity, 1)
+                ),
+                presentationUnit:
+                  toKefirText(item.presentationUnit) ||
+                  toKefirText(item.unit) ||
+                  "unidad",
+                presentationVolumeMl: getKefirPresentationVolumeMl(item, name),
+                presentationWeightGr: Math.max(
+                  0,
+                  toFiniteKefirNumber(item.presentationWeightGr, 0)
+                ),
+                productionRole: getKefirProductionRole(item, name),
               });
 
               delete sanitizedItem.stock;

@@ -215,6 +215,11 @@ export const productionRouter = router({
         productCode: products.code,
         category: products.category,
         unit: products.unit,
+        presentationQuantity: products.presentationQuantity,
+        presentationUnit: products.presentationUnit,
+        presentationVolumeMl: products.presentationVolumeMl,
+        presentationWeightGr: products.presentationWeightGr,
+        productionRole: products.productionRole,
       })
       .from(productionInventory)
       .innerJoin(products, eq(productionInventory.productId, products.id));
@@ -231,6 +236,11 @@ export const productionRouter = router({
         productCode: products.code,
         category: products.category,
         unit: products.unit,
+        presentationQuantity: products.presentationQuantity,
+        presentationUnit: products.presentationUnit,
+        presentationVolumeMl: products.presentationVolumeMl,
+        presentationWeightGr: products.presentationWeightGr,
+        productionRole: products.productionRole,
       })
       .from(inventoryTransferItems)
       .innerJoin(inventoryTransfers, eq(inventoryTransferItems.transferId, inventoryTransfers.id))
@@ -250,6 +260,11 @@ export const productionRouter = router({
         productCode: row.productCode,
         category: row.category,
         unit: row.unit,
+        presentationQuantity: row.presentationQuantity,
+        presentationUnit: row.presentationUnit,
+        presentationVolumeMl: row.presentationVolumeMl,
+        presentationWeightGr: row.presentationWeightGr,
+        productionRole: row.productionRole,
       };
       current.quantity += row.quantity;
       aggregate.set(row.productId, current);
