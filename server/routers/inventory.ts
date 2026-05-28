@@ -804,6 +804,7 @@ export const inventoryRouter = router({
       const { productionInventory } = await import("../../drizzle/schema");
       
       // 1. Generate transfer number
+      const createdAt = new Date();
       const countRes = await db.select({ value: count() }).from(inventoryTransfers);
       const nextId = countRes[0].value + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
@@ -929,7 +930,8 @@ export const inventoryRouter = router({
         direction: 'to_general',
         status: 'completed',
         userId: ctx.user.id,
-        notes: input.notes || null
+        notes: input.notes || null,
+        createdAt
       });
       const transferId = (insertRes[0] as any).insertId;
 
@@ -941,6 +943,9 @@ export const inventoryRouter = router({
       for (const item of input.items) {
         // Encontrar producto por ID o Nombre (si viene de KefirControl y no tiene el ID correcto)
         let product = productsData.find(p => p.id === item.productId);
+        if (item.productName && item.productId <= 0) {
+          product = undefined;
+        }
         if (!product && item.productName) {
           const searchName = item.productName.toLowerCase().trim();
           product = productsData.find(p => p.name.toLowerCase().trim() === searchName);
@@ -1027,11 +1032,20 @@ export const inventoryRouter = router({
           productId: product.id,
           productName: product.name,
           quantity: item.quantity,
-          unit: product.unit || 'unidad'
+          unit: product.unit || 'unidad',
+          productUnit: product.unit || 'unidad'
         });
       }
 
-      return { success: true, transferNumber, items: transferDetails };
+      return {
+        success: true,
+        transferNumber,
+        direction: 'to_general',
+        status: 'completed',
+        notes: input.notes || null,
+        createdAt: createdAt.toISOString(),
+        items: transferDetails
+      };
     }),
 
   getTransfers: protectedProcedure.query(async () => {
