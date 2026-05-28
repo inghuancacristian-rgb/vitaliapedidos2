@@ -804,7 +804,6 @@ export const inventoryRouter = router({
       const { productionInventory } = await import("../../drizzle/schema");
       
       // 1. Generate transfer number
-      const createdAt = new Date();
       const countRes = await db.select({ value: count() }).from(inventoryTransfers);
       const nextId = countRes[0].value + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
@@ -920,6 +919,7 @@ export const inventoryRouter = router({
       const { createInventoryMovement, updateInventory } = await import("../db");
       
       // 1. Generate transfer number
+      const createdAt = new Date();
       const countRes = await db.select({ value: count() }).from(inventoryTransfers);
       const nextId = countRes[0].value + 1;
       const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
