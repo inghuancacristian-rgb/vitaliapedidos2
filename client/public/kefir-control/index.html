@@ -7,32 +7,129 @@
     <title>KéfirControl - Panel de Control Industrial</title>
     <script>
       try {
+        var originalSetItem = localStorage.setItem;
+
+        var toKefirText = function (value) {
+          return String(value == null ? "" : value).trim();
+        };
+
+        var toFiniteKefirNumber = function (value, fallback) {
+          var numericValue = Number(value);
+          return Number.isFinite(numericValue) ? numericValue : fallback;
+        };
+
+        var isKefirPackagingName = function (value) {
+          var text = toKefirText(value).toLowerCase();
+          return (
+            text.indexOf("botella") !== -1 ||
+            text.indexOf("tapa") !== -1 ||
+            text.indexOf("envase") !== -1 ||
+            text.indexOf("etiqueta") !== -1
+          );
+        };
+
+        var getKefirCategory = function (item, name) {
+          var category = toKefirText(item && item.category);
+          if (category === "finished_product" || category === "producto") {
+            return isKefirPackagingName(name) ? "envase" : "producto";
+          }
+          if (category === "supplies" || category === "envase") {
+            return "envase";
+          }
+          if (category === "raw_material" || category === "materia") {
+            return isKefirPackagingName(name) ? "envase" : "materia";
+          }
+          if (category === "insumo") {
+            return isKefirPackagingName(name) ? "envase" : "materia";
+          }
+
+          return isKefirPackagingName(name) ? "envase" : "materia";
+        };
+
+        var sanitizeKefirInventory = function (rawValue) {
+          var parsed = JSON.parse(rawValue);
+          var sourceItems = Array.isArray(parsed)
+            ? parsed
+            : parsed && typeof parsed === "object"
+              ? Object.values(parsed)
+              : [];
+          var usedIds = {};
+          var nextId = 1;
+
+          return sourceItems
+            .filter(function (item) {
+              return item && typeof item === "object";
+            })
+            .map(function (item) {
+              var name =
+                toKefirText(item.name) ||
+                toKefirText(item.productName) ||
+                toKefirText(item.productCode) ||
+                toKefirText(item.code) ||
+                "Item sin nombre";
+              var rawId = Math.trunc(toFiniteKefirNumber(item.id, 0));
+
+              if (rawId <= 0 || usedIds[rawId]) {
+                while (usedIds[nextId]) nextId += 1;
+                rawId = nextId;
+              }
+
+              usedIds[rawId] = true;
+              nextId = Math.max(nextId, rawId + 1);
+
+              var quantitySource =
+                item.quantity !== undefined && item.quantity !== null
+                  ? item.quantity
+                  : item.stock;
+
+              var sanitizedItem = Object.assign({}, item, {
+                id: rawId,
+                name: name,
+                quantity: Math.max(0, toFiniteKefirNumber(quantitySource, 0)),
+                unit:
+                  toKefirText(item.unit) ||
+                  toKefirText(item.productUnit) ||
+                  "uds",
+                minStock: Math.max(0, toFiniteKefirNumber(item.minStock, 0)),
+                category: getKefirCategory(item, name),
+                costPerUnit: Math.max(
+                  0,
+                  toFiniteKefirNumber(item.costPerUnit, 0)
+                ),
+              });
+
+              delete sanitizedItem.stock;
+              return sanitizedItem;
+            });
+        };
+
         var kInvStr = localStorage.getItem("kefir_inventory_v3");
         if (kInvStr) {
-          var kInv = JSON.parse(kInvStr);
-          var wasArray = Array.isArray(kInv);
-          kInv = wasArray ? kInv : Object.values(kInv);
-          var changed = !wasArray;
-          kInv.forEach(function (v) {
-            if (
-              v.category === "producto" &&
-              v.name &&
-              (v.name.toLowerCase().includes("botella") ||
-                v.name.toLowerCase().includes("tapa") ||
-                v.name.toLowerCase().includes("envase") ||
-                v.name.toLowerCase().includes("etiqueta"))
-            ) {
-              v.category = "envase";
-              changed = true;
+          try {
+            var sanitizedInventory = sanitizeKefirInventory(kInvStr);
+            var sanitizedInventoryText = JSON.stringify(sanitizedInventory);
+
+            if (sanitizedInventoryText !== kInvStr) {
+              originalSetItem.call(
+                localStorage,
+                "kefir_inventory_v3",
+                sanitizedInventoryText
+              );
             }
-          });
-          if (changed) {
-            localStorage.setItem("kefir_inventory_v3", JSON.stringify(kInv));
+          } catch (storageError) {
+            console.error("Kefir inventory recovery failed:", storageError);
+            try {
+              originalSetItem.call(
+                localStorage,
+                "kefir_inventory_v3_corrupt_backup",
+                kInvStr
+              );
+              originalSetItem.call(localStorage, "kefir_inventory_v3", "[]");
+            } catch (backupError) {}
           }
         }
 
         // Interceptar setItem para sincronizar en la nube automáticamente
-        var originalSetItem = localStorage.setItem;
         localStorage.setItem = function (key, value) {
           originalSetItem.apply(this, arguments);
           if (key && key.startsWith("kefir_")) {
