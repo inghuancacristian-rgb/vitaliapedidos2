@@ -290,6 +290,93 @@ export const productionRouter = router({
     }
   }),
 
+  migrateLocalData: publicProcedure
+    .input(z.object({
+      inventory: z.array(z.object({
+        name: z.string(),
+        quantity: z.number(),
+        category: z.string().optional(),
+        unit: z.string().optional(),
+      })),
+      batches: z.array(z.object({
+        id: z.string(),
+        type: z.string().optional(),
+        status: z.string().optional(),
+        date: z.string().optional(),
+        notes: z.string().optional(),
+      })).optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: "No hay conexión con la base de datos" });
+
+      const productsData = await db.select().from(products);
+
+      // 1. Sincronizar Inventario de Planta
+      for (const item of input.inventory) {
+        if (item.quantity < 0) continue;
+
+        const nameLower = item.name.toLowerCase().trim();
+        const matchedProduct = productsData.find((p: any) => p.name.toLowerCase().trim() === nameLower);
+
+        if (matchedProduct) {
+          const [existingStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, matchedProduct.id));
+          if (existingStock) {
+            await db.update(productionInventory)
+              .set({ quantity: item.quantity, lastUpdated: new Date() })
+              .where(eq(productionInventory.id, existingStock.id));
+          } else {
+            await db.insert(productionInventory).values({
+              productId: matchedProduct.id,
+              quantity: item.quantity,
+            });
+          }
+
+          // Registrar el cambio en kefir_movements para que aparezca en el Kardex
+          const pool = (db as any).session?.client || (global as any)._pool;
+          if (pool) {
+            await pool.execute(
+              'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [
+                matchedProduct.id.toString(),
+                matchedProduct.name,
+                matchedProduct.category,
+                0,
+                item.quantity,
+                item.quantity,
+                'Sincronización inicial desde navegador'
+              ]
+            ).catch(console.error);
+          }
+        }
+      }
+
+      // 2. Sincronizar Lotes
+      if (input.batches && input.batches.length > 0) {
+        // @ts-ignore
+        const userId = ctx.user?.id || 1;
+        for (const batch of input.batches) {
+          const batchNumber = batch.id || `ELAB-MIG-${Math.floor(Math.random() * 1000)}`;
+          const [existingBatch] = await db.select().from(productionBatches).where(eq(productionBatches.batchNumber, batchNumber));
+          if (!existingBatch) {
+            const batchType = batch.type === 'lavado' || batch.type === 'nodule_washing' ? 'nodule_washing' : 'kefir_production';
+            const batchStatus = batch.status === 'completado' || batch.status === 'completed' ? 'completed' : 'in_progress';
+            await db.insert(productionBatches).values({
+              batchNumber,
+              type: batchType,
+              status: batchStatus,
+              startDate: batch.date ? new Date(batch.date) : new Date(),
+              endDate: batchStatus === 'completed' ? new Date() : null,
+              registeredBy: userId,
+              notes: batch.notes || 'Migrado desde localstorage del navegador',
+            });
+          }
+        }
+      }
+
+      return { success: true };
+    }),
+
   // ==========================================
   // LEGACY ENDPOINTS (Backward Compatibility)
   // Para clientes antiguos que tengan el caché del navegador sin actualizar

@@ -25,7 +25,7 @@ export default function KefirControlInventoryPage() {
       subtitle="Subruta independiente dentro de KéfirControl"
     >
       <ProductionInventoryTab
-        inventoryWithStock={inventoryWithStock}
+        inventoryWithStock={productionInventory || []}
         loadingInv={loadingInv}
       />
     </KefirControlLayout>

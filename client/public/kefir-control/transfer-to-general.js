@@ -164,6 +164,17 @@
 
   function findGeneralProductReference(item, generalProducts) {
     var finishedProducts = generalProducts.filter(isFinishedGeneralProduct);
+
+    // Buscar por SKU (code) primero de forma precisa y exacta
+    var itemCode = String(item && (item.code || item.productCode || item.id || "")).trim().toLowerCase();
+    if (itemCode) {
+      var codeMatch = finishedProducts.find(function (product) {
+        var prodCode = String(product.code || "").trim().toLowerCase();
+        return prodCode && prodCode === itemCode;
+      });
+      if (codeMatch) return { product: codeMatch, status: "linked" };
+    }
+
     var explicitId = getExplicitProductId(item);
 
     if (explicitId > 0) {

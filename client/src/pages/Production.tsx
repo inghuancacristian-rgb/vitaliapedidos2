@@ -5,8 +5,10 @@ import {
   Plus,
   CheckCircle,
   AlertCircle,
+  CloudUpload,
+  Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   PRODUCT_LIST_QUERY_OPTIONS,
@@ -50,6 +52,10 @@ export function Production() {
   const [isCompleteBatchOpen, setIsCompleteBatchOpen] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
 
+  // Local Data Sync State
+  const [hasLocalData, setHasLocalData] = useState(false);
+  const [localData, setLocalData] = useState<{ inventory: any[]; batches: any[] } | null>(null);
+
   // Transfer State
   const [transferItems, setTransferItems] = useState<Record<number, string>>(
     {}
@@ -67,6 +73,84 @@ export function Production() {
   const [inputs, setInputs] = useState<QuantityDraft[]>([]);
 
   const utils = trpc.useContext();
+
+  // Efecto para detectar datos locales listos para sincronización
+  useEffect(() => {
+    try {
+      const kInvStr = localStorage.getItem("kefir_inventory_v3");
+      const kBatchesStr = localStorage.getItem("kefir_batches_v3");
+      const migrated = localStorage.getItem("kefir_data_migrated_v3");
+
+      if (migrated === "true") return;
+
+      let parsedInv = [];
+      let parsedBatches = [];
+
+      if (kInvStr) {
+        try { parsedInv = JSON.parse(kInvStr); } catch {}
+      }
+      if (kBatchesStr) {
+        try { parsedBatches = JSON.parse(kBatchesStr); } catch {}
+      }
+
+      // Solo mostrar el banner si hay stock o lotes locales
+      const hasStock = Array.isArray(parsedInv) && parsedInv.some((item: any) => Number(item.quantity) > 0);
+      const hasBatches = Array.isArray(parsedBatches) && parsedBatches.length > 0;
+
+      if (hasStock || hasBatches) {
+        setLocalData({
+          inventory: Array.isArray(parsedInv) ? parsedInv : [],
+          batches: Array.isArray(parsedBatches) ? parsedBatches : [],
+        });
+        setHasLocalData(true);
+      }
+    } catch (e) {
+      console.warn("Error al leer localstorage de produccion", e);
+    }
+  }, []);
+
+  // Mutación de migración
+  const migrateLocalDataMutation = trpc.production.migrateLocalData.useMutation({
+    onSuccess: () => {
+      toast.success("¡Datos locales sincronizados con la base de datos central!");
+      localStorage.setItem("kefir_data_migrated_v3", "true");
+      setHasLocalData(false);
+      utils.production.getProductionInventory.invalidate();
+      utils.production.getBatches.invalidate();
+      utils.production.getKefirMovements.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Error al sincronizar datos locales: " + err.message);
+    }
+  });
+
+  const handleMigrateLocalData = () => {
+    if (!localData) return;
+
+    const simplifiedInv = localData.inventory
+      .map((item: any) => ({
+        name: String(item.name || item.productName || ""),
+        quantity: Number(item.quantity || 0),
+        category: String(item.category || "finished_product"),
+        unit: String(item.unit || "unidad"),
+      }))
+      .filter(item => item.name && item.quantity > 0);
+
+    const simplifiedBatches = localData.batches
+      .map((batch: any) => ({
+        id: String(batch.id || ""),
+        type: String(batch.type || "kefir_production"),
+        status: String(batch.status || "completed"),
+        date: String(batch.date || ""),
+        notes: String(batch.notes || ""),
+      }))
+      .filter(b => b.id);
+
+    migrateLocalDataMutation.mutate({
+      inventory: simplifiedInv,
+      batches: simplifiedBatches
+    });
+  };
 
   // ── Queries ────────────────────────────────────────────────
   const {
@@ -375,6 +459,50 @@ export function Production() {
 
       {/* Main Content */}
       <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+        {/* Banner de Sincronización de Datos Locales */}
+        {hasLocalData && localData && (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 backdrop-blur-md p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                  <CloudUpload className="h-6 w-6 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900">
+                      ¡Datos locales de producción detectados!
+                    </h3>
+                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Navegador
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600 max-w-2xl leading-relaxed">
+                    Hemos encontrado <strong>{localData.inventory.filter((i: any) => Number(i.quantity) > 0).length} productos</strong> y <strong>{localData.batches.length} lotes de producción</strong> guardados localmente en este navegador. Sincronízalos en la base de datos central de Railway para poder verlos desde cualquier computadora o dispositivo en tiempo real.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleMigrateLocalData}
+                disabled={migrateLocalDataMutation.isPending}
+                className="shrink-0 gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 rounded-xl px-5 font-bold h-11"
+              >
+                {migrateLocalDataMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sincronizando...
+                  </>
+                ) : (
+                  <>
+                    <CloudUpload className="h-4 w-4" />
+                    Sincronizar a la Base de Datos
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Tabs defaultValue="batches">
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="batches">Lotes de Producción</TabsTrigger>
@@ -468,7 +596,7 @@ export function Production() {
           {/* ─── TAB 2: Inventario en Planta ─── */}
           <TabsContent value="inventory">
             <ProductionInventoryTab
-              inventoryWithStock={inventoryWithStock}
+              inventoryWithStock={productionInventory || []}
               loadingInv={loadingInv}
             />
           </TabsContent>
