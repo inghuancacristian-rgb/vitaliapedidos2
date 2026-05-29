@@ -30,8 +30,6 @@ import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
 import { Production } from "@/pages/Production";
-import KefirControlInventoryPage from "@/pages/kefir-control/inventario-produccion/InventoryPage";
-import KefirControlKardexPage from "@/pages/kefir-control/auditoria/KardexPage";
 import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
 import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
 import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
@@ -145,21 +143,6 @@ function Router() {
             <ProtectedRoute component={Inventory} adminOnly={true} />
           </Route>
           <Route path="/production">
-            <ProtectedRoute component={Production} adminOnly={true} />
-          </Route>
-          <Route path="/kefir-control">
-            <ProtectedRoute component={Production} adminOnly={true} />
-          </Route>
-          <Route path="/kefir-control/index.html">
-            <ProtectedRoute component={Production} adminOnly={true} />
-          </Route>
-          <Route path="/kefir-control/inventory">
-            <ProtectedRoute component={Production} adminOnly={true} />
-          </Route>
-          <Route path="/kefir-control/kardex">
-            <ProtectedRoute component={Production} adminOnly={true} />
-          </Route>
-          <Route path="/kefir-control/:section">
             <ProtectedRoute component={Production} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">

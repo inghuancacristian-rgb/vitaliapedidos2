@@ -55,6 +55,23 @@ export default function AppHeader() {
                 const isActive = location === item.href;
                 const Icon = item.icon;
 
+                if (item.href.startsWith("/kefir-control")) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"
+                          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                      }`}
+                    >
+                      {Icon ? <Icon className="h-4 w-4" /> : null}
+                      {item.label}
+                    </a>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}

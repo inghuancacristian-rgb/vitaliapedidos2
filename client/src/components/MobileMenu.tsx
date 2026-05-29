@@ -107,6 +107,27 @@ export default function MobileMenu() {
             {menuItems.map((item) => {
               const Icon = item.icon;
 
+              if (item.href.startsWith("/kefir-control")) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className="block"
+                  >
+                    <Button
+                      variant={isActive(item.href) ? "default" : "ghost"}
+                      className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
+                        isActive(item.href) ? "" : "text-foreground hover:bg-accent/70"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </a>
+                );
+              }
+
               return (
                 <Link
                   key={item.href}

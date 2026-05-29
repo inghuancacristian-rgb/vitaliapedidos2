@@ -542,6 +542,25 @@ function OperationalRow({
 
 function ModuleCard({ module }: { module: any }) {
   const Icon = module.icon;
+  
+  if (module.href.startsWith("/kefir-control")) {
+    return (
+      <a href={module.href} className="block h-full">
+        <Card className="touch-card h-full cursor-pointer overflow-hidden border-white/70">
+          <CardContent className="flex h-full items-start gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/90">
+              <Icon className="h-5 w-5 text-slate-900" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-slate-900">{module.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{module.description}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </a>
+    );
+  }
+
   return (
     <Link href={module.href}>
       <Card className="touch-card h-full cursor-pointer overflow-hidden border-white/70">
