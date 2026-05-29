@@ -194,16 +194,34 @@ async function startServer() {
       <script>
         try {
           window.__KEFIR_INITIAL_STATE__ = ${JSON.stringify(storageData)};
+          
+          // 1. Sincronizar DESDE la nube HACIA el navegador local
           for (const key in window.__KEFIR_INITIAL_STATE__) {
             if (window.__KEFIR_INITIAL_STATE__.hasOwnProperty(key)) {
-              // Sólo sobreescribir si la clave es de kefir
               if (key.startsWith('kefir_')) {
                 localStorage.setItem(key, window.__KEFIR_INITIAL_STATE__[key]);
               }
             }
           }
+          
+          // 2. Sincronizar DESDE el navegador HACIA la nube (para recuperar datos huérfanos del PC original)
+          for (let i = 0; i < localStorage.length; i++) {
+            const localKey = localStorage.key(i);
+            if (localKey && localKey.startsWith('kefir_')) {
+              // Si la nube no tiene esta llave, o es diferente, la subimos
+              if (!window.__KEFIR_INITIAL_STATE__[localKey] || window.__KEFIR_INITIAL_STATE__[localKey] !== localStorage.getItem(localKey)) {
+                try {
+                  fetch("/api/trpc/production.setKefirStorage", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 0: { key: localKey, value: localStorage.getItem(localKey) } }),
+                  });
+                } catch(e) {}
+              }
+            }
+          }
         } catch(e) {
-          console.error("Failed to inject kefir storage state", e);
+          console.error("Failed to inject and sync kefir storage state", e);
         }
       </script>
       `;
