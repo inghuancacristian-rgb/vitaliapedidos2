@@ -160,12 +160,60 @@ async function startServer() {
 
     res.sendFile(rootAppIndex);
   };
-  const sendKefirControlIndex = (
+  const sendKefirControlIndex = async (
     _req: express.Request,
     res: express.Response
   ) => {
     res.setHeader("Cache-Control", "no-cache");
-    res.sendFile(kefirControlIndex);
+    try {
+      let html = await fs.promises.readFile(kefirControlIndex, 'utf-8');
+      
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      let storageData: Record<string, string> = {};
+      
+      if (db) {
+        const pool = (db as any).session?.client || (global as any)._pool;
+        if (pool) {
+          try {
+            const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
+            if (Array.isArray(rows)) {
+              for (const row of rows) {
+                if (row.storage_key && row.storage_value) {
+                  storageData[row.storage_key] = row.storage_value;
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Error reading kefir_storage:", e);
+          }
+        }
+      }
+      
+      const injection = `
+      <script>
+        try {
+          window.__KEFIR_INITIAL_STATE__ = ${JSON.stringify(storageData)};
+          for (const key in window.__KEFIR_INITIAL_STATE__) {
+            if (window.__KEFIR_INITIAL_STATE__.hasOwnProperty(key)) {
+              // Sólo sobreescribir si la clave es de kefir
+              if (key.startsWith('kefir_')) {
+                localStorage.setItem(key, window.__KEFIR_INITIAL_STATE__[key]);
+              }
+            }
+          }
+        } catch(e) {
+          console.error("Failed to inject kefir storage state", e);
+        }
+      </script>
+      `;
+      
+      html = html.replace('<head>', '<head>\\n' + injection);
+      res.send(html);
+    } catch (err) {
+      console.error("Error serving kefir control index:", err);
+      res.sendFile(kefirControlIndex);
+    }
   };
   app.use(
     "/kefir-control",

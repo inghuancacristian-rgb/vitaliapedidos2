@@ -473,7 +473,19 @@ export const productionRouter = router({
   // Para clientes antiguos que tengan el caché del navegador sin actualizar
   // ==========================================
   getKefirStorage: publicProcedure.query(async () => {
-    return [];
+    const db = await getDb();
+    if (!db) return [];
+    
+    const pool = (db as any).session?.client || (global as any)._pool;
+    if (!pool) return [];
+    
+    try {
+      const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
+      return rows as any[];
+    } catch (e) {
+      console.error("Error getting kefir storage:", e);
+      return [];
+    }
   }),
 
   setKefirStorage: publicProcedure
@@ -482,7 +494,24 @@ export const productionRouter = router({
       value: z.string()
     }))
     .mutation(async ({ input }) => {
-      return { success: true };
+      const db = await getDb();
+      if (!db) return { success: false, error: "No DB" };
+      
+      const pool = (db as any).session?.client || (global as any)._pool;
+      if (!pool) return { success: false, error: "No connection pool" };
+      
+      try {
+        await pool.execute(
+          `INSERT INTO kefir_storage (storage_key, storage_value) 
+           VALUES (?, ?) 
+           ON DUPLICATE KEY UPDATE storage_value = VALUES(storage_value), updatedAt = CURRENT_TIMESTAMP`,
+          [input.key, input.value]
+        );
+        return { success: true };
+      } catch (e) {
+        console.error("Error setting kefir storage:", e);
+        return { success: false, error: String(e) };
+      }
     }),
 
   logKefirData: publicProcedure
