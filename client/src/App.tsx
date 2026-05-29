@@ -32,6 +32,7 @@ import BusinessAnalysis from "@/pages/BusinessAnalysis";
 import { Production } from "@/pages/Production";
 import KefirControlInventoryPage from "@/pages/kefir-control/inventario-produccion/InventoryPage";
 import KefirControlKardexPage from "@/pages/kefir-control/auditoria/KardexPage";
+import KefirControlProductosPage from "@/pages/kefir-control/productos/ProductosPage";
 import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
 import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
 import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
@@ -153,10 +154,19 @@ function Router() {
           <Route path="/kefir-control/index.html">
             <ProtectedRoute component={Production} adminOnly={true} />
           </Route>
+          <Route path="/kefir-control/inventario-produccion">
+            <ProtectedRoute component={KefirControlInventoryPage} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/productos">
+            <ProtectedRoute component={KefirControlProductosPage} adminOnly={true} />
+          </Route>
           <Route path="/kefir-control/inventory">
-            <ProtectedRoute component={Production} adminOnly={true} />
+            <ProtectedRoute component={KefirControlInventoryPage} adminOnly={true} />
           </Route>
           <Route path="/kefir-control/kardex">
+            <ProtectedRoute component={KefirControlKardexPage} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/lotes">
             <ProtectedRoute component={Production} adminOnly={true} />
           </Route>
           <Route path="/kefir-control/:section">

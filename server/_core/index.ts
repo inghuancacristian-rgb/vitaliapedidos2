@@ -198,6 +198,19 @@ async function startServer() {
     }
     next();
   });
+  // These kefir-control sub-routes MUST serve the React SPA (not the legacy localStorage app)
+  // so that data always loads from the MySQL database on any browser/device.
+  const kefirReactRoutes = [
+    "/kefir-control/inventario-produccion",
+    "/kefir-control/productos",
+    "/kefir-control/inventory",
+    "/kefir-control/kardex",
+    "/kefir-control/lotes",
+  ];
+  for (const route of kefirReactRoutes) {
+    app.get(route, sendRootAppIndex);
+  }
+
   app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
     const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
     if (
