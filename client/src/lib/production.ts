@@ -22,9 +22,17 @@ export type ProductionInventoryItem = {
   id: number | string;
   productId?: number;
   productName: string;
+  productCode?: string | null;
   category?: string | null;
   quantity: number | string;
   unit?: string | null;
+  salePrice?: number | null;
+  presentationQuantity?: number | null;
+  presentationUnit?: string | null;
+  presentationVolumeMl?: number | null;
+  presentationWeightGr?: number | null;
+  productionRole?: string | null;
+  lastUpdated?: string | Date | null;
 };
 
 export type QuantityDraft = {
