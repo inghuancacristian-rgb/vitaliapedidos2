@@ -14,7 +14,7 @@ export default function AppHeader() {
         { href: "/sales", label: "Ventas", icon: ShoppingBag },
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/inventory", label: "Inventario General" },
-        { href: "/kefir-control/", label: "Producción" },
+        { href: "/production", label: "Producción" },
         { href: "/customers", label: "Clientes" },
         { href: "/finance", label: "Finanzas" },
         { href: "/expenses", label: "Gastos" },
@@ -54,23 +54,6 @@ export default function AppHeader() {
               {navItems.map((item) => {
                 const isActive = location === item.href;
                 const Icon = item.icon;
-
-                if (item.href.startsWith("/kefir-control")) {
-                  return (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"
-                          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                      }`}
-                    >
-                      {Icon ? <Icon className="h-4 w-4" /> : null}
-                      {item.label}
-                    </a>
-                  );
-                }
 
                 return (
                   <Link

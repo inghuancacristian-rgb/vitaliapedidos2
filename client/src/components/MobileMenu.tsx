@@ -37,7 +37,7 @@ export default function MobileMenu() {
     { href: "/orders", label: "Pedidos", icon: ShoppingCart },
     { href: "/sales", label: "Ventas", icon: ShoppingBag },
     { href: "/inventory", label: "Inventario General", icon: Package },
-    { href: "/kefir-control/", label: "Producción", icon: Package },
+    { href: "/production", label: "Producción", icon: Package },
     { href: "/products", label: "Catálogo", icon: Tag },
     { href: "/expenses", label: "Gastos", icon: Receipt },
     { href: "/customers", label: "Clientes", icon: Users },
@@ -106,27 +106,6 @@ export default function MobileMenu() {
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-5">
             {menuItems.map((item) => {
               const Icon = item.icon;
-
-              if (item.href.startsWith("/kefir-control")) {
-                return (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className="block"
-                  >
-                    <Button
-                      variant={isActive(item.href) ? "default" : "ghost"}
-                      className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
-                        isActive(item.href) ? "" : "text-foreground hover:bg-accent/70"
-                      }`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Button>
-                  </a>
-                );
-              }
 
               return (
                 <Link

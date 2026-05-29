@@ -37,7 +37,7 @@ import { useEffect } from "react";
 
 function OpenKefirControl() {
   useEffect(() => {
-    window.location.replace("/kefir-control/index.html");
+    window.location.replace("/production");
   }, []);
 
   return null;
