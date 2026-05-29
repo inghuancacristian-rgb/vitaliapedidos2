@@ -29,19 +29,10 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
-import { Production } from "@/pages/Production";
 import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
 import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
 import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
 import { useEffect } from "react";
-
-function OpenKefirControl() {
-  useEffect(() => {
-    window.location.replace("/production");
-  }, []);
-
-  return null;
-}
 
 function ProtectedRoute({
   component: Component,
@@ -141,9 +132,6 @@ function Router() {
           </Route>
           <Route path="/inventory">
             <ProtectedRoute component={Inventory} adminOnly={true} />
-          </Route>
-          <Route path="/production">
-            <ProtectedRoute component={Production} adminOnly={true} />
           </Route>
           <Route path="/delivery-persons">
             <ProtectedRoute component={DeliveryPersons} adminOnly={true} />
