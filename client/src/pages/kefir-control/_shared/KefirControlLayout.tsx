@@ -40,16 +40,10 @@ const NAV_ITEMS: NavItem[] = [
     activeMatch: "/kefir-control/",
   },
   {
-    label: "Productos",
-    href: "/kefir-control/productos",
-    icon: Package,
-    activeMatch: "/kefir-control/productos",
-  },
-  {
     label: "Inventario de Producción",
-    href: "/kefir-control/inventario-produccion",
+    href: "/kefir-control/inventory",
     icon: Boxes,
-    activeMatch: "/kefir-control/inventario-produccion",
+    activeMatch: "/kefir-control/inventory",
   },
   {
     label: "Kárdex de Planta",
