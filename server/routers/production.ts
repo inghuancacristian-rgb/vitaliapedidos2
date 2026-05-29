@@ -304,6 +304,15 @@ export const productionRouter = router({
         status: z.string().optional(),
         date: z.string().optional(),
         notes: z.string().optional(),
+      })).optional(),
+      products: z.array(z.object({
+        id: z.string().optional(),
+        name: z.string(),
+        sellPrice: z.number().optional(),
+        unit: z.string().optional(),
+        volume: z.number().optional(),
+        flavor: z.string().optional(),
+        type: z.string().optional(),
       })).optional()
     }))
     .mutation(async ({ input, ctx }) => {
@@ -311,6 +320,88 @@ export const productionRouter = router({
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: "No hay conexión con la base de datos" });
 
       const productsData = await db.select().from(products);
+
+      // 0. Sincronizar Catálogo de Productos
+      if (input.products && input.products.length > 0) {
+        for (const localProduct of input.products) {
+          const nameLower = localProduct.name.toLowerCase().trim();
+          let matched = productsData.find((p: any) => p.name.toLowerCase().trim() === nameLower);
+
+          if (!matched) {
+            // No existe el producto en el catálogo SQL, lo creamos de forma automática
+            const code = localProduct.id && localProduct.id.startsWith("PROD-") 
+              ? localProduct.id 
+              : `PROD-${String(productsData.length + 1).padStart(3, '0')}`;
+              
+            const salePrice = localProduct.sellPrice || 0;
+            const volumeMl = localProduct.volume || (localProduct.name.toLowerCase().includes("1l") ? 1000 : 500);
+            const presUnit = localProduct.unit || "ml";
+
+            try {
+              const pool = (db as any).session?.client || (global as any)._pool;
+              if (pool) {
+                const sqlInsert = `
+                  INSERT INTO products (code, name, category, price, salePrice, wholesalePrice, discountPrice,
+                    wholesaleDiscountType, wholesaleDiscountValue, unit, presentationQuantity, presentationUnit,
+                    presentationVolumeMl, presentationWeightGr, productionRole, storageLocation, supplierName,
+                    productionNotes, status, imageUrl)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+                const params = [
+                  code,
+                  localProduct.name,
+                  "finished_product",
+                  0, // price
+                  Math.round(salePrice * 100), // salePrice en centavos
+                  Math.round(salePrice * 100), // wholesalePrice
+                  Math.round(salePrice * 100), // discountPrice
+                  "percentage",
+                  0,
+                  "unidad",
+                  1,
+                  presUnit,
+                  presUnit === "ml" ? volumeMl : 0,
+                  presUnit === "g" ? volumeMl : 0,
+                  "finished_good",
+                  "Inventario General",
+                  "Producción",
+                  "Creado automáticamente en la sincronización de producción",
+                  "active",
+                  null
+                ];
+
+                console.log("[DB Migration] Auto-creating product in SQL:", localProduct.name, "SKU:", code);
+                const [resInsert] = await pool.execute(sqlInsert, params) as any;
+                const newProductId = resInsert?.insertId;
+
+                if (newProductId) {
+                  // Crear automáticamente el registro en la tabla de inventario general con stock 0
+                  await pool.execute(
+                    `INSERT INTO inventory (productId, quantity, minStock) VALUES (?, 0, 5)`,
+                    [newProductId]
+                  );
+                  
+                  // Agregar el producto recién creado a productsData en memoria
+                  productsData.push({
+                    id: newProductId,
+                    code,
+                    name: localProduct.name,
+                    category: "finished_product",
+                    unit: "unidad",
+                    presentationQuantity: 1,
+                    presentationUnit: presUnit,
+                    presentationVolumeMl: presUnit === "ml" ? volumeMl : 0,
+                    presentationWeightGr: presUnit === "g" ? volumeMl : 0,
+                    productionRole: "finished_good"
+                  });
+                }
+              }
+            } catch (err) {
+              console.error("[DB Migration] Error auto-creating product:", localProduct.name, err);
+            }
+          }
+        }
+      }
 
       // 1. Sincronizar Inventario de Planta
       for (const item of input.inventory) {

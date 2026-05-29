@@ -54,7 +54,7 @@ export function Production() {
 
   // Local Data Sync State
   const [hasLocalData, setHasLocalData] = useState(false);
-  const [localData, setLocalData] = useState<{ inventory: any[]; batches: any[] } | null>(null);
+  const [localData, setLocalData] = useState<{ inventory: any[]; batches: any[]; products: any[] } | null>(null);
 
   // Transfer State
   const [transferItems, setTransferItems] = useState<Record<number, string>>(
@@ -79,12 +79,14 @@ export function Production() {
     try {
       const kInvStr = localStorage.getItem("kefir_inventory_v3");
       const kBatchesStr = localStorage.getItem("kefir_batches_v3");
+      const kProductsStr = localStorage.getItem("kefir_products_v3");
       const migrated = localStorage.getItem("kefir_data_migrated_v3");
 
       if (migrated === "true") return;
 
       let parsedInv = [];
       let parsedBatches = [];
+      let parsedProducts = [];
 
       if (kInvStr) {
         try { parsedInv = JSON.parse(kInvStr); } catch {}
@@ -92,15 +94,20 @@ export function Production() {
       if (kBatchesStr) {
         try { parsedBatches = JSON.parse(kBatchesStr); } catch {}
       }
+      if (kProductsStr) {
+        try { parsedProducts = JSON.parse(kProductsStr); } catch {}
+      }
 
-      // Solo mostrar el banner si hay stock o lotes locales
+      // Solo mostrar el banner si hay stock, lotes locales o catálogo de productos
       const hasStock = Array.isArray(parsedInv) && parsedInv.some((item: any) => Number(item.quantity) > 0);
       const hasBatches = Array.isArray(parsedBatches) && parsedBatches.length > 0;
+      const hasProducts = Array.isArray(parsedProducts) && parsedProducts.length > 0;
 
-      if (hasStock || hasBatches) {
+      if (hasStock || hasBatches || hasProducts) {
         setLocalData({
           inventory: Array.isArray(parsedInv) ? parsedInv : [],
           batches: Array.isArray(parsedBatches) ? parsedBatches : [],
+          products: Array.isArray(parsedProducts) ? parsedProducts : [],
         });
         setHasLocalData(true);
       }
@@ -118,6 +125,8 @@ export function Production() {
       utils.production.getProductionInventory.invalidate();
       utils.production.getBatches.invalidate();
       utils.production.getKefirMovements.invalidate();
+      utils.inventory.listInventory.invalidate();
+      utils.inventory.listProducts.invalidate();
     },
     onError: (err) => {
       toast.error("Error al sincronizar datos locales: " + err.message);
@@ -146,9 +155,22 @@ export function Production() {
       }))
       .filter(b => b.id);
 
+    const simplifiedProducts = localData.products
+      .map((p: any) => ({
+        id: String(p.id || ""),
+        name: String(p.name || ""),
+        sellPrice: Number(p.sellPrice || 0),
+        unit: String(p.unit || "ml"),
+        volume: Number(p.volume || 0),
+        flavor: String(p.flavor || ""),
+        type: String(p.type || ""),
+      }))
+      .filter(p => p.name);
+
     migrateLocalDataMutation.mutate({
       inventory: simplifiedInv,
-      batches: simplifiedBatches
+      batches: simplifiedBatches,
+      products: simplifiedProducts
     });
   };
 
