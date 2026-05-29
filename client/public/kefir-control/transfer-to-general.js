@@ -85,9 +85,10 @@
 
   function isFinishedProduct(item) {
     var category = normalize(item && item.category);
+    var rawCategory = String((item && item.category) || "").toLowerCase().trim();
     var name = normalize(item && item.name);
 
-    if (category === "producto" || category === "finished_product") {
+    if (rawCategory === "finished_product" || category === "finished product" || category === "producto" || category === "producto terminado") {
       return true;
     }
 
@@ -110,7 +111,9 @@
   }
 
   function isFinishedGeneralProduct(product) {
-    return product && normalize(product.category) === "finished_product";
+    if (!product) return false;
+    var cat = String(product.category || "").toLowerCase().trim();
+    return cat === "finished_product" || cat === "producto" || normalize(cat) === "finished product" || normalize(cat) === "producto terminado";
   }
 
   function getExplicitProductId(item) {
