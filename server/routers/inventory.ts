@@ -55,8 +55,19 @@ function productReferenceTokens(value?: string | null) {
 function resolveFinishedProductReference(
   productsData: any[],
   productId: number,
-  productName?: string
+  productName?: string,
+  productCode?: string
 ) {
+  if (productCode) {
+    const searchCode = productCode.trim().toLowerCase();
+    const product = productsData.find(
+      product =>
+        product.category === "finished_product" &&
+        String(product.code || "").trim().toLowerCase() === searchCode
+    );
+    if (product) return product;
+  }
+
   if (productId > 0) {
     const product = productsData.find(product => product.id === productId);
     if (product && product.category === "finished_product") return product;
@@ -99,6 +110,58 @@ function resolveFinishedProductReference(
   }
 
   return undefined;
+}
+
+function getKefirProductPresentation(product: any) {
+  const unit = normalizeProductReference(product?.unit);
+  const volume = Number(product?.volume || 0);
+  const name = String(product?.name || "");
+  const normalizedName = normalizeProductReference(name);
+  const volumeMatch = normalizedName.match(/(\d+(?:[.,]\d+)?)(ml|l)\b/);
+  const weightMatch = normalizedName.match(/(\d+(?:[.,]\d+)?)(g)\b/);
+
+  if (unit === "l") return { volumeMl: volume * 1000, weightGr: 0, presentationUnit: "ml" };
+  if (unit === "ml") return { volumeMl: volume, weightGr: 0, presentationUnit: "ml" };
+  if (unit === "g" || unit === "gr") return { volumeMl: 0, weightGr: volume, presentationUnit: "g" };
+
+  if (volumeMatch) {
+    const value = Number(volumeMatch[1].replace(",", "."));
+    return {
+      volumeMl: volumeMatch[2] === "l" ? value * 1000 : value,
+      weightGr: 0,
+      presentationUnit: "ml",
+    };
+  }
+
+  if (weightMatch) {
+    return {
+      volumeMl: 0,
+      weightGr: Number(weightMatch[1].replace(",", ".")),
+      presentationUnit: "g",
+    };
+  }
+
+  return { volumeMl: 0, weightGr: 0, presentationUnit: "unidad" };
+}
+
+function buildUniqueProductCode(productsData: any[], preferredCode: string, productName: string) {
+  const cleanPreferred = String(preferredCode || "").trim();
+  const base =
+    cleanPreferred ||
+    `KF-${productReferenceKey(productName).slice(0, 18).toUpperCase() || "PRODUCTO"}`;
+  let code = base;
+  let suffix = 1;
+
+  while (
+    productsData.some(
+      product => String(product.code || "").trim().toLowerCase() === code.toLowerCase()
+    )
+  ) {
+    suffix += 1;
+    code = `${base}-${suffix}`;
+  }
+
+  return code;
 }
 
 function classifyHistoryEvent(movement: any) {
@@ -296,6 +359,121 @@ export const inventoryRouter = router({
       }
 
       return { success: true, productId };
+    }),
+
+  syncKefirProducts: protectedProcedure
+    .input(
+      z.object({
+        products: z.array(
+          z.object({
+            id: z.union([z.string(), z.number()]).optional(),
+            code: z.string().optional(),
+            generalProductId: z.number().optional(),
+            inventoryProductId: z.number().optional(),
+            productId: z.number().optional(),
+            name: z.string(),
+            type: z.string().optional(),
+            flavor: z.string().optional(),
+            volume: z.number().optional(),
+            unit: z.string().optional(),
+            sellPrice: z.number().optional(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user?.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+
+      const productsData = await getAllProducts();
+      const mappings: any[] = [];
+
+      for (const kefirProduct of input.products) {
+        const productName = kefirProduct.name.trim();
+        if (!productName) continue;
+
+        const localId = String(kefirProduct.id || kefirProduct.code || productName);
+        const linkedId =
+          kefirProduct.generalProductId ||
+          kefirProduct.inventoryProductId ||
+          kefirProduct.productId ||
+          0;
+        const preferredCode = String(kefirProduct.code || kefirProduct.id || "").trim();
+
+        let product = resolveFinishedProductReference(
+          productsData,
+          Number(linkedId || 0),
+          productName,
+          preferredCode
+        );
+        let created = false;
+
+        if (!product) {
+          const presentation = getKefirProductPresentation(kefirProduct);
+          const salePrice = Math.max(0, Number(kefirProduct.sellPrice || 0));
+          const code = buildUniqueProductCode(productsData, preferredCode, productName);
+          const result = await createProduct({
+            code,
+            name: productName,
+            category: "finished_product",
+            price: 0,
+            salePrice: Math.round(salePrice * 100),
+            wholesalePrice: Math.round(salePrice * 100),
+            discountPrice: Math.round(salePrice * 100),
+            wholesaleDiscountType: "percentage",
+            wholesaleDiscountValue: 0,
+            imageUrl: null,
+            status: "active",
+            unit: "unidad",
+            presentationQuantity: 1,
+            presentationUnit: presentation.presentationUnit,
+            presentationVolumeMl: presentation.volumeMl,
+            presentationWeightGr: presentation.weightGr,
+            productionRole: "finished_good",
+            storageLocation: "Inventario General",
+            supplierName: "Produccion",
+            productionNotes: "Creado automaticamente desde KefirControl",
+          } as any);
+
+          const productId = Array.isArray(result)
+            ? Number(result[0]?.insertId || 0)
+            : Number((result as any)?.insertId || 0);
+
+          if (productId > 0) {
+            product = {
+              id: productId,
+              code,
+              name: productName,
+              category: "finished_product",
+              unit: "unidad",
+            };
+            productsData.push(product);
+            created = true;
+
+            await createInventoryMovement({
+              productId,
+              userId: ctx.user.id,
+              type: "adjustment",
+              quantity: 0,
+              reason: "Producto creado",
+              notes: `Creado automaticamente desde KefirControl para sincronizacion de produccion.`,
+            });
+          }
+        }
+
+        if (product) {
+          mappings.push({
+            localId,
+            productId: product.id,
+            code: product.code,
+            name: product.name,
+            created,
+          });
+        }
+      }
+
+      return { success: true, mappings };
     }),
 
   // Actualizar un producto

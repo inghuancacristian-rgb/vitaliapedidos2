@@ -3,6 +3,7 @@
   var TRANSFER_ENDPOINT = "/api/trpc/inventory.transferToGeneral?batch=1";
   var PRODUCTS_ENDPOINT = "/api/trpc/inventory.listProducts?batch=1";
   var CREATE_PRODUCT_ENDPOINT = "/api/trpc/inventory.createProduct?batch=1";
+  var SYNC_PRODUCTS_ENDPOINT = "/api/trpc/inventory.syncKefirProducts?batch=1";
   var pendingReload = false;
   var currentReceipt = null;
   var generalProductsPromise = null;
@@ -371,6 +372,32 @@
     return readTrpcPayload(payload);
   }
 
+  async function syncKefirProductsOnServer(products) {
+    var response = await fetch(SYNC_PRODUCTS_ENDPOINT, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 0: { json: { products: products } } }),
+    });
+    var payload = await response.json().catch(function () {
+      return null;
+    });
+
+    if (!response.ok) {
+      var message =
+        (payload &&
+          payload[0] &&
+          payload[0].error &&
+          payload[0].error.json &&
+          payload[0].error.json.message) ||
+        (payload && payload[0] && payload[0].error && payload[0].error.message) ||
+        "No se pudo sincronizar productos con inventario general.";
+      throw new Error(message);
+    }
+
+    return readTrpcPayload(payload);
+  }
+
   function buildKefirProduct(product) {
     var presentation = parsePresentation(product);
     return {
@@ -421,50 +448,48 @@
 
     try {
       var localProducts = readKefirProducts();
+      var serverSync = await syncKefirProductsOnServer(localProducts);
+      var mappings = Array.isArray(serverSync && serverSync.mappings)
+        ? serverSync.mappings
+        : [];
+      var mappingsByLocalId = new Map(
+        mappings.map(function (mapping) {
+          return [String(mapping.localId), mapping];
+        })
+      );
+
+      var linkedLocalProducts = localProducts.map(function (product) {
+        var localKeys = [
+          product && product.id,
+          product && product.code,
+          product && product.name,
+        ].map(function (value) {
+          return String(value || "");
+        });
+        var mapping = localKeys
+          .map(function (key) {
+            return mappingsByLocalId.get(key);
+          })
+          .find(Boolean);
+
+        return mapping
+          ? Object.assign({}, product, { generalProductId: Number(mapping.productId) })
+          : product;
+      });
+
+      var createdProduct = mappings.some(function (mapping) {
+        return !!mapping.created;
+      });
+
+      if (createdProduct || mappings.length) {
+        generalProductsPromise = null;
+        generalProducts = await fetchGeneralProducts();
+      }
+
       var mergedProducts = mergeGeneralProductsIntoLocal(
-        localProducts,
+        linkedLocalProducts,
         generalProducts
       );
-      var createdProduct = false;
-
-      for (var index = 0; index < mergedProducts.length; index += 1) {
-        var product = mergedProducts[index];
-        var reference = findGeneralProductReference(product, generalProducts);
-        if (reference.product) {
-          mergedProducts[index] = Object.assign({}, product, {
-            generalProductId: Number(reference.product.id),
-          });
-          continue;
-        }
-
-        if (reference.status === "ambiguous" || !product.name) continue;
-
-        try {
-          var created = await createGeneralProductFromKefirProduct(product);
-          var productId = Number(created && created.productId);
-          if (productId > 0) {
-            mergedProducts[index] = Object.assign({}, product, {
-              generalProductId: productId,
-            });
-            createdProduct = true;
-          }
-        } catch (error) {
-          console.warn(
-            "No se pudo crear producto en inventario general",
-            product,
-            error
-          );
-        }
-      }
-
-      if (createdProduct) {
-        generalProductsPromise = null;
-        var refreshedProducts = await fetchGeneralProducts();
-        mergedProducts = mergeGeneralProductsIntoLocal(
-          mergedProducts,
-          refreshedProducts
-        );
-      }
 
       var nextText = JSON.stringify(mergedProducts);
       var currentText = localStorage.getItem("kefir_products_v3") || "[]";
