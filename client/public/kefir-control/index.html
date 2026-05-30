@@ -1,7 +1,9 @@
-<html lang="es"><head>
-    <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="/kefir-control/favicon.svg">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/kefir-control/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KéfirControl - Panel de Control Industrial</title>
     <script>
       try {
@@ -206,13 +208,255 @@
         console.error("Auto-fix before React load failed:", e);
       }
     </script>
-    <link rel="modulepreload" crossorigin="" href="/kefir-control/assets/index-8XlJ la la la l l l l la l l la l l lL la la lL de mayo de 2024" a la última versión de la herramienta de control de producción (KéfirControl) que tienes en tu servidor.
+    <link
+      rel="modulepreload"
+      crossorigin
+      href="/kefir-control/assets/index-8XlJpsEw.js"
+    />
+    <script
+      type="module"
+      crossorigin
+      src="/kefir-control/assets/index-8XlJpsEw.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      crossorigin
+      href="/kefir-control/assets/index-B8wn4ucd.css"
+    />
+  </head>
 
-He actualizado el archivo `client\public\kefir-control\index.html` con el código HTML completo y actualizado que me has proporcionado.
+  <body>
+    <div id="root"></div>
+    <script src="/kefir-control/transfer-to-general.js"></script>
+    <script>
+      (() => {
+        const BASE_PATH = "/kefir-control";
+        const MAIN_APP_URL =
+          "https://vitaliapedidos2-production-a969.up.railway.app/";
+        const modules = [
+          { slug: "inicio", labels: ["inicio"] },
+          { slug: "productos", labels: ["productos"] },
+          { slug: "lotes", labels: ["lotes"] },
+          { slug: "ordenes", labels: ["ordenes"] },
+          { slug: "auditoria", labels: ["auditoria", "trazabilidad"] },
+          { slug: "nodulos", labels: ["nodulos"] },
+          { slug: "reportes", labels: ["reportes"] },
+          {
+            slug: "inventario-produccion",
+            labels: ["inventario de produccion", "inventario"],
+          },
+          { slug: "calidad", labels: ["calidad"] },
+          { slug: "costos", labels: ["costos"] },
+          { slug: "rendimientos", labels: ["rendimientos"] },
+        ];
 
-**Lo que he hecho:**
-1. **Reemplazo Total:** He sustituido todo el contenido del archivo `index.html` por la versión más reciente.
-2. **Sincronización con GitHub:** He subido este cambio a tu repositorio para que se refleje inmediatamente en tu servidor de producción.
+        const normalize = value =>
+          String(value || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[̀-ͯ]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
 
-**Pasos finales:**
-- **Limpia la Caché:** Por favor, abre la página y presiona `Ctrl + F5` (o limpia la caché del navegador) para forzar la carga del nuevo archivo HTML.
+        const moduleBySlug = new Map(
+          modules.map(module => [module.slug, module])
+        );
+
+        const getSlugFromPath = () => {
+          const rawSlug = decodeURIComponent(
+            window.location.pathname
+              .replace(/^\/kefir-control\/?/, "")
+              .replace(/\/$/, "")
+          );
+
+          if (!rawSlug || rawSlug === "index.html") return null;
+          if (rawSlug === "inventory" || rawSlug === "inventario") {
+            return "inventario-produccion";
+          }
+          if (rawSlug === "kardex" || rawSlug === "trazabilidad") {
+            return "auditoria";
+          }
+
+          return moduleBySlug.has(rawSlug) ? rawSlug : null;
+        };
+
+        const findSlugByText = text => {
+          const normalizedText = normalize(text);
+          return modules.find(module =>
+            module.labels.some(
+              label =>
+                normalizedText === label || normalizedText.includes(label)
+            )
+          )?.slug;
+        };
+
+        const setUrlForSlug = slug => {
+          const nextPath = `${BASE_PATH}/${slug}`;
+          if (window.location.pathname === nextPath) return;
+          window.history.pushState({ kefirModule: slug }, "", nextPath);
+        };
+
+        const getNavigationTarget = event => {
+          const path = event.composedPath ? event.composedPath() : [];
+          const elements = path.filter(item => item instanceof Element);
+          const directTarget = elements.find(element =>
+            element.matches("button,a,[role='button']")
+          );
+
+          if (directTarget) return directTarget;
+
+          return elements.find(element => {
+            if (["HTML", "BODY"].includes(element.tagName)) return false;
+            const text = normalize(element.textContent);
+            return text.length > 0 && text.length < 80;
+          });
+        };
+
+        const findModuleButton = slug => {
+          const module = moduleBySlug.get(slug);
+          if (!module) return null;
+
+          const elements = Array.from(
+            document.querySelectorAll("button,a,[role='button'],nav *")
+          );
+
+          const match = elements.find(element => {
+            const text = normalize(element.textContent);
+            return module.labels.some(
+              label => text === label || text.includes(label)
+            );
+          });
+
+          return match?.closest("button,a,[role='button']") || match || null;
+        };
+
+        const selectModuleFromPath = () => {
+          const slug = getSlugFromPath();
+          if (!slug) return;
+
+          let attempts = 0;
+          const timer = window.setInterval(() => {
+            attempts += 1;
+            const target = findModuleButton(slug);
+            if (!target && attempts < 40) return;
+
+            window.clearInterval(timer);
+            if (target) target.click();
+          }, 100);
+        };
+
+        const ensureMainAppButton = () => {
+          if (document.querySelector("[data-main-app-link='true']")) return;
+
+          const footer = document.querySelector(".sidebar-footer");
+          if (!footer) return;
+
+          const link = document.createElement("a");
+          link.href = MAIN_APP_URL;
+          link.dataset.mainAppLink = "true";
+          link.className = "nav-item kefir-main-app-link";
+          link.setAttribute("aria-label", "Volver al programa principal");
+          link.innerHTML = `
+            <span class="nav-item-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 19-7-7 7-7"></path>
+                <path d="M19 12H5"></path>
+              </svg>
+            </span>
+            <span class="nav-item-label">Volver al programa</span>
+          `;
+
+          footer.prepend(link);
+        };
+
+        const installMainAppButton = () => {
+          const style = document.createElement("style");
+          style.textContent = `
+            .kefir-main-app-link {
+              color: var(--color-primary) !important;
+              text-decoration: none;
+              margin-bottom: 10px;
+              border: 1px solid var(--border-primary);
+              background: var(--color-primary-light);
+            }
+
+            .kefir-main-app-link:hover {
+              background: var(--color-gradient-territory) !important;
+              color: var(--white) !important;
+            }
+          `;
+          document.head.appendChild(style);
+
+          let attempts = 0;
+          const timer = window.setInterval(() => {
+            attempts += 1;
+            ensureMainAppButton();
+            if (
+              document.querySelector("[data-main-app-link='true']") ||
+              attempts >= 40
+            ) {
+              window.clearInterval(timer);
+            }
+          }, 100);
+        };
+
+        document.addEventListener(
+          "click",
+          event => {
+            const target = getNavigationTarget(event);
+            const slug = findSlugByText(target?.textContent);
+            if (!slug) return;
+
+            window.setTimeout(() => setUrlForSlug(slug), 0);
+          },
+          true
+        );
+
+        window.addEventListener("popstate", selectModuleFromPath);
+        window.addEventListener("DOMContentLoaded", selectModuleFromPath);
+        window.addEventListener("DOMContentLoaded", installMainAppButton);
+      })();
+
+      window.addEventListener("DOMContentLoaded", () => {
+        // Only show if we are in an iframe (embedded in Production.tsx)
+        if (window !== window.parent && !window.KefirTransferToGeneral) {
+          const btn = document.createElement("button");
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg> Pasar a Inventario General`;
+          btn.style.position = "fixed";
+          btn.style.bottom = "24px";
+          btn.style.right = "24px";
+          btn.style.zIndex = "999999";
+          btn.style.backgroundColor = "#2563 la l l l l la l l la l l la la l l l de mayo de 2024" a la última versión de la herramienta de control de producción (KéfirControl) que tienes en tu servidor.
+          btn.style.color = "white";
+          btn.style.padding = "12px 24px";
+          btn.style.borderRadius = "9999px";
+          btn.style.boxShadow =
+            "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)";
+          btn.style.border = "none";
+          btn.style.cursor = "pointer";
+          btn.style.display = "flex";
+          btn.style.alignItems = "center";
+          btn.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          btn.style.fontWeight = "bold";
+          btn.style.fontSize = "14px";
+          btn.style.transition = "all 0.2s";
+
+          btn.onmouseover = () => {
+            btn.style.backgroundColor = "#1d4ed8"; // blue-700
+            btn.style.transform = "translateY(-2px)";
+          };
+          btn.onmouseout = () => {
+            btn.style.backgroundColor = "#2563eb";
+            btn.style.transform = "translateY(0)";
+          };
+
+          btn.onclick = () => {
+            window.parent.postMessage({ type: "OPEN_TRANSFER_DIALOG" }, "*");
+          };
+
+          document.body.appendChild(btn);
+        }
+      });
+    </script>
+  </body>
+</html>
