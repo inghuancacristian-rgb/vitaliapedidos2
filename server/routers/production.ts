@@ -480,15 +480,36 @@ export const productionRouter = router({
   getKefirStorage: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    
-    const pool = (db as any).session?.client || (global as any)._pool;
-    if (!pool) return [];
-    
+
     try {
-      const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
-      return rows as any[];
+      // 1. Obtener el estado real actual del inventario de producción desde la tabla estructurada
+      const items = await db
+        .select({
+          id: productionInventory.productId,
+          name: products.name,
+          quantity: productionInventory.quantity,
+          unit: products.unit,
+          minStock: 5, // Valor por defecto
+          category: products.category,
+          costPerUnit: products.price,
+          presentationQuantity: products.presentationQuantity,
+          presentationUnit: products.presentationUnit,
+          presentationVolumeMl: products.presentationVolumeMl,
+          presentationWeightGr: products.presentationWeightGr,
+          productionRole: products.productionRole,
+        })
+        .from(productionInventory)
+        .innerJoin(products, eq(productionInventory.productId, products.id));
+
+      // 2. Formatear los datos como el JSON que el módulo de Kefir espera (kefir_inventory_v3)
+      const inventoryJson = JSON.stringify(items);
+
+      // Retornamos un objeto que simula la tabla kefir_storage para mantener compatibilidad con el frontend
+      return {
+        "kefir_inventory_v3": inventoryJson
+      };
     } catch (e) {
-      console.error("Error getting kefir storage:", e);
+      console.error("Error synthesizing kefir storage from production inventory:", e);
       return [];
     }
   }),
@@ -501,17 +522,41 @@ export const productionRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) return { success: false, error: "No DB" };
-      
+
       const pool = (db as any).session?.client || (global as any)._pool;
       if (!pool) return { success: false, error: "No connection pool" };
-      
+
       try {
+        // 1. Guardar siempre en la tabla de respaldo kefir_storage (Legacy)
         await pool.execute(
-          `INSERT INTO kefir_storage (storage_key, storage_value) 
-           VALUES (?, ?) 
+          `INSERT INTO kefir_storage (storage_key, storage_value)
+           VALUES (?, ?)
            ON DUPLICATE KEY UPDATE storage_value = VALUES(storage_value), updatedAt = CURRENT_TIMESTAMP`,
           [input.key, input.value]
         );
+
+        // 2. Si la llave es el inventario, sincronizar con la tabla productionInventory (La Verdad)
+        if (input.key === "kefir_inventory_v3") {
+          const parsed = JSON.parse(input.value);
+          const items = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? Object.values(parsed) : []);
+
+          for (const item of items) {
+            const productId = Number(item.id);
+            if (!isNaN(productId) && productId > 0) {
+              const [existing] = await db.select().from(productionInventory).where(eq(productionInventory.productId, productId));
+              if (existing) {
+                await db.update(productionInventory)
+                  .set({ quantity: Math.max(0, Number(item.quantity || 0)) })
+                  .where(eq(productionInventory.id, existing.id));
+              } else {
+                await db.insert(productionInventory).values({
+                  productId,
+                  quantity: Math.max(0, Number(item.quantity || 0)),
+                });
+              }
+            }
+          }
+        }
         return { success: true };
       } catch (e) {
         console.error("Error setting kefir storage:", e);
