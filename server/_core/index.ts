@@ -122,32 +122,10 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use("/uploads", express.static(uploadsDir));
 
-  const kefirControlDir = path.resolve(
-    process.cwd(),
-    "client",
-    "public",
-    "kefir-control"
-  );
-  const kefirControlIndex = path.join(kefirControlDir, "index.html");
   const rootAppIndex =
     process.env.NODE_ENV === "development"
       ? path.resolve(process.cwd(), "client", "index.html")
       : path.resolve(process.cwd(), "dist", "public", "index.html");
-  const setKefirControlCacheHeaders = (
-    res: express.Response,
-    filePath: string
-  ) => {
-    const normalizedFilePath = filePath.split(path.sep).join("/");
-
-    if (normalizedFilePath.includes("/assets/")) {
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-      return;
-    }
-
-    if (normalizedFilePath.endsWith("/index.html")) {
-      res.setHeader("Cache-Control", "no-cache");
-    }
-  };
   const sendRootAppIndex = (
     _req: express.Request,
     res: express.Response,
@@ -160,122 +138,6 @@ async function startServer() {
 
     res.sendFile(rootAppIndex);
   };
-  const sendKefirControlIndex = async (
-    _req: express.Request,
-    res: express.Response
-  ) => {
-    res.setHeader("Cache-Control", "no-cache");
-    try {
-      let html = await fs.promises.readFile(kefirControlIndex, 'utf-8');
-      
-      const { getDb } = await import("../db");
-      const db = await getDb();
-      let storageData: Record<string, string> = {};
-      
-      if (db) {
-        const pool = (db as any).session?.client || (global as any)._pool;
-        if (pool) {
-          try {
-            const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
-            if (Array.isArray(rows)) {
-              for (const row of rows) {
-                if (row.storage_key && row.storage_value) {
-                  storageData[row.storage_key] = row.storage_value;
-                }
-              }
-            }
-          } catch (e) {
-            console.error("Error reading kefir_storage:", e);
-          }
-        }
-      }
-      
-      const injection = `
-      <script>
-        try {
-          window.__KEFIR_INITIAL_STATE__ = ${JSON.stringify(storageData)};
-          
-          // 1. Sincronizar DESDE la nube HACIA el navegador local
-          for (const key in window.__KEFIR_INITIAL_STATE__) {
-            if (window.__KEFIR_INITIAL_STATE__.hasOwnProperty(key)) {
-              if (key.startsWith('kefir_')) {
-                localStorage.setItem(key, window.__KEFIR_INITIAL_STATE__[key]);
-              }
-            }
-          }
-          
-          // 2. Sincronizar DESDE el navegador HACIA la nube (para recuperar datos huérfanos del PC original)
-          for (let i = 0; i < localStorage.length; i++) {
-            const localKey = localStorage.key(i);
-            if (localKey && localKey.startsWith('kefir_')) {
-              // Si la nube no tiene esta llave, o es diferente, la subimos
-              if (!window.__KEFIR_INITIAL_STATE__[localKey] || window.__KEFIR_INITIAL_STATE__[localKey] !== localStorage.getItem(localKey)) {
-                try {
-                  fetch("/api/trpc/production.setKefirStorage", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 0: { key: localKey, value: localStorage.getItem(localKey) } }),
-                  });
-                } catch(e) {}
-              }
-            }
-          }
-        } catch(e) {
-          console.error("Failed to inject and sync kefir storage state", e);
-        }
-      </script>
-      `;
-      
-      html = html.replace('<head>', '<head>\\n' + injection);
-      res.send(html);
-    } catch (err) {
-      console.error("Error serving kefir control index:", err);
-      res.sendFile(kefirControlIndex);
-    }
-  };
-  app.use(
-    "/kefir-control",
-    express.static(kefirControlDir, {
-      index: false,
-      setHeaders: setKefirControlCacheHeaders,
-    })
-  );
-  app.get("/kefir-control", sendKefirControlIndex);
-  app.get("/kefir-control/index.html", sendKefirControlIndex);
-  app.get("/preview/kefir-control", sendRootAppIndex);
-  app.get("/preview/kefir-control/index.html", sendRootAppIndex);
-  app.get("/preview/kefir-control/inventory", sendRootAppIndex);
-  app.get("/preview/kefir-control/kardex", sendRootAppIndex);
-  app.get("/preview/kefir-control/lotes", sendRootAppIndex);
-  app.get(/^\/preview\/kefir-control(?:\/.*)?$/, (req, res, next) => {
-    const relativePath = req.path.replace(/^\/preview\/kefir-control\/?/, "");
-    if (
-      !relativePath ||
-      relativePath === "index.html" ||
-      !path.extname(relativePath)
-    ) {
-      if (process.env.NODE_ENV === "development") {
-        next();
-        return;
-      }
-
-      res.sendFile(rootAppIndex);
-      return;
-    }
-    next();
-  });
-  app.get(/^\/kefir-control(?:\/.*)?$/, (req, res, next) => {
-    const relativePath = req.path.replace(/^\/kefir-control\/?/, "");
-    if (
-      !relativePath ||
-      relativePath === "index.html" ||
-      !path.extname(relativePath)
-    ) {
-      sendKefirControlIndex(req, res);
-      return;
-    }
-    next();
-  });
 
   // Configurar multer para upload de imágenes
   const upload = multer({
