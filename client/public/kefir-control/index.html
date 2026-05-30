@@ -8,6 +8,9 @@
     <script>
       try {
         var originalSetItem = localStorage.setItem;
+        var originalGetItem = localStorage.getItem;
+        var originalRemoveItem = localStorage.removeItem;
+        var cloudStore = {};
 
         var toKefirText = function (value) {
           return String(value == null ? "" : value).trim();
@@ -165,45 +168,83 @@
             });
         };
 
-        var kInvStr = localStorage.getItem("kefir_inventory_v3");
-        if (kInvStr) {
-          try {
-            var sanitizedInventory = sanitizeKefirInventory(kInvStr);
-            var sanitizedInventoryText = JSON.stringify(sanitizedInventory);
-
-            if (sanitizedInventoryText !== kInvStr) {
-              originalSetItem.call(
-                localStorage,
-                "kefir_inventory_v3",
-                sanitizedInventoryText
-              );
+        // Inicializar cloudStore desde el estado inyectado por el servidor
+        if (window.__KEFIR_INITIAL_STATE__) {
+          for (var key in window.__KEFIR_INITIAL_STATE__) {
+            if (window.__KEFIR_INITIAL_STATE__.hasOwnProperty(key)) {
+              var val = window.__KEFIR_INITIAL_STATE__[key];
+              if (key === "kefir_inventory_v3" && typeof val === "string") {
+                try {
+                  var sanitized = sanitizeKefirInventory(val);
+                  cloudStore[key] = JSON.stringify(sanitized);
+                } catch (e) {
+                  cloudStore[key] = val;
+                }
+              } else {
+                cloudStore[key] = val;
+              }
             }
-          } catch (storageError) {
-            console.error("Kefir inventory recovery failed:", storageError);
-            try {
-              originalSetItem.call(
-                localStorage,
-                "kefir_inventory_v3_corrupt_backup",
-                kInvStr
-              );
-              originalSetItem.call(localStorage, "kefir_inventory_v3", "[]");
-            } catch (backupError) {}
           }
         }
 
-        // Interceptar setItem para sincronizar en la nube automáticamente
+        // MOCK STORE: Redirigimos todo a cloudStore (RAM) y al Servidor
         localStorage.setItem = function (key, value) {
-          originalSetItem.apply(this, arguments);
           if (key && key.startsWith("kefir_")) {
+            cloudStore[key] = value;
             try {
               fetch("/api/trpc/production.setKefirStorage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 0: { key: key, value: value } }), // TRPC format
+                body: JSON.stringify({ 0: { key: key, value: value } }),
               });
             } catch (e) {}
+          } else {
+            originalSetItem.apply(this, arguments);
           }
         };
+
+        localStorage.getItem = function (key) {
+          if (key && key.startsWith("kefir_")) {
+            return cloudStore[key] || null;
+          }
+          return originalGetItem.apply(this, arguments);
+        };
+
+        localStorage.removeItem = function (key) {
+          if (key && key.startsWith("kefir_")) {
+            delete cloudStore[key];
+            try {
+              fetch("/api/trpc/production.setKefirStorage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 0: { key: key, value: null } }),
+              });
+            } catch (e) {}
+          } else {
+            originalRemoveItem.apply(this, arguments);
+          }
+        };
+
+        // Heartbeat: Sincronización periódica para mantener coherencia con Inventario General
+        setInterval(function() {
+          fetch("/api/trpc/production.getKefirStorage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 0: {} }),
+          })
+          .then(res => res.json())
+          .then(data => {
+            var serverState = data.result.data.json;
+            if (serverState) {
+              for (var k in serverState) {
+                if (serverState[k] !== cloudStore[k]) {
+                  cloudStore[k] = serverState[k];
+                }
+              }
+            }
+          })
+          .catch(e => {});
+        }, 10000);
       } catch (e) {
         console.error("Auto-fix before React load failed:", e);
       }
