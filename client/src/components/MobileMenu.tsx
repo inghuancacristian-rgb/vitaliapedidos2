@@ -108,21 +108,40 @@ export default function MobileMenu() {
               const Icon = item.icon;
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                >
-                  <Button
-                    variant={isActive(item.href) ? "default" : "ghost"}
-                    className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
-                      isActive(item.href) ? "" : "text-foreground hover:bg-accent/70"
-                    }`}
+                item.external ? (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className="block"
                   >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Button>
-                </Link>
+                    <Button
+                      variant={isActive(item.href) ? "default" : "ghost"}
+                      className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
+                        isActive(item.href) ? "" : "text-foreground hover:bg-accent/70"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </a>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                  >
+                    <Button
+                      variant={isActive(item.href) ? "default" : "ghost"}
+                      className={`h-12 w-full justify-start gap-3 rounded-2xl px-4 ${
+                        isActive(item.href) ? "" : "text-foreground hover:bg-accent/70"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Button>
+                  </Link>
+                )
               );
             })}
           </div>
