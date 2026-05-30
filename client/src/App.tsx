@@ -29,9 +29,6 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
-import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
-import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
-import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
 import { useEffect } from "react";
 
 function ProtectedRoute({
@@ -64,44 +61,10 @@ function ProtectedRoute({
 
 function Router() {
   const [location] = useLocation();
-  const isKefirPreview = location.startsWith("/preview/kefir-control");
   const { user, loading } = useAuth();
   const showTopHeader =
     !location.startsWith("/kefir-control") &&
-    !location.startsWith("/production") &&
-    !location.startsWith("/preview/kefir-control");
-
-  if (isKefirPreview) {
-    return (
-      <Switch>
-        <Route
-          path="/preview/kefir-control"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/index.html"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/inventory"
-          component={KefirControlPreviewInventoryPage}
-        />
-        <Route
-          path="/preview/kefir-control/kardex"
-          component={KefirControlPreviewKardexPage}
-        />
-        <Route
-          path="/preview/kefir-control/lotes"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/:section"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route component={KefirControlPreviewHomePage} />
-      </Switch>
-    );
-  }
+    !location.startsWith("/production");
 
   if (loading) {
     return (
