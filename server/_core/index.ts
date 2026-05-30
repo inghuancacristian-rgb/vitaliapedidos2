@@ -176,16 +176,44 @@ async function startServer() {
         const pool = (db as any).session?.client || (global as any)._pool;
         if (pool) {
           try {
-            const [rows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
-            if (Array.isArray(rows)) {
-              for (const row of rows) {
-                if (row.storage_key && row.storage_value) {
+            // 1. Sincronizar el Inventario de Producción REAL (La Verdad)
+            const [prodRows] = await pool.execute(`
+              SELECT p.id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
+                     p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
+                     p.presentationWeightGr, p.productionRole
+              FROM production_inventory pi
+              INNER JOIN products p ON pi.productId = p.id
+            `);
+
+            if (Array.isArray(prodRows)) {
+              const sanitizedProd = prodRows.map((row: any) => ({
+                id: row.id,
+                name: row.name,
+                quantity: row.quantity,
+                unit: row.unit || 'uds',
+                minStock: 5,
+                category: row.category,
+                costPerUnit: row.costPerUnit,
+                presentationQuantity: row.presentationQuantity || 1,
+                presentationUnit: row.presentationUnit || row.unit || 'unidad',
+                presentationVolumeMl: row.presentationVolumeMl || 0,
+                presentationWeightGr: row.presentationWeightGr || 0,
+                productionRole: row.productionRole || 'none',
+              }));
+              storageData["kefir_inventory_v3"] = JSON.stringify(sanitizedProd);
+            }
+
+            // 2. Recuperar el resto de configuraciones legacy de kefir_storage
+            const [legacyRows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
+            if (Array.isArray(legacyRows)) {
+              for (const row of legacyRows) {
+                if (row.storage_key && row.storage_value && row.storage_key !== "kefir_inventory_v3") {
                   storageData[row.storage_key] = row.storage_value;
                 }
               }
             }
           } catch (e) {
-            console.error("Error reading kefir_storage:", e);
+            console.error("Error reading kefir storage synthesis:", e);
           }
         }
       }
