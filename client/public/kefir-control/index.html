@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/kefir-control/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KéfirControl - Panel de Control Industrial</title>
+    <script>
+      try {
+        var originalSetItem = localStorage.setItem;
+
+        var toKefirText = function (value) {
+          return String(value == null ? "" : value).trim();
+        };
+
+        var toFiniteKefirNumber = function (value, fallback) {
+          var numericValue = Number(value);
+          return Number.isFinite(numericValue) ? numericValue : fallback;
+        };
+
+        var isKefirPackagingName = function (value) {
+          var text = toKefirText(value).toLowerCase();
+          return (
+            text.indexOf("botella") !== -1 ||
+            text.indexOf("tapa") !== -1 ||
+            text.indexOf("envase") !== -1 ||
+            text.indexOf("etiqueta") !== -1
+          );
+        };
+
+        var getKefirPresentationVolumeMl = function (item, name) {
+          var explicitVolume = toFiniteKefirNumber(
+            item && item.presentationVolumeMl,
+            0
+          );
+          if (explicitVolume > 0) return explicitVolume;
+
+          var unit = toKefirText(
+            (item && (item.unit || item.productUnit)) || ""
+          ).toLowerCase();
+          if (
+            unit === "l" ||
+            unit === "lt" ||
+            unit === "lts" ||
+            unit === "litro" ||
+            unit === "litros"
+          ) {
+            return 1000;
+          }
+
+          var match = toKefirText(name)
+            .toLowerCase()
+            .match(/(\d+(?:[.,]\d+)?)\s*(ml|l|lt|lts|litro|litros)\b/);
+          if (!match) return 0;
+
+          var value = Number(match[1].replace(",", "."));
+          if (!Number.isFinite(value) || value <= 0) return 0;
+
+          return match[2] === "ml" ? value : value * 1000;
+        };
+
+        var getKefirProductionRole = function (item, name) {
+          var currentRole = toKefirText(item && item.productionRole);
+          if (currentRole && currentRole !== "none") return currentRole;
+
+          var lowerName = toKefirText(name).toLowerCase();
+          if (isKefirPackagingName(lowerName)) return "packaging";
+          if (lowerName.indexOf("leche") !== -1) return "milk";
+          if (
+            lowerName.indexOf("azucar") !== -1 ||
+            lowerName.indexOf("azúcar") !== -1
+          ) {
+            return "sugar";
+          }
+
+          return currentRole || "none";
+        };
+
+        var getKefirCategory = function (item, name) {
+          var category = toKefirText(item && item.category);
+          if (category === "finished_product" || category === "producto") {
+            return isKefirPackagingName(name) ? "envase" : "producto";
+          }
+          if (category === "supplies" || category === "envase") {
+            return "envase";
+          }
+          if (category === "raw_material" || category === "materia") {
+            return isKefirPackagingName(name) ? "envase" : "materia";
+          }
+          if (category === "insumo") {
+            return isKefirPackagingName(name) ? "envase" : "materia";
+          }
+
+          return isKefirPackagingName(name) ? "envase" : "materia";
+        };
+
+        var sanitizeKefirInventory = function (rawValue) {
+          var parsed = JSON.parse(rawValue);
+          var sourceItems = Array.isArray(parsed)
+            ? parsed
+            : parsed && typeof parsed === "object"
+              ? Object.values(parsed)
+              : [];
+          var usedIds = {};
+          var nextId = 1;
+
+          return sourceItems
+            .filter(function (item) {
+              return item && typeof item === "object";
+            })
+            .map(function (item) {
+              var name =
+                toKefirText(item.name) ||
+                toKefirText(item.productName) ||
+                toKefirText(item.productCode) ||
+                toKefirText(item.code) ||
+                "Item sin nombre";
+              var rawId = Math.trunc(toFiniteKefirNumber(item.id, 0));
+
+              if (rawId <= 0 || usedIds[rawId]) {
+                while (usedIds[nextId]) nextId += 1;
+                rawId = nextId;
+              }
+
+              usedIds[rawId] = true;
+              nextId = Math.max(nextId, rawId + 1);
+
+              var quantitySource =
+                item.quantity !== undefined && item.quantity !== null
+                  ? item.quantity
+                  : item.stock;
+
+              var sanitizedItem = Object.assign({}, item, {
+                id: rawId,
+                name: name,
+                quantity: Math.max(0, toFiniteKefirNumber(quantitySource, 0)),
+                unit:
+                  toKefirText(item.unit) ||
+                  toKefirText(item.productUnit) ||
+                  "uds",
+                minStock: Math.max(0, toFiniteKefirNumber(item.minStock, 0)),
+                category: getKefirCategory(item, name),
+                costPerUnit: Math.max(
+                  0,
+                  toFiniteKefirNumber(item.costPerUnit, 0)
+                ),
+                presentationQuantity: Math.max(
+                  1,
+                  toFiniteKefirNumber(item.presentationQuantity, 1)
+                ),
+                presentationUnit:
+                  toKefirText(item.presentationUnit) ||
+                  toKefirText(item.unit) ||
+                  "unidad",
+                presentationVolumeMl: getKefirPresentationVolumeMl(item, name),
+                presentationWeightGr: Math.max(
+                  0,
+                  toFiniteKefirNumber(item.presentationWeightGr, 0)
+                ),
+                productionRole: getKefirProductionRole(item, name),
+              });
+
+              delete sanitizedItem.stock;
+              return sanitizedItem;
+            });
+        };
+
+        var kInvStr = localStorage.getItem("kefir_inventory_v3");
+        if (kInvStr) {
+          try {
+            var sanitizedInventory = sanitizeKefirInventory(kInvStr);
+            var sanitizedInventoryText = JSON.stringify(sanitizedInventory);
+
+            if (sanitizedInventoryText !== kInvStr) {
+              originalSetItem.call(
+                localStorage,
+                "kefir_inventory_v3",
+                sanitizedInventoryText
+              );
+            }
+          } catch (storageError) {
+            console.error("Kefir inventory recovery failed:", storageError);
+            try {
+              originalSetItem.call(
+                localStorage,
+                "kefir_inventory_v3_corrupt_backup",
+                kInvStr
+              );
+              originalSetItem.call(localStorage, "kefir_inventory_v3", "[]");
+            } catch (backupError) {}
+          }
+        }
+
+        // Interceptar setItem para sincronizar en la nube automáticamente
+        localStorage.setItem = function (key, value) {
+          originalSetItem.apply(this, arguments);
+          if (key && key.startsWith("kefir_")) {
+            try {
+              fetch("/api/trpc/production.setKefirStorage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 0: { key: key, value: value } }), // TRPC format
+              });
+            } catch (e) {}
+          }
+        };
+      } catch (e) {
+        console.error("Auto-fix before React load failed:", e);
+      }
+    </script>
+    <link
+      rel="modulepreload"
+      crossorigin
+      href="/kefir-control/assets/index-8XlJpsEw.js"
+    />
+    <script
+      type="module"
+      crossorigin
+      src="/kefir-control/assets/index-8XlJpsEw.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      crossorigin
+      href="/kefir-control/assets/index-B8wn4ucd.css"
+    />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script src="/kefir-control/transfer-to-general.js"></script>
+    <script>
+      (() => {
+        const BASE_PATH = "/kefir-control";
+        const MAIN_APP_URL =
+          "https://vitaliapedidos2-production-a969.up.railway.app/";
+        const modules = [
+          { slug: "inicio", labels: ["inicio"] },
+          { slug: "productos", labels: ["productos"] },
+          { slug: "lotes", labels: ["lotes"] },
+          { slug: "ordenes", labels: ["ordenes"] },
+          { slug: "auditoria", labels: ["auditoria", "trazabilidad"] },
+          { slug: "nodulos", labels: ["nodulos"] },
+          { slug: "reportes", labels: ["reportes"] },
+          {
+            slug: "inventario-produccion",
+            labels: ["inventario de produccion", "inventario"],
+          },
+          { slug: "calidad", labels: ["calidad"] },
+          { slug: "costos", labels: ["costos"] },
+          { slug: "rendimientos", labels: ["rendimientos"] },
+        ];
+
+        const normalize = value =>
+          String(value || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[̀-ͯ]/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const moduleBySlug = new Map(
+          modules.map(module => [module.slug, module])
+        );
+
+        const getSlugFromPath = () => {
+          const rawSlug = decodeURIComponent(
+            window.location.pathname
+              .replace(/^\/kefir-control\/?/, "")
+              .replace(/\/$/, "")
+          );
+
+          if (!rawSlug || rawSlug === "index.html") return null;
+          if (rawSlug === "inventory" || rawSlug === "inventario") {
+            return "inventario-produccion";
+          }
+          if (rawSlug === "kardex" || rawSlug === "trazabilidad") {
+            return "auditoria";
+          }
+
+          return moduleBySlug.has(rawSlug) ? rawSlug : null;
+        };
+
+        const findSlugByText = text => {
+          const normalizedText = normalize(text);
+          return modules.find(module =>
+            module.labels.some(
+              label =>
+                normalizedText === label || normalizedText.includes(label)
+            )
+          )?.slug;
+        };
+
+        const setUrlForSlug = slug => {
+          const nextPath = `${BASE_PATH}/${slug}`;
+          if (window.location.pathname === nextPath) return;
+          window.history.pushState({ kefirModule: slug }, "", nextPath);
+        };
+
+        const getNavigationTarget = event => {
+          const path = event.composedPath ? event.composedPath() : [];
+          const elements = path.filter(item => item instanceof Element);
+          const directTarget = elements.find(element =>
+            element.matches("button,a,[role='button']")
+          );
+
+          if (directTarget) return directTarget;
+
+          return elements.find(element => {
+            if (["HTML", "BODY"].includes(element.tagName)) return false;
+            const text = normalize(element.textContent);
+            return text.length > 0 && text.length < 80;
+          });
+        };
+
+        const findModuleButton = slug => {
+          const module = moduleBySlug.get(slug);
+          if (!module) return null;
+
+          const elements = Array.from(
+            document.querySelectorAll("button,a,[role='button'],nav *")
+          );
+
+          const match = elements.find(element => {
+            const text = normalize(element.textContent);
+            return module.labels.some(
+              label => text === label || text.includes(label)
+            );
+          });
+
+          return match?.closest("button,a,[role='button']") || match || null;
+        };
+
+        const selectModuleFromPath = () => {
+          const slug = getSlugFromPath();
+          if (!slug) return;
+
+          let attempts = 0;
+          const timer = window.setInterval(() => {
+            attempts += 1;
+            const target = findModuleButton(slug);
+            if (!target && attempts < 40) return;
+
+            window.clearInterval(timer);
+            if (target) target.click();
+          }, 100);
+        };
+
+        const ensureMainAppButton = () => {
+          if (document.querySelector("[data-main-app-link='true']")) return;
+
+          const footer = document.querySelector(".sidebar-footer");
+          if (!footer) return;
+
+          const link = document.createElement("a");
+          link.href = MAIN_APP_URL;
+          link.dataset.mainAppLink = "true";
+          link.className = "nav-item kefir-main-app-link";
+          link.setAttribute("aria-label", "Volver al programa principal");
+          link.innerHTML = `
+            <span class="nav-item-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 19-7-7 7-7"></path>
+                <path d="M19 12H5"></path>
+              </svg>
+            </span>
+            <span class="nav-item-label">Volver al programa</span>
+          `;
+
+          footer.prepend(link);
+        };
+
+        const installMainAppButton = () => {
+          const style = document.createElement("style");
+          style.textContent = `
+            .kefir-main-app-link {
+              color: var(--color-primary) !important;
+              text-decoration: none;
+              margin-bottom: 10px;
+              border: 1px solid var(--border-primary);
+              background: var(--color-primary-light);
+            }
+
+            .kefir-main-app-link:hover {
+              background: var(--color-gradient-territory) !important;
+              color: var(--white) !important;
+            }
+          `;
+          document.head.appendChild(style);
+
+          let attempts = 0;
+          const timer = window.setInterval(() => {
+            attempts += 1;
+            ensureMainAppButton();
+            if (
+              document.querySelector("[data-main-app-link='true']") ||
+              attempts >= 40
+            ) {
+              window.clearInterval(timer);
+            }
+          }, 100);
+        };
+
+        document.addEventListener(
+          "click",
+          event => {
+            const target = getNavigationTarget(event);
+            const slug = findSlugByText(target?.textContent);
+            if (!slug) return;
+
+            window.setTimeout(() => setUrlForSlug(slug), 0);
+          },
+          true
+        );
+
+        window.addEventListener("popstate", selectModuleFromPath);
+        window.addEventListener("DOMContentLoaded", selectModuleFromPath);
+        window.addEventListener("DOMContentLoaded", installMainAppButton);
+      })();
+
+      window.addEventListener("DOMContentLoaded", () => {
+        // Only show if we are in an iframe (embedded in Production.tsx)
+        if (window !== window.parent && !window.KefirTransferToGeneral) {
+          const btn = document.createElement("button");
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg> Pasar a Inventario General`;
+          btn.style.position = "fixed";
+          btn.style.bottom = "24px";
+          btn.style.right = "24px";
+          btn.style.zIndex = "999999";
+          btn.style.backgroundColor = "#2563 la l l l l la l l la l l la la l l l de mayo de 2024" a la última versión de la herramienta de control de producción (KéfirControl) que tienes en tu servidor.
+          btn.style.color = "white";
+          btn.style.padding = "12px 24px";
+          btn.style.borderRadius = "9999px";
+          btn.style.boxShadow =
+            "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)";
+          btn.style.border = "none";
+          btn.style.cursor = "pointer";
+          btn.style.display = "flex";
+          btn.style.alignItems = "center";
+          btn.style.fontFamily = "system-ui, -apple-system, sans-serif";
+          btn.style.fontWeight = "bold";
+          btn.style.fontSize = "14px";
+          btn.style.transition = "all 0.2s";
+
+          btn.onmouseover = () => {
+            btn.style.backgroundColor = "#1d4ed8"; // blue-700
+            btn.style.transform = "translateY(-2px)";
+          };
+          btn.onmouseout = () => {
+            btn.style.backgroundColor = "#2563eb";
+            btn.style.transform = "translateY(0)";
+          };
+
+          btn.onclick = () => {
+            window.parent.postMessage({ type: "OPEN_TRANSFER_DIALOG" }, "*");
+          };
+
+          document.body.appendChild(btn);
+        }
+      });
+    </script>
+  </body>
+</html>
