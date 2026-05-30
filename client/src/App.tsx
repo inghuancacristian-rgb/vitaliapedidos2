@@ -29,9 +29,12 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
-import KefirControlPreviewHomePage from "@/pages/kefir-control-preview/HomePage";
-import KefirControlPreviewInventoryPage from "@/pages/kefir-control-preview/InventoryPage";
-import KefirControlPreviewKardexPage from "@/pages/kefir-control-preview/KardexPage";
+
+import KefirControlHome from "@/pages/kefir-control/inicio/HomePage";
+import KefirControlInventory from "@/pages/kefir-control/inventario-produccion/InventoryPage";
+import KefirControlKardex from "@/pages/kefir-control/auditoria/KardexPage";
+import KefirModulePlaceholder from "@/pages/kefir-control/_shared/KefirModulePlaceholder";
+
 import { useEffect } from "react";
 
 function ProtectedRoute({
@@ -64,44 +67,10 @@ function ProtectedRoute({
 
 function Router() {
   const [location] = useLocation();
-  const isKefirPreview = location.startsWith("/preview/kefir-control");
   const { user, loading } = useAuth();
   const showTopHeader =
     !location.startsWith("/kefir-control") &&
-    !location.startsWith("/production") &&
-    !location.startsWith("/preview/kefir-control");
-
-  if (isKefirPreview) {
-    return (
-      <Switch>
-        <Route
-          path="/preview/kefir-control"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/index.html"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/inventory"
-          component={KefirControlPreviewInventoryPage}
-        />
-        <Route
-          path="/preview/kefir-control/kardex"
-          component={KefirControlPreviewKardexPage}
-        />
-        <Route
-          path="/preview/kefir-control/lotes"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route
-          path="/preview/kefir-control/:section"
-          component={KefirControlPreviewHomePage}
-        />
-        <Route component={KefirControlPreviewHomePage} />
-      </Switch>
-    );
-  }
+    !location.startsWith("/production");
 
   if (loading) {
     return (
@@ -170,6 +139,66 @@ function Router() {
           <Route path={"/edit-order/:id"} component={EditOrder} />
           <Route path="/repartidor/finance" component={RepartidorFinance} />
           <Route path="/delivery-load" component={DeliveryLoad} />
+
+          {/* Kefir Control Modules */}
+          <Route path="/kefir-control/">
+            <ProtectedRoute component={KefirControlHome} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/inventory">
+            <ProtectedRoute component={KefirControlInventory} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/auditoria">
+            <ProtectedRoute component={KefirControlKardex} adminOnly={true} />
+          </Route>
+          <Route path="/kefir-control/productos">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Productos" subtitle="Gestión de catálogo de productos" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/lotes">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Lotes" subtitle="Gestión de lotes de producción" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/ordenes">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Órdenes" subtitle="Gestión de órdenes de producción" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/nodulos">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Nódulos" subtitle="Gestión de nódulos" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/reportes">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Reportes" subtitle="Reportes de producción" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/calidad">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Calidad" subtitle="Control de calidad" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/costos">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Costos" subtitle="Análisis de costos" />}
+              adminOnly={true}
+            />
+          </Route>
+          <Route path="/kefir-control/rendimientos">
+            <ProtectedRoute
+              component={() => <KefirModulePlaceholder title="Rendimientos" subtitle="Análisis de rendimientos" />}
+              adminOnly={true}
+            />
+          </Route>
+
           <Route path={"/404"} component={NotFound} />
           <Route component={NotFound} />
         </Switch>

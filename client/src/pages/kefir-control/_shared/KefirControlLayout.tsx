@@ -47,9 +47,9 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Kárdex de Planta",
-    href: "/kefir-control/kardex",
+    href: "/kefir-control/auditoria",
     icon: FileText,
-    activeMatch: "/kefir-control/kardex",
+    activeMatch: "/kefir-control/auditoria",
   },
   {
     label: "Lotes",
@@ -57,13 +57,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: Layers3,
     activeMatch: "/kefir-control/lotes",
   },
-  { label: "Órdenes", href: "#", icon: ClipboardList, disabled: true },
-  { label: "Auditoría", href: "#", icon: ShieldCheck, disabled: true },
-  { label: "Nódulos", href: "#", icon: Package, disabled: true },
-  { label: "Reportes", href: "#", icon: BarChart3, disabled: true },
-  { label: "Calidad", href: "#", icon: FlaskConical, disabled: true },
-  { label: "Costos", href: "#", icon: DollarSign, disabled: true },
-  { label: "Rendimientos", href: "#", icon: TrendingUp, disabled: true },
+  { label: "Órdenes", href: "/kefir-control/ordenes", icon: ClipboardList, activeMatch: "/kefir-control/ordenes" },
+  { label: "Auditoría", href: "/kefir-control/auditoria", icon: ShieldCheck, activeMatch: "/kefir-control/auditoria" },
+  { label: "Nódulos", href: "/kefir-control/nodulos", icon: Package, activeMatch: "/kefir-control/nodulos" },
+  { label: "Reportes", href: "/kefir-control/reportes", icon: BarChart3, activeMatch: "/kefir-control/reportes" },
+  { label: "Calidad", href: "/kefir-control/calidad", icon: FlaskConical, activeMatch: "/kefir-control/calidad" },
+  { label: "Costos", href: "/kefir-control/costos", icon: DollarSign, activeMatch: "/kefir-control/costos" },
+  { label: "Rendimientos", href: "/kefir-control/rendimientos", icon: TrendingUp, activeMatch: "/kefir-control/rendimientos" },
 ];
 
 export default function KefirControlLayout({
