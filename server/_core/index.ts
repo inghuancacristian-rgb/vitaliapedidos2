@@ -176,7 +176,8 @@ async function startServer() {
         const pool = (db as any).session?.client || (global as any)._pool;
         if (pool) {
           try {
-            // 1. Sincronizar el Inventario de Producción REAL (La Verdad)
+            // 1. Sincronizar el Inventario de Producción REAL
+            // Intentamos obtener datos de production_inventory
             const [prodRows] = await pool.execute(`
               SELECT p.id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
                      p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
@@ -185,8 +186,9 @@ async function startServer() {
               INNER JOIN products p ON pi.productId = p.id
             `);
 
-            if (Array.isArray(prodRows)) {
-              const sanitizedProd = prodRows.map((row: any) => ({
+            let sanitizedProd = [];
+            if (Array.isArray(prodRows) && prodRows.length > 0) {
+              sanitizedProd = prodRows.map((row: any) => ({
                 id: row.id,
                 name: row.name,
                 quantity: row.quantity,
@@ -200,8 +202,38 @@ async function startServer() {
                 presentationWeightGr: row.presentationWeightGr || 0,
                 productionRole: row.productionRole || 'none',
               }));
-              storageData["kefir_inventory_v3"] = JSON.stringify(sanitizedProd);
+            } else {
+              // FALLBACK: Si no hay nada en la tabla de inventario, buscamos traspasos completados
+              const [transferRows] = await pool.execute(`
+                SELECT p.id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
+                       p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
+                       p.presentationWeightGr, p.productionRole
+                FROM inventory_transfer_items it
+                INNER JOIN inventory_transfers t ON it.transferId = t.id
+                INNER JOIN products p ON it.productId = p.id
+                WHERE t.direction = 'to_production' AND t.status = 'completed'
+              `);
+
+              if (Array.isArray(transferRows)) {
+                const agg = new Map();
+                for (const row of transferRows) {
+                  const current = agg.get(row.id) || {
+                    id: row.id, name: row.name, quantity: 0, unit: row.unit || 'uds',
+                    minStock: 5, category: row.category, costPerUnit: row.costPerUnit,
+                    presentationQuantity: row.presentationQuantity || 1,
+                    presentationUnit: row.presentationUnit || row.unit || 'unidad',
+                    presentationVolumeMl: row.presentationVolumeMl || 0,
+                    presentationWeightGr: row.presentationWeightGr || 0,
+                    productionRole: row.productionRole || 'none'
+                  };
+                  current.quantity += row.quantity;
+                  agg.set(row.id, current);
+                }
+                sanitizedProd = Array.from(agg.values());
+              }
             }
+            storageData["kefir_inventory_v3"] = JSON.stringify(sanitizedProd);
+
 
             // 2. Recuperar el resto de configuraciones legacy de kefir_storage
             const [legacyRows] = await pool.execute('SELECT storage_key, storage_value FROM kefir_storage');
