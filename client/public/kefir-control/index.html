@@ -195,7 +195,7 @@
               fetch("/api/trpc/production.setKefirStorage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 0: { key: key, value: value } }),
+                body: JSON.stringify({ key: key, value: value }),
               });
             } catch (e) {}
           } else {
@@ -217,7 +217,7 @@
               fetch("/api/trpc/production.setKefirStorage", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 0: { key: key, value: null } }),
+                body: JSON.stringify({ key: key, value: null }),
               });
             } catch (e) {}
           } else {
@@ -226,12 +226,9 @@
         };
 
         // Heartbeat: Sincronización periódica para mantener coherencia con Inventario General
+        // getKefirStorage es un query (GET) en tRPC, no un mutation (POST)
         setInterval(function() {
-          fetch("/api/trpc/production.getKefirStorage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 0: {} }),
-          })
+          fetch("/api/trpc/production.getKefirStorage?input=" + encodeURIComponent(JSON.stringify({})))
           .then(res => res.json())
           .then(data => {
             // tRPC v11 returns result.data in different formats depending on transformer
