@@ -234,10 +234,18 @@
           })
           .then(res => res.json())
           .then(data => {
-            var serverState = data.result.data.json;
-            if (serverState) {
+            // tRPC v11 returns result.data in different formats depending on transformer
+            var serverState = null;
+            if (data && data.result) {
+              if (data.result.data) {
+                serverState = data.result.data;
+              } else if (data.result.json) {
+                serverState = data.result.json;
+              }
+            }
+            if (serverState && typeof serverState === 'object') {
               for (var k in serverState) {
-                if (serverState[k] !== cloudStore[k]) {
+                if (serverState.hasOwnProperty(k)) {
                   cloudStore[k] = serverState[k];
                 }
               }

@@ -294,6 +294,7 @@ export function TransferToProductionDialog({
       if (onSuccess) onSuccess();
       (utils as any).production?.getProductionInventory?.invalidate?.();
       (utils as any).production?.getKefirMovements?.invalidate?.();
+      (utils as any).production?.getKefirStorage?.invalidate?.();
       (utils as any).inventory?.listInventory?.invalidate?.();
       (utils as any).inventory?.getTransfers?.invalidate?.();
     },

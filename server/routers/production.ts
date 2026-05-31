@@ -13,7 +13,7 @@ import {
   users, 
   products 
 } from '../../drizzle/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, count } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 
 export const productionRouter = router({
@@ -482,27 +482,78 @@ export const productionRouter = router({
     if (!db) return [];
 
     try {
-      // 1. Obtener el estado real actual del inventario de producción desde la tabla estructurada
-      const items = await db
-        .select({
-          id: productionInventory.productId,
-          name: products.name,
-          quantity: productionInventory.quantity,
-          unit: products.unit,
-          minStock: 5, // Valor por defecto
-          category: products.category,
-          costPerUnit: products.price,
-          presentationQuantity: products.presentationQuantity,
-          presentationUnit: products.presentationUnit,
-          presentationVolumeMl: products.presentationVolumeMl,
-          presentationWeightGr: products.presentationWeightGr,
-          productionRole: products.productionRole,
-        })
-        .from(productionInventory)
-        .innerJoin(products, eq(productionInventory.productId, products.id));
+      const pool = (db as any).session?.client || (global as any)._pool;
+
+      // 1. Intentar obtener datos de production_inventory (fuente de verdad principal)
+      let items: any[] = [];
+
+      if (pool) {
+        try {
+          const [prodRows] = await pool.execute(`
+            SELECT p.id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
+                   p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
+                   p.presentationWeightGr, p.productionRole
+            FROM production_inventory pi
+            INNER JOIN products p ON pi.productId = p.id
+          `);
+
+          console.log(`[getKefirStorage] production_inventory: ${prodRows?.length || 0} items`);
+
+          if (Array.isArray(prodRows) && prodRows.length > 0) {
+            items = prodRows.map((row: any) => ({
+              id: row.id,
+              name: row.name,
+              quantity: row.quantity,
+              unit: row.unit || 'uds',
+              minStock: 5,
+              category: row.category,
+              costPerUnit: row.costPerUnit,
+              presentationQuantity: row.presentationQuantity || 1,
+              presentationUnit: row.presentationUnit || row.unit || 'unidad',
+              presentationVolumeMl: row.presentationVolumeMl || 0,
+              presentationWeightGr: row.presentationWeightGr || 0,
+              productionRole: row.productionRole || 'none',
+            }));
+          } else {
+            // FALLBACK: Si no hay nada en production_inventory, buscar en inventory_transfer_items
+            const [transferRows] = await pool.execute(`
+              SELECT p.id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
+                     p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
+                     p.presentationWeightGr, p.productionRole
+              FROM inventory_transfer_items it
+              INNER JOIN inventory_transfers t ON it.transferId = t.id
+              INNER JOIN products p ON it.productId = p.id
+              WHERE t.direction = 'to_production' AND t.status = 'completed'
+            `);
+
+            if (Array.isArray(transferRows)) {
+              console.log(`[getKefirStorage] inventory_transfer_items: ${transferRows.length} items found`);
+              const agg = new Map();
+              for (const row of transferRows) {
+                const current = agg.get(row.id) || {
+                  id: row.id, name: row.name, quantity: 0, unit: row.unit || 'uds',
+                  minStock: 5, category: row.category, costPerUnit: row.costPerUnit,
+                  presentationQuantity: row.presentationQuantity || 1,
+                  presentationUnit: row.presentationUnit || row.unit || 'unidad',
+                  presentationVolumeMl: row.presentationVolumeMl || 0,
+                  presentationWeightGr: row.presentationWeightGr || 0,
+                  productionRole: row.productionRole || 'none'
+                };
+                current.quantity += row.quantity;
+                agg.set(row.id, current);
+              }
+              items = Array.from(agg.values());
+              console.log(`[getKefirStorage] Fallback aggregated: ${items.length} items`);
+            }
+          }
+        } catch (e) {
+          console.error("Error reading production inventory:", e);
+        }
+      }
 
       // 2. Formatear los datos como el JSON que el módulo de Kefir espera (kefir_inventory_v3)
       const inventoryJson = JSON.stringify(items);
+      console.log(`[getKefirStorage] Final result: ${items.length} items`);
 
       // Retornamos un objeto que simula la tabla kefir_storage para mantener compatibilidad con el frontend
       return {
