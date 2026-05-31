@@ -490,7 +490,7 @@ export const productionRouter = router({
       if (pool) {
         try {
           const [prodRows] = await pool.execute(`
-            SELECT p.id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
+            SELECT pi.productId as id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
                    p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
                    p.presentationWeightGr, p.productionRole
             FROM production_inventory pi
@@ -517,7 +517,7 @@ export const productionRouter = router({
           } else {
             // FALLBACK: Si no hay nada en production_inventory, buscar en inventory_transfer_items
             const [transferRows] = await pool.execute(`
-              SELECT p.id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
+              SELECT it.productId as id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
                      p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
                      p.presentationWeightGr, p.productionRole
               FROM inventory_transfer_items it

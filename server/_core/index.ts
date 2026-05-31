@@ -179,7 +179,7 @@ async function startServer() {
             // 1. Sincronizar el Inventario de Producción REAL
             // Intentamos obtener datos de production_inventory
             const [prodRows] = await pool.execute(`
-              SELECT p.id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
+              SELECT pi.productId as id, p.name, pi.quantity, p.unit, p.category, p.price as costPerUnit,
                      p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
                      p.presentationWeightGr, p.productionRole
               FROM production_inventory pi
@@ -205,7 +205,7 @@ async function startServer() {
             } else {
               // FALLBACK: Si no hay nada en la tabla de inventario, buscamos traspasos completados
               const [transferRows] = await pool.execute(`
-                SELECT p.id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
+                SELECT it.productId as id, p.name, it.quantity, p.unit, p.category, p.price as costPerUnit,
                        p.presentationQuantity, p.presentationUnit, p.presentationVolumeMl,
                        p.presentationWeightGr, p.productionRole
                 FROM inventory_transfer_items it
