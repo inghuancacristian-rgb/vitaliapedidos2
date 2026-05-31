@@ -206,7 +206,8 @@ export const productionRouter = router({
     const db = await getDb();
     if (!db) return [];
 
-    const items = await db
+    // 1. Obtener stock actual de la tabla de inventario de producción
+    const prodItems = await db
       .select({
         id: productionInventory.id,
         productId: productionInventory.productId,
@@ -226,10 +227,7 @@ export const productionRouter = router({
       .from(productionInventory)
       .innerJoin(products, eq(productionInventory.productId, products.id));
 
-    if (items.length > 0) {
-      return items;
-    }
-
+    // 2. Obtener transferencias completadas hacia producción (para asegurar consistencia)
     const transferRows = await db
       .select({
         productId: inventoryTransferItems.productId,
@@ -253,26 +251,36 @@ export const productionRouter = router({
         eq(inventoryTransfers.status, 'completed')
       ));
 
+    // 3. Combinar ambos resultados en un mapa para evitar duplicados y sumar cantidades
     const aggregate = new Map<number, any>();
+
+    // Primero agregamos los items de la tabla de inventario (prioridad)
+    for (const item of prodItems) {
+      aggregate.set(item.productId, { ...item });
+    }
+
+    // Luego sumamos las transferencias que podrían no haberse reflejado en la tabla principal
     for (const row of transferRows) {
-      const current = aggregate.get(row.productId) || {
-        id: `transfer-${row.productId}`,
-        productId: row.productId,
-        quantity: 0,
-        lastUpdated: null,
-        productName: row.productName,
-        productCode: row.productCode,
-        category: row.category,
-        unit: row.unit,
-        salePrice: row.salePrice,
-        presentationQuantity: row.presentationQuantity,
-        presentationUnit: row.presentationUnit,
-        presentationVolumeMl: row.presentationVolumeMl,
-        presentationWeightGr: row.presentationWeightGr,
-        productionRole: row.productionRole,
-      };
-      current.quantity += row.quantity;
-      aggregate.set(row.productId, current);
+      const existing = aggregate.get(row.productId);
+      if (!existing) {
+        const current = {
+          id: `transfer-${row.productId}`,
+          productId: row.productId,
+          quantity: row.quantity,
+          lastUpdated: null,
+          productName: row.productName,
+          productCode: row.productCode,
+          category: row.category,
+          unit: row.unit,
+          salePrice: row.salePrice,
+          presentationQuantity: row.presentationQuantity,
+          presentationUnit: row.presentationUnit,
+          presentationVolumeMl: row.presentationVolumeMl,
+          presentationWeightGr: row.presentationWeightGr,
+          productionRole: row.productionRole,
+        };
+        aggregate.set(row.productId, current);
+      }
     }
 
     return Array.from(aggregate.values());
@@ -615,13 +623,34 @@ export const productionRouter = router({
       }
     }),
 
-  logKefirData: publicProcedure
-    .input(z.object({
-      batches: z.any(),
-      yields: z.any(),
-      inventory: z.any()
-    }))
-    .mutation(async ({ input }) => {
-      return { success: true };
-    })
+  debugKefirData: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return { error: "No DB" };
+
+    const pool = (db as any).session?.client || (global as any)._pool;
+    if (!pool) return { error: "No pool" };
+
+    try {
+      // production_inventory
+      const [prodRows] = await pool.execute('SELECT * FROM production_inventory');
+
+      // inventory_transfer_items
+      const [transferRows] = await pool.execute('SELECT * FROM inventory_transfer_items');
+
+      // products
+      const [products] = await pool.execute('SELECT id, name, category, productionRole FROM products');
+
+      // inventory_transfers
+      const [transfers] = await pool.execute('SELECT * FROM inventory_transfers ORDER BY id DESC LIMIT 5');
+
+      return {
+        production_inventory: prodRows,
+        inventory_transfer_items: transferRows,
+        products: products,
+        inventory_transfers: transfers
+      };
+    } catch (e) {
+      return { error: String(e) };
+    }
+  })
 });
