@@ -591,6 +591,66 @@ export async function ensureTables() {
     `);
 
     // ============================================================
+    // 28. PRODUCTION INPUTS
+    // ============================================================
+    await runSQL("production_inputs table", `
+      CREATE TABLE IF NOT EXISTS production_inputs (
+        id int AUTO_INCREMENT NOT NULL,
+        batchId int NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT production_inputs_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 29. PRODUCTION INVENTORY
+    // ============================================================
+    await runSQL("production_inventory table", `
+      CREATE TABLE IF NOT EXISTS production_inventory (
+        id int AUTO_INCREMENT NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL DEFAULT 0,
+        lastUpdated timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT production_inventory_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
+    // 30. INVENTORY TRANSFERS
+    // ============================================================
+    await runSQL("inventory_transfers table", `
+      CREATE TABLE IF NOT EXISTS inventory_transfers (
+        id int AUTO_INCREMENT NOT NULL,
+        transferNumber varchar(50) NOT NULL,
+        direction enum('to_production','to_general') NOT NULL,
+        status enum('completed','cancelled') NOT NULL DEFAULT 'completed',
+        userId int NOT NULL,
+        notes text,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT inventory_transfers_id PRIMARY KEY(id),
+        CONSTRAINT inventory_transfers_transferNumber_unique UNIQUE(transferNumber)
+      )
+    `);
+
+    // ============================================================
+    // 31. INVENTORY TRANSFER ITEMS
+    // ============================================================
+    await runSQL("inventory_transfer_items table", `
+      CREATE TABLE IF NOT EXISTS inventory_transfer_items (
+        id int AUTO_INCREMENT NOT NULL,
+        transferId int NOT NULL,
+        productId int NOT NULL,
+        quantity int NOT NULL,
+        productName varchar(255),
+        productUnit varchar(20),
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT inventory_transfer_items_id PRIMARY KEY(id)
+      )
+    `);
+
+    // ============================================================
     // ENSURE MISSING COLUMNS ON EXISTING TABLES
     // (for tables that were created by old migrations without these columns)
     // ============================================================

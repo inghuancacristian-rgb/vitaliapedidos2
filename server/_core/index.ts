@@ -166,7 +166,7 @@ async function startServer() {
   ) => {
     res.setHeader("Cache-Control", "no-cache");
     try {
-      let html = await fs.promises.readFile(kefirControlIndex, 'utf-8');
+      let html = await fs.readFile(kefirControlIndex, 'utf-8');
       
       const { getDb } = await import("../db");
       const db = await getDb();

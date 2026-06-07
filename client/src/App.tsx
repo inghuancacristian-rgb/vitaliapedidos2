@@ -29,11 +29,13 @@ import Customers from "@/pages/Customers";
 import Reports from "@/pages/Reports";
 import Expenses from "@/pages/Expenses";
 import BusinessAnalysis from "@/pages/BusinessAnalysis";
+import ProductionModule from "@/pages/production/ProductionModule";
 import { useEffect } from "react";
 
 function ProtectedRoute({
   component: Component,
   adminOnly = false,
+  children,
   ...rest
 }: any) {
   const { user } = useAuth();
@@ -54,6 +56,10 @@ function ProtectedRoute({
         </Link>
       </div>
     );
+  }
+
+  if (children) {
+    return <>{children}</>;
   }
 
   return <Component {...rest} />;
@@ -133,6 +139,19 @@ function Router() {
           <Route path={"/edit-order/:id"} component={EditOrder} />
           <Route path="/repartidor/finance" component={RepartidorFinance} />
           <Route path="/delivery-load" component={DeliveryLoad} />
+
+          {/* Módulo de Producción Modernizado */}
+          <Route path="/production">
+            <ProtectedRoute adminOnly={true}>
+              <ProductionModule />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/production/:path*">
+            <ProtectedRoute adminOnly={true}>
+              <ProductionModule />
+            </ProtectedRoute>
+          </Route>
+
           <Route path={"/404"} component={NotFound} />
           <Route component={NotFound} />
         </Switch>

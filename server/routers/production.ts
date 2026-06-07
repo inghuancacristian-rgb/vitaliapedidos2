@@ -290,10 +290,10 @@ export const productionRouter = router({
   getKefirMovements: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return [];
-    
+
     const pool = (db as any).session?.client || (global as any)._pool;
     if (!pool) return [];
-    
+
     try {
       const [rows] = await pool.execute('SELECT * FROM kefir_movements ORDER BY createdAt DESC');
       return rows as any[];
@@ -302,6 +302,94 @@ export const productionRouter = router({
       return [];
     }
   }),
+
+  transferToGeneral: publicProcedure
+    .input(z.object({
+      items: z.array(z.object({
+        productId: z.number(),
+        quantity: z.number(),
+      })),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const pool = (db as any).session?.client || (global as any)._pool;
+      if (!pool) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: "No connection pool" });
+
+      // @ts-ignore
+      const userId = ctx.user?.id || 1;
+
+      try {
+        // 1. Crear el registro del traspaso
+        const transferNumber = `TRN-${Date.now().toString().slice(-6)}`;
+        const [transferRes] = await db.insert(inventoryTransfers).values({
+          transferNumber,
+          direction: 'to_general',
+          status: 'completed',
+          userId: userId,
+          notes: input.notes || 'Traspaso automático desde planta',
+        });
+        const transferId = transferRes.insertId;
+
+        for (const item of input.items) {
+          // 2. Restar de inventario de producción
+          const [prodStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, item.productId));
+          if (!prodStock || prodStock.quantity < item.quantity) {
+            throw new Error(`Stock insuficiente en planta para el producto ID ${item.productId}`);
+          }
+          await db.update(productionInventory)
+            .set({ quantity: prodStock.quantity - item.quantity })
+            .where(eq(productionInventory.id, prodStock.id));
+
+          // 3. Sumar al inventario general
+          const [genStock] = await db.select().from(inventory).where(eq(inventory.productId, item.productId));
+          if (genStock) {
+            await db.update(inventory)
+              .set({ quantity: genStock.quantity + item.quantity })
+              .where(eq(inventory.id, genStock.id));
+          } else {
+            await db.insert(inventory).values({
+              productId: item.productId,
+              quantity: item.quantity,
+            });
+          }
+
+          // 4. Registrar items del traspaso
+          const product = await db.query.products.findFirst({
+            where: eq(products.id, item.productId)
+          });
+          await db.insert(inventoryTransferItems).values({
+            transferId,
+            productId: item.productId,
+            quantity: item.quantity,
+            productName: product?.name || 'Desconocido',
+            productUnit: product?.unit || 'uds',
+          });
+
+          // 5. Registrar movimiento en Kardex de Planta
+          if (pool && product) {
+            await pool.execute(
+              'INSERT INTO kefir_movements (productId, productName, category, previousQuantity, newQuantity, changeAmount, reason) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [
+                product.id.toString(),
+                product.name,
+                product.category,
+                prodStock.quantity,
+                prodStock.quantity - item.quantity,
+                -item.quantity,
+                `Traspaso a General #${transferNumber}`
+              ]
+            ).catch(console.error);
+          }
+        }
+
+        return { success: true, transferNumber };
+      } catch (e: any) {
+        console.error("[Transfer] Error:", e);
+        throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+      }
+    }),
 
   migrateLocalData: publicProcedure
     .input(z.object({
@@ -652,5 +740,75 @@ export const productionRouter = router({
     } catch (e) {
       return { error: String(e) };
     }
+  }),
+
+  validateParity: publicProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) return { success: false, error: "No DB" };
+
+    try {
+      const allProducts = await db.select().from(products);
+      const milkProduct = allProducts.find(p => p.name.toLowerCase().includes('leche') && p.productionRole === 'finished_good')
+                        || allProducts.find(p => p.productionRole === 'finished_good');
+      const inputProduct = allProducts.find(p => p.productionRole === 'milk' || p.name.toLowerCase().includes('insumo'))
+                         || allProducts.find(p => p.productionRole === 'none');
+
+      if (!milkProduct || !inputProduct) return { success: false, error: "No se encontraron productos de prueba" };
+
+      const batchNumber = `PARITY-TEST-${Date.now()}`;
+      const [batchResult] = await db.insert(productionBatches).values({
+        batchNumber,
+        type: 'kefir_production',
+        status: 'in_progress',
+        registeredBy: 1,
+        notes: 'Validacion de paridad',
+      });
+      const batchId = batchResult.insertId;
+
+      const outputQty = 10;
+      const inputQty = 5;
+
+      await db.update(productionBatches).set({ status: 'completed', endDate: new Date() }).where(eq(productionBatches.id, batchId));
+      await db.insert(productionOutputs).values({ batchId, productId: milkProduct.id, quantity: outputQty });
+
+      const [prodStock] = await db.select().from(productionInventory).where(eq(productionInventory.productId, milkProduct.id));
+      const startProdQty = prodStock?.quantity || 0;
+      if (prodStock) {
+        await db.update(productionInventory).set({ quantity: startProdQty + outputQty }).where(eq(productionInventory.id, prodStock.id));
+      } else {
+        await db.insert(productionInventory).values({ productId: milkProduct.id, quantity: outputQty });
+      }
+
+      await db.insert(productionInputs).values({ batchId, productId: inputProduct.id, quantity: inputQty });
+      const [genStock] = await db.select().from(inventory).where(eq(inventory.productId, inputProduct.id));
+      if (genStock) {
+        await db.update(inventory).set({ quantity: Math.max(0, genStock.quantity - inputQty) }).where(eq(inventory.id, genStock.id));
+      }
+
+      await db.insert(inventoryMovements).values({
+        productId: inputProduct.id,
+        type: 'exit',
+        quantity: inputQty,
+        reason: `Validacion paridad #${batchNumber}`,
+        userId: 1,
+      });
+
+      const [finalProd] = await db.select().from(productionInventory).where(eq(productionInventory.productId, milkProduct.id));
+      const [finalGen] = await db.select().from(inventory).where(eq(inventory.productId, inputProduct.id));
+
+      const success = finalProd.quantity === (startProdQty + outputQty) && finalGen.quantity === Math.max(0, (genStock?.quantity || 0) - inputQty);
+
+      return {
+        success,
+        details: {
+          batch: batchNumber,
+          productionStock: { initial: startProdQty, final: finalProd.quantity, expected: startProdQty + outputQty },
+          generalStock: { initial: genStock?.quantity || 0, final: finalGen.quantity, expected: Math.max(0, (genStock?.quantity || 0) - inputQty) }
+        }
+      };
+    } catch (e) {
+      return { success: false, error: String(e) };
+    }
   })
+
 });

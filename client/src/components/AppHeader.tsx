@@ -10,11 +10,12 @@ export default function AppHeader() {
   const navItems = user?.role === "admin"
     ? [
         { href: "/", label: "Inicio" },
+        { href: "/create-order", label: "Nueva Orden", icon: ShoppingBag },
         { href: "/orders", label: "Pedidos" },
         { href: "/sales", label: "Ventas", icon: ShoppingBag },
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/inventory", label: "Inventario General" },
-        { href: "/kefir-control", label: "Producción", external: true },
+        { href: "/production", label: "Producción" },
         { href: "/customers", label: "Clientes" },
         { href: "/finance", label: "Finanzas" },
         { href: "/expenses", label: "Gastos" },
@@ -56,33 +57,18 @@ export default function AppHeader() {
                 const Icon = item.icon;
 
                 return (
-                  item.external ? (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"
-                          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                      }`}
-                    >
-                      {Icon ? <Icon className="h-4 w-4" /> : null}
-                      {item.label}
-                    </a>
-                  ) : (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"
-                          : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-                      }`}
-                    >
-                      {Icon ? <Icon className="h-4 w-4" /> : null}
-                      {item.label}
-                    </Link>
-                  )
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-[0_14px_26px_-18px_var(--primary)]"
+                        : "text-muted-foreground hover:bg-accent/80 hover:text-foreground"
+                    }`}
+                  >
+                    {Icon ? <Icon className="h-4 w-4" /> : null}
+                    {item.label}
+                  </Link>
                 );
               })}
             </nav>

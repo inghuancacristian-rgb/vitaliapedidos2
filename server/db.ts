@@ -91,8 +91,14 @@ export const MOCK_SALE_ITEMS: any[] = [];
 export const MOCK_QUOTATIONS: any[] = [];
 export const MOCK_QUOTATION_ITEMS: any[] = [];
 export const MOCK_DELIVERY_EXTRA_LOAD: any[] = [];
+export const MOCK_PRODUCTION_BATCHES: any[] = [];
+export const MOCK_PRODUCTION_OUTPUTS: any[] = [];
+export const MOCK_PRODUCTION_INPUTS: any[] = [];
+export const MOCK_PRODUCTION_INVENTORY: any[] = [];
+export const MOCK_INVENTORY_TRANSFERS: any[] = [];
+export const MOCK_INVENTORY_TRANSFER_ITEMS: any[] = [];
 
-function syncMocksToDisk() {
+export function syncMocksToDisk() {
   if (process.env.DATABASE_URL) return;
   const data = {
     MOCK_CUSTOMERS,
@@ -117,6 +123,12 @@ function syncMocksToDisk() {
     MOCK_QUOTATIONS,
     MOCK_QUOTATION_ITEMS,
     MOCK_DELIVERY_EXTRA_LOAD,
+    MOCK_PRODUCTION_BATCHES,
+    MOCK_PRODUCTION_OUTPUTS,
+    MOCK_PRODUCTION_INPUTS,
+    MOCK_PRODUCTION_INVENTORY,
+    MOCK_INVENTORY_TRANSFERS,
+    MOCK_INVENTORY_TRANSFER_ITEMS,
   };
   try {
     fs.writeFileSync(MOCK_DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
@@ -138,7 +150,10 @@ function loadMocks() {
       MOCK_FINANCIAL_TRANSACTIONS, MOCK_CASH_CLOSURES,
       MOCK_CASH_OPENINGS, MOCK_SALES, MOCK_SALE_ITEMS,
       MOCK_QUOTATIONS, MOCK_QUOTATION_ITEMS,
-      MOCK_DELIVERY_EXTRA_LOAD
+      MOCK_DELIVERY_EXTRA_LOAD,
+      MOCK_PRODUCTION_BATCHES, MOCK_PRODUCTION_OUTPUTS,
+      MOCK_PRODUCTION_INPUTS, MOCK_PRODUCTION_INVENTORY,
+      MOCK_INVENTORY_TRANSFERS, MOCK_INVENTORY_TRANSFER_ITEMS
     };
     for (const [key, arr] of Object.entries(arrays)) {
       if (data[key] && Array.isArray(data[key])) {

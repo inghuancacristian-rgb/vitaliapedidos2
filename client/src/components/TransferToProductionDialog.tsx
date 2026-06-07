@@ -38,6 +38,15 @@ const isKefirPackagingName = (value: unknown) => {
   return KEFIR_PACKAGING_KEYWORDS.some(keyword => text.includes(keyword));
 };
 
+const normalizeProductionName = (value: unknown) => {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+};
+
 const getKefirPresentationVolumeMl = (
   item: KefirInventoryItem,
   itemName: string
@@ -281,7 +290,75 @@ export function TransferToProductionDialog({
         kInv = normalizeKefirInventory(kInv);
 
         localStorage.setItem("kefir_inventory_v3", JSON.stringify(kInv));
+
+        // ALSO update the new Production Control state in localStorage
+        const newSTATE_KEY = "control_pedidos_production_state_v2";
+        const prodStateStr = localStorage.getItem(newSTATE_KEY);
+        let prodState: any = null;
+        if (prodStateStr) {
+          try {
+            prodState = JSON.parse(prodStateStr);
+          } catch (e) {}
+        }
+
+        if (prodState && Array.isArray(prodState.inventory)) {
+          (data.items || []).forEach((item: any) => {
+            const productName = getKefirText(item.productName);
+            const itemQuantity = toFiniteKefirNumber(item.quantity, 0);
+            if (!productName || itemQuantity <= 0) return;
+
+            const normName = normalizeProductionName(productName);
+            let existingItem = prodState.inventory.find(
+              (i: any) => normalizeProductionName(i.name) === normName
+            );
+
+            const kCategory = getKefirCategory(item.category, productName);
+            let pCategory: "materia" | "insumo" | "terminado" = "materia";
+            if (kCategory === "envase") {
+              pCategory = "insumo";
+            } else if (kCategory === "producto") {
+              pCategory = "terminado";
+            }
+
+            if (!existingItem) {
+              existingItem = {
+                id: `inv-${normName.replace(/\s+/g, "-")}`,
+                name: productName,
+                category: pCategory,
+                unit: getKefirText(item.unit) || "uds",
+                quantity: 0,
+                minStock: 0,
+                avgCost: toFiniteKefirNumber(item.costPerUnit, 0),
+                updatedAt: new Date().toISOString(),
+              };
+              prodState.inventory.push(existingItem);
+            }
+
+            existingItem.quantity = Number((existingItem.quantity + itemQuantity).toFixed(3));
+            existingItem.updatedAt = new Date().toISOString();
+
+            // Record a movement in prodState.movements
+            prodState.movements = [
+              {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                date: new Date().toISOString(),
+                productName: productName,
+                category: pCategory,
+                changeAmount: Number(itemQuantity.toFixed(3)),
+                newQuantity: existingItem.quantity,
+                unit: existingItem.unit,
+                reason: "Traspaso de inventario general",
+                reference: data.transferNumber ? String(data.transferNumber) : undefined,
+              },
+              ...(Array.isArray(prodState.movements) ? prodState.movements : [])
+            ];
+          });
+
+          localStorage.setItem(newSTATE_KEY, JSON.stringify(prodState));
+        }
+
         window.dispatchEvent(new Event("storage"));
+        window.dispatchEvent(new CustomEvent("control_pedidos_production_state_updated"));
       } catch (e) {
         console.error("No se pudo actualizar KefirControl localStorage", e);
       }
@@ -361,6 +438,149 @@ export function TransferToProductionDialog({
     setSelectedItems({});
   };
 
+  const handleLocalTransfer = (itemsToTransfer: { productId: number; quantity: number }[]) => {
+    // Build transfer details from eligible items
+    const transferNumber = `TR-LOCAL-${Date.now().toString(36).toUpperCase()}`;
+    const transferDetails: any[] = [];
+
+    for (const transferItem of itemsToTransfer) {
+      const invItem = eligibleItems.find(i => i.productId === transferItem.productId);
+      if (!invItem) continue;
+
+      const productName = getKefirText(invItem.product?.name || invItem.name);
+      const itemQuantity = transferItem.quantity;
+      const unitLabel = getKefirText(invItem.product?.unit || invItem.unit || "uds");
+      const category = getKefirText(invItem.product?.category || invItem.category);
+
+      transferDetails.push({
+        productId: transferItem.productId,
+        productName,
+        category,
+        quantity: itemQuantity,
+        unit: unitLabel,
+        presentationQuantity: toFiniteKefirNumber(invItem.product?.presentationQuantity, 1),
+        presentationUnit: getKefirText(invItem.product?.presentationUnit || unitLabel),
+        presentationVolumeMl: toFiniteKefirNumber(invItem.product?.presentationVolumeMl, 0),
+        presentationWeightGr: toFiniteKefirNumber(invItem.product?.presentationWeightGr, 0),
+        productionRole: getKefirText(invItem.product?.productionRole || "none"),
+      });
+    }
+
+    // Update kefir_inventory_v3
+    try {
+      const kInvStr = localStorage.getItem("kefir_inventory_v3");
+      let kInv = normalizeKefirInventory(JSON.parse(kInvStr || "[]"));
+
+      transferDetails.forEach((item: any) => {
+        const productName = getKefirText(item.productName);
+        const itemQuantity = toFiniteKefirNumber(item.quantity, 0);
+        if (!productName || itemQuantity <= 0) return;
+
+        const nameLower = productName.toLowerCase();
+        let existingItem = kInv.find(i => getKefirText(i.name).toLowerCase() === nameLower);
+        const kCategory = getKefirCategory(item.category, productName);
+
+        if (!existingItem) {
+          existingItem = {
+            id: getNextKefirInventoryId(kInv),
+            name: productName,
+            quantity: 0,
+            unit: getKefirText(item.unit) || "uds",
+            minStock: 0,
+            category: kCategory,
+            costPerUnit: 0,
+            presentationQuantity: Math.max(1, toFiniteKefirNumber(item.presentationQuantity, 1)),
+            presentationUnit: getKefirText(item.presentationUnit) || getKefirText(item.unit) || "unidad",
+            presentationVolumeMl: getKefirPresentationVolumeMl(item, productName),
+            presentationWeightGr: Math.max(0, toFiniteKefirNumber(item.presentationWeightGr, 0)),
+            productionRole: getKefirProductionRole(item, productName),
+          };
+          kInv.push(existingItem);
+        }
+        existingItem.quantity = toFiniteKefirNumber(existingItem.quantity, 0) + itemQuantity;
+        if (existingItem.stock !== undefined) delete existingItem.stock;
+      });
+
+      kInv = normalizeKefirInventory(kInv);
+      localStorage.setItem("kefir_inventory_v3", JSON.stringify(kInv));
+    } catch (e) {
+      console.error("Error updating kefir_inventory_v3", e);
+    }
+
+    // Update production control state
+    const newSTATE_KEY = "control_pedidos_production_state_v2";
+    try {
+      const prodStateStr = localStorage.getItem(newSTATE_KEY);
+      let prodState: any = prodStateStr ? JSON.parse(prodStateStr) : null;
+
+      if (prodState && Array.isArray(prodState.inventory)) {
+        transferDetails.forEach((item: any) => {
+          const productName = getKefirText(item.productName);
+          const itemQuantity = toFiniteKefirNumber(item.quantity, 0);
+          if (!productName || itemQuantity <= 0) return;
+
+          const normName = normalizeProductionName(productName);
+          let existingItem = prodState.inventory.find(
+            (i: any) => normalizeProductionName(i.name) === normName
+          );
+
+          const kCategory = getKefirCategory(item.category, productName);
+          let pCategory: "materia" | "insumo" | "terminado" = "materia";
+          if (kCategory === "envase") pCategory = "insumo";
+          else if (kCategory === "producto") pCategory = "terminado";
+
+          if (!existingItem) {
+            existingItem = {
+              id: `inv-${normName.replace(/\s+/g, "-")}`,
+              name: productName,
+              category: pCategory,
+              unit: getKefirText(item.unit) || "uds",
+              quantity: 0,
+              minStock: 0,
+              avgCost: 0,
+              updatedAt: new Date().toISOString(),
+              lots: [],
+            };
+            prodState.inventory.push(existingItem);
+          }
+
+          existingItem.quantity = Number((existingItem.quantity + itemQuantity).toFixed(3));
+          existingItem.updatedAt = new Date().toISOString();
+
+          prodState.movements = [
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              date: new Date().toISOString(),
+              productName: productName,
+              category: pCategory,
+              changeAmount: Number(itemQuantity.toFixed(3)),
+              newQuantity: existingItem.quantity,
+              unit: existingItem.unit,
+              reason: "Traspaso de inventario general",
+              reference: transferNumber,
+            },
+            ...(Array.isArray(prodState.movements) ? prodState.movements : []),
+          ];
+        });
+
+        localStorage.setItem(newSTATE_KEY, JSON.stringify(prodState));
+      }
+    } catch (e) {
+      console.error("Error updating production state", e);
+    }
+
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("control_pedidos_production_state_updated"));
+    window.dispatchEvent(new CustomEvent("production-control-updated"));
+
+    toast.success(`Traspaso ${transferNumber} realizado con éxito (modo local)`);
+    setIsOpen(false);
+    setSelectedItems({});
+    setNotes("");
+    setSearchTerm("");
+    if (onSuccess) onSuccess();
+  };
+
   const handleSubmit = () => {
     const itemsToTransfer = Object.entries(selectedItems)
       .map(([id, qty]) => ({
@@ -374,10 +594,18 @@ export function TransferToProductionDialog({
       return;
     }
 
-    transferMutation.mutate({
-      items: itemsToTransfer,
-      notes: notes.trim() || undefined,
-    });
+    transferMutation.mutate(
+      {
+        items: itemsToTransfer,
+        notes: notes.trim() || undefined,
+      },
+      {
+        onError: () => {
+          // Fallback: Si el servidor no tiene DB, hacer el traspaso localmente
+          handleLocalTransfer(itemsToTransfer);
+        },
+      }
+    );
   };
 
   const selectedCount = Object.keys(selectedItems).length;

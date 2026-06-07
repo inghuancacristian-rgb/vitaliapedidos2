@@ -1047,7 +1047,93 @@ export const inventoryRouter = router({
       if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       
       const db = await import("../db").then(m => m.getDb());
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB Error" });
+      const productsData = await getAllProducts();
+      const inventoryData = await getAllInventory();
+      const transferDetails = [];
+
+      if (!db) {
+        const { MOCK_INVENTORY, MOCK_PRODUCTION_INVENTORY, MOCK_MOVEMENTS, MOCK_INVENTORY_TRANSFERS, MOCK_INVENTORY_TRANSFER_ITEMS } = await import("../db");
+        const { syncMocksToDisk } = await import("../db");
+
+        const nextId = MOCK_INVENTORY_TRANSFERS.length + 1;
+        const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
+        const transferId = nextId;
+
+        MOCK_INVENTORY_TRANSFERS.push({
+          id: transferId,
+          transferNumber,
+          direction: 'to_production',
+          status: 'completed',
+          userId: ctx.user.id,
+          notes: input.notes || null,
+          createdAt: new Date()
+        });
+
+        for (const item of input.items) {
+          const product = productsData.find((p: any) => p.id === item.productId);
+          if (!product) continue;
+
+          MOCK_INVENTORY_TRANSFER_ITEMS.push({
+            id: MOCK_INVENTORY_TRANSFER_ITEMS.length + 1,
+            transferId,
+            productId: item.productId,
+            quantity: item.quantity,
+            productName: product.name,
+            productUnit: product.unit || 'unidad',
+            createdAt: new Date()
+          });
+
+          const currentInv = MOCK_INVENTORY.find((i: any) => i.productId === item.productId && !i.batchNumber);
+          if (currentInv) {
+            const newQty = (currentInv.quantity || 0) - item.quantity;
+            currentInv.quantity = Math.max(0, newQty);
+            currentInv.lastUpdated = new Date();
+          }
+
+          let prodStock = MOCK_PRODUCTION_INVENTORY.find((i: any) => i.productId === item.productId);
+          const previousProdQty = prodStock?.quantity || 0;
+          const nextProdQty = previousProdQty + item.quantity;
+
+          if (prodStock) {
+            prodStock.quantity = nextProdQty;
+            prodStock.lastUpdated = new Date();
+          } else {
+            MOCK_PRODUCTION_INVENTORY.push({
+              id: MOCK_PRODUCTION_INVENTORY.length + 1,
+              productId: item.productId,
+              quantity: item.quantity,
+              lastUpdated: new Date()
+            });
+          }
+
+          MOCK_MOVEMENTS.push({
+            id: MOCK_MOVEMENTS.length + 1,
+            productId: item.productId,
+            userId: ctx.user.id,
+            type: "exit",
+            quantity: item.quantity,
+            reason: "Traspaso a Producción",
+            notes: `Traspaso ${transferNumber}${input.notes ? ': ' + input.notes : ''}`,
+            createdAt: new Date()
+          });
+
+          transferDetails.push({
+            productId: item.productId,
+            productName: product.name,
+            category: product.category,
+            quantity: item.quantity,
+            unit: product.unit || 'unidad',
+            presentationQuantity: product.presentationQuantity || 1,
+            presentationUnit: product.presentationUnit || product.unit || 'unidad',
+            presentationVolumeMl: product.presentationVolumeMl || 0,
+            presentationWeightGr: product.presentationWeightGr || 0,
+            productionRole: product.productionRole || 'none'
+          });
+        }
+
+        syncMocksToDisk();
+        return { success: true, transferNumber, items: transferDetails };
+      }
       
       const { createInventoryMovement, updateInventory } = await import("../db");
       const { productionInventory } = await import("../../drizzle/schema");
@@ -1067,13 +1153,8 @@ export const inventoryRouter = router({
       });
       const transferId = (insertRes[0] as any).insertId;
 
-      const productsData = await getAllProducts();
-      const inventoryData = await getAllInventory();
-
-      const transferDetails = [];
-
       for (const item of input.items) {
-        const product = productsData.find(p => p.id === item.productId);
+        const product = productsData.find((p: any) => p.id === item.productId);
         if (!product) continue;
 
         // 3. Create Transfer Item
@@ -1086,7 +1167,7 @@ export const inventoryRouter = router({
         });
 
         // 4. Update Inventory (General -> decrease)
-        const currentInv = inventoryData.find(i => i.productId === item.productId);
+        const currentInv = inventoryData.find((i: any) => i.productId === item.productId);
         const newQty = (currentInv?.quantity || 0) - item.quantity;
         await updateInventory(item.productId, Math.max(0, newQty));
 
@@ -1163,7 +1244,106 @@ export const inventoryRouter = router({
       if (ctx.user?.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
       
       const db = await import("../db").then(m => m.getDb());
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB Error" });
+      const productsData = await getAllProducts();
+      const inventoryData = await getAllInventory();
+      const transferDetails = [];
+
+      if (!db) {
+        const { MOCK_INVENTORY, MOCK_PRODUCTION_INVENTORY, MOCK_MOVEMENTS, MOCK_INVENTORY_TRANSFERS, MOCK_INVENTORY_TRANSFER_ITEMS } = await import("../db");
+        const { syncMocksToDisk } = await import("../db");
+
+        const createdAt = new Date();
+        const nextId = MOCK_INVENTORY_TRANSFERS.length + 1;
+        const transferNumber = `TR-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`;
+        const transferId = nextId;
+
+        MOCK_INVENTORY_TRANSFERS.push({
+          id: transferId,
+          transferNumber,
+          direction: 'to_general',
+          status: 'completed',
+          userId: ctx.user.id,
+          notes: input.notes || null,
+          createdAt
+        });
+
+        for (const item of input.items) {
+          const product = resolveFinishedProductReference(
+            productsData,
+            item.productId,
+            item.productName
+          );
+          if (!product) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `No se encontro una referencia exacta para "${item.productName || item.productId}" en el inventario general. Cree o enlace primero ese producto.`,
+            });
+          }
+
+          MOCK_INVENTORY_TRANSFER_ITEMS.push({
+            id: MOCK_INVENTORY_TRANSFER_ITEMS.length + 1,
+            transferId,
+            productId: product.id,
+            quantity: item.quantity,
+            productName: product.name,
+            productUnit: product.unit || 'unidad',
+            createdAt
+          });
+
+          let currentInv = MOCK_INVENTORY.find((i: any) => i.productId === product!.id && !i.batchNumber);
+          const newQty = (currentInv?.quantity || 0) + item.quantity;
+          if (currentInv) {
+            currentInv.quantity = newQty;
+            currentInv.lastUpdated = new Date();
+          } else {
+            MOCK_INVENTORY.push({
+              id: MOCK_INVENTORY.length + 1,
+              productId: product!.id,
+              batchNumber: null,
+              quantity: item.quantity,
+              minStock: 5,
+              lastUpdated: new Date()
+            });
+          }
+
+          let prodStock = MOCK_PRODUCTION_INVENTORY.find((i: any) => i.productId === product!.id);
+          if (prodStock) {
+            prodStock.quantity = Math.max(0, prodStock.quantity - item.quantity);
+            prodStock.lastUpdated = new Date();
+          }
+
+          MOCK_MOVEMENTS.push({
+            id: MOCK_MOVEMENTS.length + 1,
+            productId: product.id,
+            userId: ctx.user.id,
+            type: "entry",
+            quantity: item.quantity,
+            reason: "Ingreso por Producción",
+            notes: `Traspaso ${transferNumber}${input.notes ? ': ' + input.notes : ''}`,
+            createdAt: new Date()
+          });
+
+          transferDetails.push({
+            productId: product.id,
+            productName: product.name,
+            quantity: item.quantity,
+            unit: product.unit || 'unidad',
+            productUnit: product.unit || 'unidad'
+          });
+        }
+
+        syncMocksToDisk();
+
+        return {
+          success: true,
+          transferNumber,
+          direction: 'to_general',
+          status: 'completed',
+          notes: input.notes || null,
+          createdAt: createdAt.toISOString(),
+          items: transferDetails
+        };
+      }
       
       const { createInventoryMovement, updateInventory } = await import("../db");
       
@@ -1183,11 +1363,6 @@ export const inventoryRouter = router({
         createdAt
       });
       const transferId = (insertRes[0] as any).insertId;
-
-      const productsData = await getAllProducts();
-      const inventoryData = await getAllInventory();
-
-      const transferDetails = [];
 
       for (const item of input.items) {
         const product = resolveFinishedProductReference(
@@ -1275,7 +1450,24 @@ export const inventoryRouter = router({
 
   getTransfers: protectedProcedure.query(async () => {
     const db = await import("../db").then(m => m.getDb());
-    if (!db) return [];
+    if (!db) {
+      const { MOCK_INVENTORY_TRANSFERS, MOCK_INVENTORY_TRANSFER_ITEMS, MOCK_USERS } = await import("../db");
+      return MOCK_INVENTORY_TRANSFERS.map((t: any) => {
+        const user = MOCK_USERS.find((u: any) => u.id === t.userId);
+        return {
+          id: t.id,
+          transferNumber: t.transferNumber,
+          direction: t.direction,
+          status: t.status,
+          userId: t.userId,
+          notes: t.notes,
+          createdAt: t.createdAt,
+          username: user?.username || 'admin',
+          userFullName: user?.name || 'Administrador (Modo Demo)',
+          items: MOCK_INVENTORY_TRANSFER_ITEMS.filter((i: any) => i.transferId === t.id)
+        };
+      }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
     
     // Fetch transfers
     const transfersRows = await db.select({
@@ -1297,7 +1489,7 @@ export const inventoryRouter = router({
     if (!transfers || transfers.length === 0) return [];
     
     // Fetch items
-    const transferIds = transfers.map(t => t.id);
+    const transferIds = transfers.map((t: any) => t.id);
     
     const itemsRows = await db.select()
       .from(inventoryTransferItems)
@@ -1306,9 +1498,9 @@ export const inventoryRouter = router({
     const items = itemsRows;
     
     // Assemble
-    return transfers.map(t => ({
+    return transfers.map((t: any) => ({
       ...t,
-      items: items.filter(i => i.transferId === t.id)
+      items: items.filter((i: any) => i.transferId === t.id)
     }));
   }),
 });

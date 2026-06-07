@@ -10,7 +10,7 @@
       "openId": "demo_admin",
       "createdAt": "2026-05-05T06:13:29.383Z",
       "updatedAt": "2026-05-05T06:13:29.383Z",
-      "lastSignedIn": "2026-05-19T22:31:05.582Z",
+      "lastSignedIn": "2026-06-07T04:37:42.059Z",
       "email": "admin@demo.com",
       "loginMethod": "traditional"
     },
@@ -71,7 +71,7 @@
     },
     {
       "code": "leche kream",
-      "name": "leche kream",
+      "name": "leche kream 800 ml",
       "category": "raw_material",
       "price": 730,
       "salePrice": 0,
@@ -79,7 +79,7 @@
       "discountPrice": 0,
       "status": "active",
       "unit": "unidad",
-      "presentationQuantity": 50,
+      "presentationQuantity": 1,
       "presentationUnit": "unidad",
       "presentationVolumeMl": 800,
       "presentationWeightGr": 0,
@@ -89,7 +89,8 @@
       "productionNotes": null,
       "id": 5,
       "createdAt": "2026-05-19T22:28:58.280Z",
-      "updatedAt": "2026-05-19T22:28:58.280Z"
+      "updatedAt": "2026-06-07T04:37:42.061Z",
+      "imageUrl": ""
     },
     {
       "id": 6,
@@ -530,6 +531,56 @@
       "productionNotes": null,
       "createdAt": "2026-05-25T17:16:17.695Z",
       "updatedAt": "2026-05-25T17:16:17.695Z"
+    },
+    {
+      "code": "PROD-011",
+      "name": "KEFIR MARACUYA",
+      "category": "finished_product",
+      "price": 0,
+      "salePrice": 2800,
+      "wholesalePrice": 2800,
+      "discountPrice": 2800,
+      "wholesaleDiscountType": "percentage",
+      "wholesaleDiscountValue": 0,
+      "imageUrl": null,
+      "status": "active",
+      "unit": "unidad",
+      "presentationQuantity": 1,
+      "presentationUnit": "ml",
+      "presentationVolumeMl": 1000,
+      "presentationWeightGr": 0,
+      "productionRole": "finished_good",
+      "storageLocation": "Producción",
+      "supplierName": "Producción KéfirControl",
+      "productionNotes": "Tipo: kefir | Sabor: MARACUYA",
+      "id": 26,
+      "createdAt": "2026-06-05T03:17:24.417Z",
+      "updatedAt": "2026-06-05T03:17:24.417Z"
+    },
+    {
+      "code": "PROD-011",
+      "name": "KEFIR MANGO",
+      "category": "finished_product",
+      "price": 0,
+      "salePrice": 2800,
+      "wholesalePrice": 2800,
+      "discountPrice": 2800,
+      "wholesaleDiscountType": "percentage",
+      "wholesaleDiscountValue": 0,
+      "imageUrl": null,
+      "status": "active",
+      "unit": "unidad",
+      "presentationQuantity": 1,
+      "presentationUnit": "ml",
+      "presentationVolumeMl": 1000,
+      "presentationWeightGr": 0,
+      "productionRole": "finished_good",
+      "storageLocation": "Producción",
+      "supplierName": "Producción KéfirControl",
+      "productionNotes": "Tipo: kefir | Sabor: Natural",
+      "id": 27,
+      "createdAt": "2026-06-06T03:02:30.663Z",
+      "updatedAt": "2026-06-06T03:02:30.663Z"
     }
   ],
   "MOCK_INVENTORY": [
@@ -564,9 +615,9 @@
     {
       "id": 5,
       "productId": 5,
-      "quantity": 10,
+      "quantity": 0,
       "minStock": 10,
-      "lastUpdated": "2026-05-19T22:31:05.588Z",
+      "lastUpdated": "2026-06-07T04:26:26.373Z",
       "expiryDate": "2026-06-27"
     },
     {
@@ -708,6 +759,20 @@
       "quantity": 5,
       "minStock": 10,
       "lastUpdated": "2026-05-25T17:16:17.695Z"
+    },
+    {
+      "id": 26,
+      "productId": 26,
+      "quantity": 0,
+      "minStock": 10,
+      "lastUpdated": "2026-06-05T03:17:24.417Z"
+    },
+    {
+      "id": 27,
+      "productId": 27,
+      "quantity": 0,
+      "minStock": 10,
+      "lastUpdated": "2026-06-06T03:02:30.663Z"
     }
   ],
   "MOCK_ORDERS": [
@@ -738,6 +803,56 @@
       "notes": "Creado por Administrador (Modo Demo) con precio compra Bs. 7.30, venta unitaria Bs. 0.00, mayorista Bs. 0.00 y descuento Bs. 0.00. Estado inicial: activo.",
       "id": 1,
       "createdAt": "2026-05-19T22:28:58.287Z"
+    },
+    {
+      "productId": 26,
+      "userId": 999,
+      "type": "adjustment",
+      "quantity": 0,
+      "reason": "Producto creado",
+      "notes": "Creado por Administrador (Modo Demo) con precio compra Bs. 0.00, venta unitaria Bs. 28.00, mayorista Bs. 28.00 y descuento Bs. 28.00. Estado inicial: activo.",
+      "id": 2,
+      "createdAt": "2026-06-05T03:17:24.427Z"
+    },
+    {
+      "productId": 27,
+      "userId": 999,
+      "type": "adjustment",
+      "quantity": 0,
+      "reason": "Producto creado",
+      "notes": "Creado por Administrador (Modo Demo) con precio compra Bs. 0.00, venta unitaria Bs. 28.00, mayorista Bs. 28.00 y descuento Bs. 28.00. Estado inicial: activo.",
+      "id": 3,
+      "createdAt": "2026-06-06T03:02:30.670Z"
+    },
+    {
+      "id": 4,
+      "productId": 5,
+      "userId": 999,
+      "type": "exit",
+      "quantity": 10,
+      "reason": "Traspaso a Producción",
+      "notes": "Traspaso TR-2026-0001",
+      "createdAt": "2026-06-07T04:26:26.373Z"
+    },
+    {
+      "productId": 5,
+      "userId": 999,
+      "type": "adjustment",
+      "quantity": 0,
+      "reason": "Datos del producto actualizados",
+      "notes": "Administrador (Modo Demo) modificó imagen actualizada.",
+      "id": 5,
+      "createdAt": "2026-06-07T04:29:27.757Z"
+    },
+    {
+      "productId": 5,
+      "userId": 999,
+      "type": "adjustment",
+      "quantity": 0,
+      "reason": "Datos del producto actualizados",
+      "notes": "Administrador (Modo Demo) modificó nombre: leche kream -> leche kream 800 ml.",
+      "id": 6,
+      "createdAt": "2026-06-07T04:37:42.062Z"
     }
   ],
   "MOCK_SUPPLIERS": [],
@@ -819,5 +934,38 @@
   "MOCK_SALE_ITEMS": [],
   "MOCK_QUOTATIONS": [],
   "MOCK_QUOTATION_ITEMS": [],
-  "MOCK_DELIVERY_EXTRA_LOAD": []
+  "MOCK_DELIVERY_EXTRA_LOAD": [],
+  "MOCK_PRODUCTION_BATCHES": [],
+  "MOCK_PRODUCTION_OUTPUTS": [],
+  "MOCK_PRODUCTION_INPUTS": [],
+  "MOCK_PRODUCTION_INVENTORY": [
+    {
+      "id": 1,
+      "productId": 5,
+      "quantity": 10,
+      "lastUpdated": "2026-06-07T04:26:26.373Z"
+    }
+  ],
+  "MOCK_INVENTORY_TRANSFERS": [
+    {
+      "id": 1,
+      "transferNumber": "TR-2026-0001",
+      "direction": "to_production",
+      "status": "completed",
+      "userId": 999,
+      "notes": null,
+      "createdAt": "2026-06-07T04:26:26.373Z"
+    }
+  ],
+  "MOCK_INVENTORY_TRANSFER_ITEMS": [
+    {
+      "id": 1,
+      "transferId": 1,
+      "productId": 5,
+      "quantity": 10,
+      "productName": "leche kream",
+      "productUnit": "unidad",
+      "createdAt": "2026-06-07T04:26:26.373Z"
+    }
+  ]
 }

@@ -16,7 +16,8 @@
     "db:ensure-tables": "tsx scripts/ensure_tables.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:seed-admin": "tsx scripts/seed_railway_admin.ts",
-    "railway:predeploy": "pnpm run db:ensure-tables && pnpm run db:seed-admin",
+    "db:seed-products": "tsx seed_all_required_products.ts",
+    "railway:predeploy": "pnpm run db:ensure-tables && pnpm run db:seed-admin && pnpm run db:seed-products",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {
