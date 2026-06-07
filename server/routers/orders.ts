@@ -307,6 +307,28 @@ export const ordersRouter = router({
         });
       }
 
+      // Verificar que todos los productos existen en la BD real
+      const db = await import("../db").then(m => m.getDb());
+      if (db) {
+        const { products } = await import("../../drizzle/schema");
+        const { inArray } = await import("drizzle-orm");
+        const productIds = input.items.map(item => item.productId);
+        const existingProducts = await db.select({ id: products.id }).from(products).where(inArray(products.id, productIds));
+        const existingIds = existingProducts.map(p => p.id);
+        
+        for (const id of productIds) {
+          if (!existingIds.includes(id)) {
+            // Log for debugging
+            const allDbProducts = await db.select({ id: products.id, name: products.name }).from(products);
+            console.error(`Product ID ${id} not found in DB! Available products:`, allDbProducts);
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `El producto con ID ${id} no existe en la base de datos. Por favor, recarga la página.`,
+            });
+          }
+        }
+      }
+
       // Crear items del pedido
       for (const item of input.items) {
         await createOrderItem({
