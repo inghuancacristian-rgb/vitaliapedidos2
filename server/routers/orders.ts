@@ -331,13 +331,21 @@ export const ordersRouter = router({
 
       // Crear items del pedido
       for (const item of input.items) {
-        await createOrderItem({
-          orderId: newOrder.id,
-          productId: item.productId,
-          pricingType: item.pricingType,
-          quantity: item.quantity,
-          price: item.price,
-        });
+        try {
+          await createOrderItem({
+            orderId: newOrder.id,
+            productId: item.productId,
+            pricingType: item.pricingType,
+            quantity: item.quantity,
+            price: item.price,
+          });
+        } catch (error: any) {
+          console.error("Error inserting order item:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Error MySQL al insertar item (Order: ${newOrder.id}, Product: ${item.productId}): ${error.sqlMessage || error.message || String(error)}`,
+          });
+        }
       }
 
       // Descontar stock del inventario y registrar en historial
