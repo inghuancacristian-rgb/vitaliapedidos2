@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "wouter";
-import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2, Package, Filter, ChevronDown } from "lucide-react";
+import { Plus, Eye, MapPin, Search, Edit, Trash2, Calendar, DollarSign, MessageCircle, Building2, Package, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -42,6 +42,10 @@ export default function Orders() {
   const [dateFilter, setDateFilter] = useState("");
   const [deliveryPersonFilter, setDeliveryPersonFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<"time_asc" | "time_desc" | "none">("time_asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [deliveredPage, setDeliveredPage] = useState(1);
+  const [cancelledPage, setCancelledPage] = useState(1);
+  const ORDERS_PER_PAGE = 10;
 
   const [dismissOrderId, setDismissOrderId] = useState<number | null>(null);
   const [cancelData, setCancelData] = useState<{ cancelledBy: "client" | "company" | "system"; reason: string }>({
@@ -166,6 +170,20 @@ export default function Orders() {
       return sortOrder === "time_asc" ? timeA.localeCompare(timeB) : timeB.localeCompare(timeA);
     });
   }, [orders, searchTerm, statusFilter, sortOrder, dateFilter, deliveryPersonFilter]);
+
+  // Pedidos por categoría
+  const routeOrders = sortedOrders.filter(o => ["pending", "assigned", "in_transit", "rescheduled"].includes(o.status));
+  const deliveredOrders = sortedOrders.filter(o => o.status === "delivered");
+  const cancelledOrders = sortedOrders.filter(o => o.status === "cancelled");
+
+  // Pedidos paginados por categoría
+  const paginatedRouteOrders = routeOrders.slice((currentPage - 1) * ORDERS_PER_PAGE, currentPage * ORDERS_PER_PAGE);
+  const paginatedDeliveredOrders = deliveredOrders.slice((deliveredPage - 1) * ORDERS_PER_PAGE, deliveredPage * ORDERS_PER_PAGE);
+  const paginatedCancelledOrders = cancelledOrders.slice((cancelledPage - 1) * ORDERS_PER_PAGE, cancelledPage * ORDERS_PER_PAGE);
+
+  const totalRoutePages = Math.ceil(routeOrders.length / ORDERS_PER_PAGE);
+  const totalDeliveredPages = Math.ceil(deliveredOrders.length / ORDERS_PER_PAGE);
+  const totalCancelledPages = Math.ceil(cancelledOrders.length / ORDERS_PER_PAGE);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -660,15 +678,24 @@ export default function Orders() {
           </div>
 
           <TabsContent value="route" className="space-y-6">
-            <OrderGrid orders={sortedOrders.filter(o => ["pending", "assigned", "in_transit", "rescheduled"].includes(o.status))} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            <OrderGrid orders={paginatedRouteOrders} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            {totalRoutePages > 1 && (
+              <PaginationControls currentPage={currentPage} totalPages={totalRoutePages} onPageChange={setCurrentPage} />
+            )}
           </TabsContent>
 
           <TabsContent value="delivered" className="space-y-6">
-            <OrderGrid orders={sortedOrders.filter(o => o.status === "delivered")} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            <OrderGrid orders={paginatedDeliveredOrders} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            {totalDeliveredPages > 1 && (
+              <PaginationControls currentPage={deliveredPage} totalPages={totalDeliveredPages} onPageChange={setDeliveredPage} />
+            )}
           </TabsContent>
 
           <TabsContent value="cancelled" className="space-y-6">
-            <OrderGrid orders={sortedOrders.filter(o => o.status === "cancelled")} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            <OrderGrid orders={paginatedCancelledOrders} user={user} openWhatsApp={openWhatsApp} setRescheduleOrderId={setRescheduleOrderId} setRescheduleData={setRescheduleData} setDeliverOrderId={setDeliverOrderId} setCancellationRequestOrderId={setCancellationRequestOrderId} setDismissOrderId={setDismissOrderId} />
+            {totalCancelledPages > 1 && (
+              <PaginationControls currentPage={cancelledPage} totalPages={totalCancelledPages} onPageChange={setCancelledPage} />
+            )}
           </TabsContent>
         </Tabs>
 
@@ -1312,5 +1339,43 @@ function StatusBadge({ status }: { status: string }) {
     <Badge className={`${getStatusColor(status)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-none shadow-sm`}>
       {getStatusLabel(status)}
     </Badge>
+  );
+}
+
+function PaginationControls({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (page: number) => void }) {
+  return (
+    <div className="flex items-center justify-center gap-2 py-4">
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-10 p-0 rounded-full"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div className="flex items-center gap-1">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          <Button
+            key={page}
+            variant={page === currentPage ? "default" : "outline"}
+            size="sm"
+            className={`h-10 w-10 p-0 rounded-full font-bold ${page === currentPage ? "bg-slate-900" : "text-slate-500"}`}
+            onClick={() => onPageChange(page)}
+          >
+            {page}
+          </Button>
+        ))}
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-10 p-0 rounded-full"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
