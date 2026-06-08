@@ -1,5 +1,15 @@
 {
-  "MOCK_CUSTOMERS": [],
+  "MOCK_CUSTOMERS": [
+    {
+      "clientNumber": "68188260",
+      "name": "gemii",
+      "zone": "preado",
+      "sourceChannel": "facebook",
+      "customerType": "retail",
+      "id": 1,
+      "createdAt": "2026-06-07T21:06:01.641Z"
+    }
+  ],
   "MOCK_USERS": [
     {
       "id": 999,
@@ -10,7 +20,7 @@
       "openId": "demo_admin",
       "createdAt": "2026-05-05T06:13:29.383Z",
       "updatedAt": "2026-05-05T06:13:29.383Z",
-      "lastSignedIn": "2026-06-07T04:37:42.059Z",
+      "lastSignedIn": "2026-06-07T21:06:01.638Z",
       "email": "admin@demo.com",
       "loginMethod": "traditional"
     },
@@ -587,7 +597,7 @@
     {
       "id": 1,
       "productId": 1,
-      "quantity": 2,
+      "quantity": 1,
       "minStock": 10,
       "lastUpdated": "2026-05-05T06:24:45.308Z"
     },
@@ -789,9 +799,35 @@
       "id": 1,
       "deliveryPersonName": null,
       "sourceChannel": "other"
+    },
+    {
+      "orderNumber": "ORD-012",
+      "customerId": 1,
+      "zone": "preado",
+      "deliveryDate": "2026-06-18",
+      "deliveryTime": "12:12",
+      "totalPrice": 15,
+      "paymentMethod": "cash",
+      "deliveryPersonId": 1000,
+      "status": "assigned",
+      "paymentStatus": "pending",
+      "sourceChannel": "facebook",
+      "id": 2,
+      "createdAt": "2026-06-07T21:06:01.642Z",
+      "updatedAt": "2026-06-07T21:06:01.642Z",
+      "deliveryPersonName": null
     }
   ],
-  "MOCK_ORDER_ITEMS": [],
+  "MOCK_ORDER_ITEMS": [
+    {
+      "orderId": 2,
+      "productId": 1,
+      "pricingType": "unit",
+      "quantity": 1,
+      "price": 15,
+      "id": 1
+    }
+  ],
   "MOCK_PAYMENTS": [],
   "MOCK_MOVEMENTS": [
     {
@@ -853,6 +889,15 @@
       "notes": "Administrador (Modo Demo) modificó nombre: leche kream -> leche kream 800 ml.",
       "id": 6,
       "createdAt": "2026-06-07T04:37:42.062Z"
+    },
+    {
+      "id": 7,
+      "productId": 1,
+      "type": "exit",
+      "quantity": 1,
+      "reason": "Pedido reservado ORD-012",
+      "orderId": 2,
+      "createdAt": "2026-06-07T21:06:01.645Z"
     }
   ],
   "MOCK_SUPPLIERS": [],

@@ -43,10 +43,17 @@ export default function RepartidorFinance() {
   const { data: myClosures, isLoading: isLoadingClosures } = trpc.finance.listMyClosures.useQuery();
   const { data: activeOpeningData, isLoading: isLoadingOpening } = trpc.finance.hasActiveOpening.useQuery();
 
+  const utils = trpc.useUtils();
+
   const submitMutation = trpc.finance.submitClosure.useMutation({
     onSuccess: () => {
       toast.success("Cierre de caja enviado correctamente.");
-      refetchStatus();
+      // Invalidar todas las queries relacionadas para actualizar la interfaz
+      utils.finance.getMyStatus.invalidate();
+      utils.finance.hasActiveOpening.invalidate();
+      utils.finance.hasPendingClosure.invalidate();
+      utils.finance.getExpectedDaily.invalidate();
+      utils.finance.listMyClosures.invalidate();
     },
     onError: (error) => {
       toast.error("Error: " + error.message);
