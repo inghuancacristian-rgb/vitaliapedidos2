@@ -684,6 +684,9 @@ export async function ensureTables() {
     await runSQL("orders.cancellationReason", `ALTER TABLE orders ADD COLUMN cancellationReason text AFTER cancellationRequested`);
     await runSQL("orders.deliveredAt", `ALTER TABLE orders ADD COLUMN deliveredAt timestamp NULL AFTER updatedAt`);
 
+    // orderItems columns - ensure pricingType exists
+    await runSQL("orderItems.pricingType", `ALTER TABLE orderItems ADD COLUMN pricingType enum('unit','wholesale','discount') NOT NULL DEFAULT 'unit' AFTER productId`);
+
     // customers profile columns
     await runSQL("customers.age", `ALTER TABLE customers ADD COLUMN age INT AFTER longitude`);
     await runSQL("customers.gender", `ALTER TABLE customers ADD COLUMN gender VARCHAR(30) AFTER age`);

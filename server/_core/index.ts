@@ -408,6 +408,59 @@ async function startServer() {
     });
   });
 
+  // Debug endpoint for order items table structure
+  app.get("/api/debug-order-tables", async (_req, res) => {
+    try {
+      const mysql = await import("mysql2/promise");
+      const connection = await mysql.default.createConnection(process.env.DATABASE_URL!);
+
+      // Check orderItems table structure
+      const [orderItemsColumns] = await connection.query("DESCRIBE orderItems");
+      const [ordersColumns] = await connection.query("DESCRIBE orders");
+
+      // Check if there are any orders
+      const [orders] = await connection.query("SELECT id, orderNumber FROM orders ORDER BY id DESC LIMIT 10");
+
+      // Check if there are any orderItems
+      const [orderItems] = await connection.query("SELECT id, orderId, productId FROM orderItems ORDER BY id DESC LIMIT 10");
+
+      await connection.end();
+
+      res.json({
+        orderItemsColumns,
+        ordersColumns,
+        recentOrders: orders,
+        recentOrderItems: orderItems,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Debug endpoint to check specific order
+  app.get("/api/debug-order/:orderId", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.orderId);
+      const mysql = await import("mysql2/promise");
+      const connection = await mysql.default.createConnection(process.env.DATABASE_URL!);
+
+      // Get order
+      const [orders] = await connection.query("SELECT * FROM orders WHERE id = ?", [orderId]);
+
+      // Get order items
+      const [items] = await connection.query("SELECT * FROM orderItems WHERE orderId = ?", [orderId]);
+
+      await connection.end();
+
+      res.json({
+        order: orders,
+        items: items,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   console.log(`[App] Version ${APP_VERSION} starting...`);
 
   // tRPC API
