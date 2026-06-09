@@ -2147,13 +2147,37 @@ export async function deleteOperationalExpense(id: number) {
   if (!db) {
     const index = MOCK_OPERATIONAL_EXPENSES.findIndex((e: any) => e.id === id);
     if (index !== -1) {
+      // Also delete associated financial transaction
+      const expense = MOCK_OPERATIONAL_EXPENSES[index];
+      if (expense?.status === "paid") {
+        const txIndex = MOCK_FINANCIAL_TRANSACTIONS.findIndex((t: any) => t.referenceId === id && t.type === "expense");
+        if (txIndex !== -1) {
+          MOCK_FINANCIAL_TRANSACTIONS.splice(txIndex, 1);
+        }
+      }
       MOCK_OPERATIONAL_EXPENSES.splice(index, 1);
       syncMocksToDisk();
       return { success: true };
     }
     return { success: false };
   }
-  return await db.delete(operationalExpenses).where(eq(operationalExpenses.id, id));
+  // Real DB - use transaction to delete both
+  return await db.transaction(async (tx: any) => {
+    // First get the expense to check if it was paid
+    const [expense] = await tx.select().from(operationalExpenses).where(eq(operationalExpenses.id, id)).limit(1);
+
+    // Delete the associated financial transaction if the expense was paid
+    if (expense && expense.status === "paid") {
+      await tx.delete(financialTransactions)
+        .where(and(
+          eq(financialTransactions.referenceId, id),
+          eq(financialTransactions.type, "expense")
+        ));
+    }
+
+    // Delete the expense
+    return await tx.delete(operationalExpenses).where(eq(operationalExpenses.id, id));
+  });
 }
 
 // Aperturas de Caja
